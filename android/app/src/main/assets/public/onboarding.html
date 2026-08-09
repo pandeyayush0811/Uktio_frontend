@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Utkio — Let's get started</title>
+<link rel="stylesheet" href="shared/style.css">
+</head>
+<body>
+<div class="wrap" style="justify-content:center;">
+  <div class="progress-dots" id="progressDots"></div>
+
+  <div class="card">
+    <div id="stepBody"></div>
+
+    <div class="status-msg err" id="statusMsg"></div>
+
+    <div class="step-nav">
+      <button class="secondary" id="backBtn" style="display:none;">Back</button>
+      <button class="primary" id="nextBtn">Next</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import './shared/config.js';
+import { requireAuthOrRedirect, apiFetch } from './shared/auth.js';
+import { initBackNav } from './shared/back-nav.js';
+
+// Just needs a logged-in session — this page itself doesn't require
+// onboarding to already be complete (that would be circular).
+requireAuthOrRedirect();
+initBackNav(null, true); // mandatory — back button is disabled here
+
+const answers = {
+  name: '', age: '', occupation_type: '', class_grade: '', profession: '', city: '',
+  goal: '', self_level: '', english_sample: '', daily_time: ''
+};
+
+const OCCUPATION_OPTIONS = [
+  { value: 'student', label: "I'm a student" },
+  { value: 'professional', label: "I'm a working professional" }
+];
+
+const GOAL_OPTIONS = [
+  { value: 'interview', label: 'Job interview / professional English' },
+  { value: 'daily_confidence', label: 'Everyday confidence — talking in English with friends/family' },
+  { value: 'exam_prep', label: 'Exam prep (IELTS / TOEFL / etc.)' },
+  { value: 'travel', label: 'Travel — talking with foreigners' },
+  { value: 'content_creation', label: 'Content creation / social media' },
+  { value: 'general', label: 'Just general improvement' }
+];
+
+const LEVEL_OPTIONS = [
+  { value: 'beginner', label: 'Beginner — starting from the basics' },
+  { value: 'intermediate', label: "Intermediate — I can speak a bit, not fluent" },
+  { value: 'advanced', label: "Advanced — I'm quite comfortable, just want to polish it" }
+];
+
+const TIME_OPTIONS = [
+  { value: '5_10', label: '5–10 minutes daily' },
+  { value: '15_20', label: '15–20 minutes daily' },
+  { value: '30_plus', label: '30+ minutes daily' }
+];
+
+// Each step: render(container) fills the step UI; validate() returns
+// true/error-string; optional flag skips the "required" check.
+const steps = [
+  {
+    title: 'What is your name?',
+    sub: 'Utkio will call you by this name.',
+    render(el){
+      el.innerHTML = `<input type="text" id="f_name" placeholder="e.g. Ayush" autocomplete="name">`;
+      el.querySelector('#f_name').value = answers.name;
+      el.querySelector('#f_name').addEventListener('input', e => answers.name = e.target.value);
+    },
+    validate(){ return answers.name.trim() ? true : 'Please enter your name 🙂'; }
+  },
+  {
+    title: 'What is your age?',
+    sub: 'Enter numbers only.',
+    render(el){
+      el.innerHTML = `<input type="text" inputmode="numeric" id="f_age" placeholder="e.g. 22">`;
+      el.querySelector('#f_age').value = answers.age;
+      el.querySelector('#f_age').addEventListener('input', e => {
+        answers.age = e.target.value.replace(/[^0-9]/g, '');
+        e.target.value = answers.age;
+      });
+    },
+    validate(){
+      const n = Number(answers.age);
+      if (!answers.age || !Number.isInteger(n) || n < 5 || n > 100) return 'Please enter a valid age (between 5-100).';
+      return true;
+    }
+  },
+  
+
+  {
+    title: 'Are you a student or a working professional?',
+    sub: '',
+    render(el){
+      el.innerHTML = `<div class="chip-group" id="f_occ"></div>`;
+      renderChips(el.querySelector('#f_occ'), OCCUPATION_OPTIONS, 'occupation_type');
+    },
+    validate(){ return answers.occupation_type ? true : 'Choose one'; }
+  },
+  {
+    // Content of this step depends on the previous answer — computed at render time.
+    title(){ return answers.occupation_type === 'student' ? 'Which class/course are you in?' : 'What is your profession/role?'; },
+    sub(){ return answers.occupation_type === 'student' ? 'e.g. "Class 10", "B.Tech 2nd year"' : 'e.g. "Software Engineer", "Teacher"'; },
+    render(el){
+      const isStudent = answers.occupation_type === 'student';
+      const key = isStudent ? 'class_grade' : 'profession';
+      const placeholder = isStudent ? 'e.g. Class 10' : 'e.g. Software Engineer';
+      el.innerHTML = `<input type="text" id="f_occdetail" placeholder="${placeholder}">`;
+      el.querySelector('#f_occdetail').value = answers[key];
+      el.querySelector('#f_occdetail').addEventListener('input', e => answers[key] = e.target.value);
+    },
+    validate(){
+      const key = answers.occupation_type === 'student' ? 'class_grade' : 'profession';
+      return answers[key] && answers[key].trim() ? true : 'Please fill this field.';
+    }
+  },
+  {
+    title: 'Which city are you from?',
+    sub: '(Optional — you can skip this)',
+    render(el){
+      el.innerHTML = `<input type="text" id="f_city" placeholder="e.g. Patna">`;
+      el.querySelector('#f_city').value = answers.city;
+      el.querySelector('#f_city').addEventListener('input', e => answers.city = e.target.value);
+    },
+    validate(){ return true; } // optional
+  },
+  {
+    title: 'Why do you want to improve your English?',
+    sub: 'This will help Utkio know which topics are most useful for you.',
+    render(el){
+      el.innerHTML = `<div class="chip-group" id="f_goal"></div>`;
+      renderChips(el.querySelector('#f_goal'), GOAL_OPTIONS, 'goal');
+    },
+    validate(){ return answers.goal ? true : 'Please choose an option.'; }
+  },
+  {
+    title: 'What is your current English level?',
+    sub: "Choose whichever feels most accurate — there's no wrong answer.",
+    render(el){
+      el.innerHTML = `<div class="chip-group" id="f_level"></div>`;
+      renderChips(el.querySelector('#f_level'), LEVEL_OPTIONS, 'self_level');
+    },
+    validate(){ return answers.self_level ? true : 'Please choose an option.'; }
+  },
+  {
+    title: 'Write 2-3 lines about yourself',
+    sub: '(Optional) Try it in English — whatever you know. This is just for the record, no grading.',
+    render(el){
+      el.innerHTML = `
+        <textarea id="f_sample" placeholder="e.g. My name is... I like... I work as..." maxlength="500"></textarea>
+        <div class="char-hint" id="charHint">0 / 500</div>`;
+      const ta = el.querySelector('#f_sample');
+      ta.value = answers.english_sample;
+      el.querySelector('#charHint').textContent = ta.value.length + ' / 500';
+      ta.addEventListener('input', e => {
+        answers.english_sample = e.target.value;
+        el.querySelector('#charHint').textContent = e.target.value.length + ' / 500';
+      });
+    },
+    validate(){ return true; } // optional
+  },
+  {
+    title: 'How much time can you spare daily for practice?',
+    sub: 'This will give us an idea of how long the sessions should be.',
+    render(el){
+      el.innerHTML = `<div class="chip-group" id="f_time"></div>`;
+      renderChips(el.querySelector('#f_time'), TIME_OPTIONS, 'daily_time');
+    },
+    validate(){ return answers.daily_time ? true : 'Please choose an option.'; }
+  }
+];
+
+function renderChips(container, options, key){
+  options.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'chip' + (answers[key] === opt.value ? ' selected' : '');
+    btn.textContent = opt.label;
+    btn.addEventListener('click', () => {
+      answers[key] = opt.value;
+      container.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
+      btn.classList.add('selected');
+    });
+    container.appendChild(btn);
+  });
+}
+
+let current = 0;
+const stepBody = document.getElementById('stepBody');
+const statusMsg = document.getElementById('statusMsg');
+const backBtn = document.getElementById('backBtn');
+const nextBtn = document.getElementById('nextBtn');
+const progressDots = document.getElementById('progressDots');
+
+function renderDots(){
+  progressDots.innerHTML = '';
+  steps.forEach((_, i) => {
+    const dot = document.createElement('span');
+    if (i < current) dot.className = 'done';
+    else if (i === current) dot.className = 'active';
+    progressDots.appendChild(dot);
+  });
+}
+
+function renderStep(){
+  statusMsg.textContent = '';
+  const step = steps[current];
+  const title = typeof step.title === 'function' ? step.title() : step.title;
+  const sub = typeof step.sub === 'function' ? step.sub() : step.sub;
+  stepBody.innerHTML = `<div class="step-title">${title}</div><div class="step-sub">${sub}</div>`;
+  step.render(stepBody);
+  backBtn.style.display = current === 0 ? 'none' : '';
+  nextBtn.textContent = current === steps.length - 1 ? 'Get Started' : 'Next';
+  renderDots();
+}
+
+backBtn.addEventListener('click', () => {
+  if (current > 0){ current--; renderStep(); }
+});
+
+nextBtn.addEventListener('click', async () => {
+  const result = steps[current].validate();
+  if (result !== true){
+    statusMsg.textContent = result;
+    return;
+  }
+
+  if (current < steps.length - 1){
+    current++;
+    renderStep();
+    return;
+  }
+
+  // Last step — submit everything.
+  nextBtn.disabled = true;
+  backBtn.disabled = true;
+  statusMsg.className = 'status-msg';
+  statusMsg.textContent = 'Saving...';
+
+  try {
+    await apiFetch('/users/onboarding', {
+      method: 'POST',
+      body: JSON.stringify(answers)
+    });
+    window.location.href = 'chat.html';
+  } catch (err) {
+    statusMsg.className = 'status-msg err';
+    statusMsg.textContent = err.message || 'Something went wrong, please try again.';
+    nextBtn.disabled = false;
+    backBtn.disabled = false;
+  }
+});
+
+renderStep();
+</script>
+</body>
+</html>

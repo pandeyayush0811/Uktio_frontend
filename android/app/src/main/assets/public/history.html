@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Utkio — Chats</title>
+<link rel="stylesheet" href="shared/style.css">
+<style>
+  .wrap{ overflow-y:auto; }
+  .expanded-transcript{ display:none; margin-top:12px; padding-top:12px; border-top:1px solid var(--line); }
+  .chat-card.open .expanded-transcript{ display:block; }
+  .t-line{ font-size:0.85rem; line-height:1.5; margin-bottom:8px; }
+  .t-line .t-tag{ font-weight:700; margin-right:6px; }
+  .t-line.user .t-tag{ color:var(--accent); }
+  .resume-btn{
+    margin-top:10px; width:100%; padding:10px; border-radius:10px; border:1.5px solid var(--accent);
+    background:transparent; color:var(--accent); font-weight:700; font-size:0.85rem; cursor:pointer; font-family:inherit;
+  }
+  .empty-state{ text-align:center; color:var(--ink-dim); padding:60px 20px; font-size:0.9rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <button class="icon-btn" id="drawerTrigger" aria-label="Menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <a class="icon-btn" href="settings.html" aria-label="Settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </a>
+  </header>
+
+  <h1 class="chats-title">Chats</h1>
+
+  <div class="search-bar">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input type="text" id="searchInput" placeholder="Search Chats">
+  </div>
+
+  <div id="listMsg" class="status-msg">Loading...</div>
+  <div id="sessionList"></div>
+</div>
+
+<button class="fab" id="newChatFab">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  New chat
+</button>
+
+<script type="module">
+import './shared/config.js';
+import { requireAuthOrRedirect, apiFetch } from './shared/auth.js';
+import { mountDrawer } from './shared/drawer.js';
+import { initBackNav } from './shared/back-nav.js';
+import { escapeHtml } from './shared/sanitize.js';
+
+requireAuthOrRedirect();
+mountDrawer(document.getElementById('drawerTrigger'), 'chats');
+initBackNav('chat.html');
+
+document.getElementById('newChatFab').addEventListener('click', () => window.location.href = 'chat.html');
+
+const listMsg = document.getElementById('listMsg');
+const sessionList = document.getElementById('sessionList');
+const searchInput = document.getElementById('searchInput');
+let allSessions = [];
+
+function formatDuration(startedAt, endedAt){
+  const totalSec = Math.max(0, Math.round((new Date(endedAt) - new Date(startedAt)) / 1000));
+  const min = Math.floor(totalSec / 60), sec = totalSec % 60;
+  return min > 0 ? `${min} min ${sec} sec` : `${sec} sec`;
+}
+function formatDateTime(iso){
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) +
+    ' · ' + d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+}
+
+async function loadTranscript(sessionId, container){
+  container.innerHTML = '<div class="status-msg">Loading...</div>';
+  try {
+    const data = await apiFetch('/chat/sessions/' + sessionId);
+    const msgs = data.messages || [];
+    container.innerHTML = '';
+    msgs.forEach(m => {
+      const line = document.createElement('div');
+      line.className = 't-line ' + (m.role === 'user' ? 'user' : 'model');
+      line.innerHTML = `<span class="t-tag">${m.role === 'user' ? 'You:' : 'Uktio:'}</span>`;
+      line.appendChild(document.createTextNode(m.content));
+      container.appendChild(line);
+    });
+    const resumeBtn = document.createElement('button');
+    resumeBtn.className = 'resume-btn';
+    resumeBtn.textContent = 'Resume this chat';
+    resumeBtn.addEventListener('click', (e) => { e.stopPropagation(); window.location.href = 'chat.html?resume=' + sessionId; });
+    container.appendChild(resumeBtn);
+  } catch (err) {
+    container.innerHTML = `<div class="status-msg err">Failed to load. Please try again: ${escapeHtml(err.message)}</div>`;
+  }
+}
+
+const MIN_TURNS_FOR_ANALYSIS = 10;
+
+function renderList(sessions){
+  sessionList.innerHTML = '';
+  if (!sessions.length){
+    sessionList.innerHTML = '<div class="empty-state">No chats found</div>';
+    return;
+  }
+  sessions.forEach(s => {
+    const card = document.createElement('div');
+    card.className = 'chat-card';
+    card.innerHTML = `
+      <div class="chat-card-date">${formatDateTime(s.started_at)}</div>
+      <div class="chat-card-meta">${formatDuration(s.started_at, s.ended_at)} · ${s.turn_count} turns</div>
+      <div class="expanded-transcript"></div>`;
+
+    // Report button: only shown once the chat is long enough to
+    // meaningfully analyze. "Generate" vs "See report" depends on
+    // whether one already exists (has_report, from GET /chat/sessions).
+    if (s.turn_count >= MIN_TURNS_FOR_ANALYSIS){
+      const reportBtn = document.createElement('button');
+      reportBtn.className = 'resume-btn';
+      reportBtn.style.marginTop = '8px';
+      reportBtn.style.borderColor = 'var(--accent-orange)';
+      reportBtn.style.color = 'var(--accent-orange)';
+      reportBtn.textContent = s.has_report ? '📊 See report' : '📊 Generate report';
+      reportBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        window.location.href = 'report.html?session=' + s.id + (s.has_report ? '' : '&generate=1');
+      });
+      card.appendChild(reportBtn);
+    }
+
+    let loaded = false;
+    card.addEventListener('click', () => {
+      const willOpen = !card.classList.contains('open');
+      card.classList.toggle('open');
+      if (willOpen && !loaded){ loaded = true; loadTranscript(s.id, card.querySelector('.expanded-transcript')); }
+    });
+    sessionList.appendChild(card);
+  });
+}
+
+searchInput.addEventListener('input', () => {
+  const q = searchInput.value.trim().toLowerCase();
+  if (!q) { renderList(allSessions); return; }
+  renderList(allSessions.filter(s => formatDateTime(s.started_at).toLowerCase().includes(q)));
+});
+
+(async () => {
+  try {
+    const data = await apiFetch('/chat/sessions');
+    allSessions = data.sessions || [];
+    listMsg.style.display = 'none';
+    renderList(allSessions);
+  } catch (err) {
+    listMsg.className = 'status-msg err';
+    listMsg.textContent = 'History load nahi ho payi: ' + err.message;
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+{
+	"appId": "com.utkio.app",
+	"appName": "Utkio",
+	"webDir": "www",
+	"server": {
+		"androidScheme": "http"
+	}
+}

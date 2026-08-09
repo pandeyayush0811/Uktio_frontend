@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Utkio</title>
+<link rel="stylesheet" href="shared/style.css">
+</head>
+<body>
+<div class="wrap splash-wrap">
+  <h1 class="app-title">Utkio</h1>
+  <div class="spinner" aria-hidden="true"></div>
+  <p class="hint" id="splashStatus" style="min-height:1.2em;"></p>
+</div>
+
+<!--
+  IMPORTANT: Capacitor always loads index.html as the app's entry point,
+  it can't be renamed to splash.html. So this file plays the role of your
+  "splash" screen — it just checks if you're logged in and forwards
+  immediately to the right page. Nothing else lives here.
+-->
+<script type="module">
+import './shared/config.js';
+import { getSession, goToPostAuthDestination, syncPendingChatSession } from './shared/auth.js';
+import { initBackNav } from './shared/back-nav.js';
+initBackNav(null);
+
+const splashStatus = document.getElementById('splashStatus');
+
+setTimeout(() => {
+  const session = getSession();
+  if (session && session.access_token) {
+    syncPendingChatSession(); // fire-and-forget — never blocks navigation
+    goToPostAuthDestination(text => { splashStatus.textContent = text; });
+  } else {
+    window.location.href = 'login.html';
+  }
+}, 500);
+</script>
+</body>
+</html>

@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Utkio — Report</title>
+<link rel="stylesheet" href="shared/style.css">
+<style>
+  .wrap{ overflow-y:auto; }
+  .report-summary{
+    background:var(--card); border-radius:18px; padding:20px; margin:16px 0;
+    box-shadow:0 6px 18px -12px rgba(60,60,120,0.2); font-size:0.95rem; line-height:1.6;
+  }
+  .strengths-list{ list-style:none; padding:0; margin:0; }
+  .strengths-list li{ padding:8px 0 8px 26px; position:relative; font-size:0.9rem; }
+  .strengths-list li::before{ content:"✓"; position:absolute; left:0; color:#2e9e5b; font-weight:700; }
+
+  .score-pill-row{ display:flex; justify-content:center; margin:14px 0 2px; }
+  .score-pill{
+    display:flex; align-items:center; gap:8px; background:var(--card); border-radius:999px;
+    padding:8px 18px 8px 10px; box-shadow:0 6px 16px -10px rgba(30,30,60,0.3); font-size:0.85rem; font-weight:700;
+  }
+  .score-pill .ring{ width:26px; height:26px; }
+  .score-pill .ring svg{ width:26px; height:26px; transform:rotate(-90deg); }
+  .score-pill .ring circle{ fill:none; stroke-width:4; }
+  .score-pill .ring .bg{ stroke:var(--line); }
+  .score-pill .ring .fg{ stroke:var(--accent); stroke-linecap:round; transition:stroke-dashoffset 1s cubic-bezier(.22,.9,.32,1); }
+  .score-pill .label{ color:var(--ink-dim); font-weight:600; font-size:0.78rem; }
+
+  /* ---- Single preview card -> opens the full-screen mistakes deck ---- */
+  .mistakes-preview{
+    position:relative; margin:12px 2px 4px; border-radius:22px; padding:22px 20px;
+    background:linear-gradient(150deg,#1b1b26,#111118); color:#fff; cursor:pointer;
+    box-shadow:0 18px 40px -20px rgba(20,20,40,0.5); overflow:hidden;
+    display:flex; align-items:center; gap:16px; border:none; width:100%; text-align:left; font-family:inherit;
+  }
+  .mistakes-preview::before{
+    content:''; position:absolute; inset:0;
+    background:radial-gradient(circle at 85% 20%, rgba(139,108,255,0.35), transparent 55%);
+  }
+  .mp-chips{ position:relative; display:flex; flex-shrink:0; }
+  .mp-chip{
+    width:38px; height:52px; border-radius:10px; margin-left:-16px; box-shadow:0 4px 10px rgba(0,0,0,0.3);
+    border:1px solid rgba(255,255,255,0.15);
+  }
+  .mp-chip:first-child{ margin-left:0; }
+  .mp-chip.c0{ background:#8b6cff; transform:rotate(-8deg); }
+  .mp-chip.c1{ background:#4ea1ff; transform:rotate(4deg); }
+  .mp-chip.c2{ background:#34d399; transform:rotate(-3deg); }
+  .mp-text{ position:relative; flex:1; }
+  .mp-title{ font-weight:800; font-size:1rem; margin-bottom:3px; }
+  .mp-sub{ font-size:0.8rem; color:rgba(255,255,255,0.6); }
+  .mp-arrow{ position:relative; flex-shrink:0; opacity:0.8; }
+
+  .practice-tip-card{
+    background:var(--accent-soft); border-radius:16px; padding:18px; margin:16px 0;
+    font-size:0.9rem; line-height:1.6;
+  }
+  .practice-tip-card strong{ display:block; margin-bottom:6px; color:var(--accent); }
+  .quiz-cta{ margin:8px 0 24px; }
+  .quiz-cta button{
+    width:100%; font-family:inherit; font-size:0.98rem; font-weight:700; padding:15px 20px;
+    border-radius:14px; border:none; background:linear-gradient(120deg,var(--accent),#8b7bff);
+    color:#fff; cursor:pointer; box-shadow:0 10px 24px -12px rgba(106,99,241,0.6);
+  }
+
+  .generate-state{ text-align:center; padding:60px 20px; }
+  .generate-state svg{ color:var(--accent-orange); margin-bottom:16px; }
+  .generate-state p{ color:var(--ink-dim); font-size:0.88rem; margin-bottom:20px; }
+  .spinner-ring{
+    width:32px; height:32px; border:3px solid var(--line); border-top-color:var(--accent-orange);
+    border-radius:50%; animation:spin 0.8s linear infinite; margin:0 auto 16px;
+  }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <a class="icon-btn" href="history.html" aria-label="Back">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+    </a>
+    <h1 class="app-title" style="font-size:1.2rem;">Report</h1>
+    <span style="width:38px;"></span>
+  </header>
+
+  <div id="content"></div>
+</div>
+
+<script type="module">
+import './shared/config.js';
+import { requireAuthOrRedirect, apiFetch } from './shared/auth.js';
+import { initBackNav } from './shared/back-nav.js';
+import { escapeHtml } from './shared/sanitize.js';
+import { buildScoreRingSvg, animateScoreRing } from './shared/score-ring.js';
+
+requireAuthOrRedirect();
+initBackNav('history.html');
+
+const params = new URLSearchParams(window.location.search);
+const sessionId = params.get('session');
+const shouldAutoGenerate = params.get('generate') === '1';
+const content = document.getElementById('content');
+
+function renderGenerateState(message, showButton){
+  content.innerHTML = `
+    <div class="generate-state">
+      ${showButton ? '' : '<div class="spinner-ring"></div>'}
+      <p>${message}</p>
+      ${showButton ? '<button class="primary" id="genBtn" style="width:auto;padding:12px 28px;">Generate Report</button>' : ''}
+    </div>`;
+  if (showButton) document.getElementById('genBtn').addEventListener('click', generateReport);
+}
+
+// ---- Confidence score pill (top of page, glanceable, animated ring) ----
+function buildScorePillHtml(score){
+  const ringSvg = buildScoreRingSvg(score, { radius: 11, center: 13, viewBoxSize: 26 });
+  return `
+    <div class="score-pill-row">
+      <div class="score-pill">
+        <span class="ring">${ringSvg}</span>
+        <span>${score}/10 <span class="label">confidence</span></span>
+      </div>
+    </div>`;
+}
+
+function animateScorePill(){
+  animateScoreRing(content);
+}
+
+// ---- Single dark preview card -> opens the full-screen swipeable mistakes deck ----
+function buildMistakesPreviewHtml(count){
+  return `
+    <button class="mistakes-preview" id="openMistakesBtn" type="button">
+      <span class="mp-chips">
+        <span class="mp-chip c0"></span>
+        <span class="mp-chip c1"></span>
+        <span class="mp-chip c2"></span>
+      </span>
+      <span class="mp-text">
+        <div class="mp-title">${count} ${count === 1 ? 'cheez' : 'cheezein'} mili is session mein</div>
+        <div class="mp-sub">Dekhne ke liye tap karo — swipe karke jao</div>
+      </span>
+      <span class="mp-arrow">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </span>
+    </button>`;
+}
+
+function renderReport(report){
+  const strengthsHtml = (report.strengths || []).map(s => `<li>${escapeHtml(s)}</li>`).join('');
+  const mistakes = report.mistakes || [];
+  const hasQuiz = Array.isArray(report.quiz) && report.quiz.length > 0;
+
+  content.innerHTML = `
+    ${buildScorePillHtml(report.confidence_score || 5)}
+    ${report.opening_line ? `<div class="report-summary">${escapeHtml(report.opening_line)}</div>` : ''}
+    ${strengthsHtml ? `<div class="drawer-section-label" style="margin-top:20px;">What you did well</div><div class="report-summary"><ul class="strengths-list">${strengthsHtml}</ul></div>` : ''}
+    ${mistakes.length ? `<div class="drawer-section-label" style="margin-top:20px;">Areas to work on</div>${buildMistakesPreviewHtml(mistakes.length)}` : ''}
+    ${report.focus_next ? `<div class="practice-tip-card"><strong>🎯 Next session mein focus karo</strong>${escapeHtml(report.focus_next)}</div>` : ''}
+    ${hasQuiz ? `<div class="quiz-cta"><button id="startQuizBtn">Quiz shuru karo — 2 min mein confirm karo kya seekha 🎯</button></div>` : ''}
+  `;
+
+  animateScorePill();
+  if (mistakes.length){
+    document.getElementById('openMistakesBtn').addEventListener('click', () => {
+      window.location.href = 'mistakes.html?session=' + encodeURIComponent(sessionId);
+    });
+  }
+  if (hasQuiz){
+    document.getElementById('startQuizBtn').addEventListener('click', () => {
+      window.location.href = 'quiz.html?session=' + encodeURIComponent(sessionId);
+    });
+  }
+}
+
+async function generateReport(){
+  renderGenerateState('Report generate ho raha hai... isme 10-20 seconds lag sakte hain.', false);
+  try {
+    const data = await apiFetch('/chat/sessions/' + sessionId + '/analyze', { method: 'POST' });
+    renderReport(data.report);
+  } catch (err) {
+    renderGenerateState('Report banane mein dikkat hui: ' + escapeHtml(err.message || 'Try again') + '.', true);
+  }
+}
+
+async function init(){
+  if (!sessionId){
+    content.innerHTML = '<div class="status-msg err" style="margin-top:20px;">Session ID missing.</div>';
+    return;
+  }
+  try {
+    const data = await apiFetch('/chat/sessions/' + sessionId + '/report');
+    renderReport(data.report);
+  } catch (err) {
+    if (err.status === 404){
+      if (shouldAutoGenerate) generateReport();
+      else renderGenerateState('Is chat ka abhi tak koi report nahi bana hai.', true);
+    } else {
+      renderGenerateState('Report load nahi ho paya: ' + escapeHtml(err.message), true);
+    }
+  }
+}
+
+init();
+</script>
+</body>
+</html>

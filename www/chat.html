@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Utkio</title>
+<link rel="stylesheet" href="shared/style.css">
+<style>
+  .status-row{
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    margin:18px 0 20px; visibility:hidden;
+  }
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--ink-dim);flex-shrink:0;}
+  #statusText{font-size:0.95rem;font-weight:500;}
+
+  .chat-card{
+    flex:1; min-height:0; background:var(--card); border-radius:26px; padding:20px 16px;
+    box-shadow:0 20px 40px -20px rgba(60,60,120,0.18);
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  .transcript{
+    flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column;
+    gap:14px; padding-right:2px; padding-bottom:4px; scroll-behavior:smooth;
+    scrollbar-width:none; -ms-overflow-style:none;
+  }
+  .transcript::-webkit-scrollbar{ display:none; }
+  .transcript:empty::before{
+    content:"The chat will appear here once the conversation starts";
+    color:var(--ink-dim); font-size:0.85rem; font-style:italic; margin:auto;
+  }
+  .line{ padding:12px 16px; border-radius:16px; font-size:0.95rem; line-height:1.5; max-width:82%; }
+  .line.user{ background:var(--accent-soft); color:var(--ink); align-self:flex-end; border-bottom-right-radius:6px; }
+  .line.model{ background:var(--panel-2); color:var(--ink); align-self:flex-start; border-bottom-left-radius:6px; }
+  .line .tag{display:none;}
+  .line.historical{ opacity:0.55; }
+  .history-divider{ text-align:center; color:var(--ink-dim); font-size:0.72rem; margin:16px 0; align-self:center; }
+
+  .mic-dock{ position:relative; display:flex; align-items:center; justify-content:center; height:96px; margin-top:8px; }
+  .wave{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; gap:4px; opacity:0.35; pointer-events:none; }
+  .wave span{ width:3px; border-radius:2px; background:var(--accent); opacity:0.55; }
+  .mic-btn{
+    position:relative; z-index:1; width:74px; height:74px; border-radius:50%;
+    background:var(--card); border:none; box-shadow:0 6px 16px -6px rgba(30,30,60,0.18);
+    display:flex; align-items:center; justify-content:center; cursor:pointer;
+    transition:transform 0.15s, box-shadow 0.2s, background 0.2s;
+    -webkit-tap-highlight-color: transparent; -webkit-user-select:none; user-select:none;
+    touch-action:manipulation; outline:none;
+  }
+  .mic-btn:focus, .mic-btn:focus-visible{ outline:none; }
+  .mic-btn:hover:not(:disabled){transform:scale(1.04);}
+  .mic-btn:disabled{opacity:0.5;cursor:not-allowed;}
+  .mic-btn svg{width:28px;height:28px;color:var(--accent);}
+  .mic-btn.active{
+    background:var(--accent);
+    box-shadow: 0 0 0 14px rgba(106,99,241,0.16), 0 0 26px 6px rgba(106,99,241,0.55);
+  }
+  .mic-btn.active svg{color:#fff;}
+
+  footer{margin-top:16px;color:var(--ink-dim);font-size:0.72rem;line-height:1.6;text-align:center;visibility:hidden;}
+
+  /* Report affordance directly on the chat page — see, generate, or (once
+     generated) the locked notice, all without a trip through History. */
+  .report-pill{
+    display:none; align-items:center; gap:6px; margin:0 auto 14px; padding:8px 14px;
+    border-radius:999px; border:1.5px solid var(--accent-orange); color:var(--accent-orange);
+    background:transparent; font-weight:700; font-size:0.82rem; cursor:pointer; font-family:inherit;
+    width:fit-content;
+  }
+  .report-pill.show{ display:flex; }
+  .locked-banner{
+    display:none; flex-direction:column; align-items:center; gap:10px; text-align:center;
+    padding:16px 18px; margin-bottom:14px; border-radius:16px;
+    background:var(--panel-2); color:var(--ink-dim); font-size:0.85rem; line-height:1.5;
+  }
+  .locked-banner.show{ display:flex; }
+  .locked-banner .locked-actions{ display:flex; gap:10px; }
+  .locked-banner button{
+    padding:9px 16px; border-radius:10px; border:1.5px solid var(--accent); background:transparent;
+    color:var(--accent); font-weight:700; font-size:0.82rem; cursor:pointer; font-family:inherit;
+  }
+  .locked-banner button.primary{ background:var(--accent); color:#fff; border-color:var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <button class="icon-btn" id="drawerTrigger" aria-label="Menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <h1 class="app-title">Utkio</h1>
+    <a class="icon-btn" href="settings.html" aria-label="Settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </a>
+  </header>
+
+  <div class="status-row">
+    <div class="dot" id="statusDot"></div>
+    <span id="statusText">Shuru karne ke liye niche mic button dabao</span>
+  </div>
+
+  <button class="report-pill" id="reportPill" type="button"></button>
+
+  <div class="locked-banner" id="lockedBanner">
+    <span>Iss chat ka report ban chuka hai — is chat mein aage baat nahi ho sakti.</span>
+    <div class="locked-actions">
+      <button class="primary" id="lockedSeeReport" type="button">📊 Report dekho</button>
+      <button id="lockedNewChat" type="button">+ Naya chat</button>
+    </div>
+  </div>
+
+  <div class="chat-card">
+    <div class="transcript" id="transcript"></div>
+  </div>
+
+  <div class="mic-dock">
+    <div class="wave" id="wave" aria-hidden="true"></div>
+    <button id="micBtn" class="mic-btn" aria-label="Baat shuru/band karo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+    </button>
+  </div>
+
+  <footer>
+    Mic access chahiye hoga (browser permission maangega). Best Chrome/Edge mein chalega.
+  </footer>
+</div>
+
+<script type="module">
+  import './shared/config.js';
+  import { requireCompleteProfile } from './shared/auth.js';
+  import { mountDrawer } from './shared/drawer.js';
+  import { initBackNav } from './shared/back-nav.js';
+
+  // UI setup first, independent of the network — the hamburger's click
+  // listener must attach immediately, not after a (possibly slow/cold-start)
+  // backend round-trip. mountDrawer already fetches its own content
+  // (user info, recent chats) lazily/async internally without blocking this.
+  mountDrawer(document.getElementById('drawerTrigger'), null);
+  initBackNav(null); // chat.html is the main hub — back minimizes the app, never exits
+
+  // Guard: bounce to login if no/invalid session, or to onboarding.html if
+  // the user hasn't finished it yet, or show a retry screen if the backend
+  // is unreachable. Stashes the profile on window so the voice-engine
+  // script below can build a personalized system prompt.
+  const profile = await requireCompleteProfile();
+  if (profile) window.__UKTIO_PROFILE = profile;
+</script>
+
+<script type="module">
+import { GoogleGenAI, Modality } from "./vendor/google-genai.bundle.mjs";
+import { PENDING_CHAT_SESSION_KEY, syncPendingChatSession, apiFetch } from './shared/auth.js';
+import { checkGeminiApiKey } from './shared/gemini-key-check.js';
+import { getApiKey, getMicCapturePlugin } from './shared/mic-helpers.js';
+
+// Single source of truth — used both for the actual connect() call below
+// AND in the permission-denied error message, so the two can never drift
+// out of sync (they used to be two separately hand-typed copies of the
+// same string).
+const LIVE_MODEL = 'gemini-3.1-flash-live-preview';
+
+function buildBaseInstruction(userName){
+  return `Tum "Uktio" ho — user ka wo tough but caring bada bhai jaisa dost jo English practice karwata hai.
+Tumhara style ek real bade bhai jaisa hai: seedha, honest, thoda challenging — lekin hamesha
+growth-focused. Tum daantte bhi ho aur cheer bhi karte ho, jaise ek bada bhai karta hai.
+
+User ka naam "${userName}" hai. (Agar naam nahi mila hai to "${userName}" ek neutral placeholder hai —
+is case mein naam wale rule ko skip karo aur sirf "tum" se hi address karo, kabhi "dost/bhai/yaar"
+mat bolo).
+
+ADDRESS STYLE:
+1. Naam ka use SELECTIVE rakho — hamesha naam se address mat karo.
+   Naam ("${userName}") sirf teen jagah use karo:
+   - Session shuru karte waqt
+   - Mistake correct karte waqt, especially repeat mistake pe
+   - Session end/closing line mein
+   Baaki poori conversation mein sirf "tum/tumhara/tumhe/tumse" use karo — naam baar baar
+   mat lo, warna tone "coach/HR review" jaisa lagta hai, "bada bhai" jaisa nahi.
+2. Hamesha "tum/tumhara/tumhe/tumse" use karo — kabhi "tu/tera/tujhe/tujhse" nahi.
+3. "Bhai/yaar/dost" jaise casual address words kabhi mat bolo — sirf naam ya "tum".
+
+CORE PERSONALITY RULES:
+1. Tum HAMESHA user ki growth chahte ho — har cheez isi intent se aani chahiye.
+2. Tum direct ho, sugar-coat nahi karte — lekin PUT DOWN kabhi nahi karte.
+3. Challenge dete ho, humiliate nahi karte:
+   Sahi: "Aaj 3 galti hui, kal kam honi chahiye"
+   Galat (kabhi mat bolo): "Itni bhi English nahi aati?"
+4. Tum kabhi user ki identity, intelligence, background, ya family pe comment nahi karte —
+   sirf UNKE EFFORT/ACTION pe focus karte ho.
+5. "Tumhe pata hona chahiye tha" jaisi shame-trigger lines mat bolo — iski jagah
+   "ye pattern repeat ho raha hai, isi pe focus karte hain" wala framing use karo.
+
+REPETITION-BASED INTENSITY:
+- 1st baar mistake ho: halka casual correction, no pressure.
+- 2nd baar same mistake: soft reminder — "ye wahi baat hai jo pehle bhi hui thi."
+- 3rd baar ya usse zyada: direct reframe — "ye pattern repeat ho raha hai, ab isi pe dhyan do."
+
+CONVERSATION FLOW:
+- Session Hinglish me casually start hoga, halka challenge ke saath.
+- Jaise hi user English bolna start kare, tum turant English me switch ho jao aur
+  conversation English me hi continue karo — deep follow-up questions ke saath,
+  shallow small-talk nahi.
+- English mode ke beech mein bhi do cheezein turant tumhe wapas HINGLISH mein le
+  aayengi:
+  a) User se koi grammar/word mistake ho jaaye.
+  b) User confuse ho ya kuch pooche — jaise "ye ___ ko kya kehte hain", "how do you
+     say ___", "wo word kya tha", ya koi bhi sign ki user atak gaya hai / word nahi
+     mil raha.
+  In dono cases mein turant Hinglish mein aake GRAMMAR CORRECTION PROTOCOL wale
+  format mein short explanation + example do (chahe wo actual "mistake" ho ya sirf
+  "confusion/query" ho — dono ko isi tarah handle karo).
+- Explanation/example dene ke turant baad, WAPAS ENGLISH mein switch ho jao aur
+  conversation continue karo — Hinglish mein zyada der mat ruko, sirf jitna zaroori
+  ho utna hi.
+
+GRAMMAR CORRECTION PROTOCOL (No Jargon, Context-Based, Short) — ye protocol dono
+cases mein use hoga: (1) user se mistake ho jaaye, (2) user confuse ho ya word/phrase
+pooche:
+- Jaise hi mistake ho, turant rok do — wording VARY karo har baar:
+  "Ek second — phir se bolo", "Ruko zara, abhi kya kaha?", "Wait, ek baar phir batao"
+- User repeat kare, phir explain karo — grammar terminology ("tense," "article," "possessive,"
+  "comparative," "preposition" waghera) BILKUL mat use karo.
+- Format: "[Context ka simple reason] isliye [sahi word/phrase], na ki [galat wala]"
+  - Context reason matlab: "ye purani baat ho rahi hai," "ye kisi ka apna cheez hai,"
+    "ye baar baar hone wali baat hai," "ye do cheezon ka comparison hai," waghera —
+    ekdum simple rozmarra ki bhasha mein, jaise ek bada bhai samjhayega.
+- MAX 2 examples do, teen nahi.
+- Explanation ke baad ek chhota encouragement/challenge line daalo.
+- Turant next question ya topic pe wapas jao — lecture mat kheecho.
+
+TOTAL CORRECTION LENGTH: 3-4 lines se zyada mat jaane do (context + fix + 2 examples + 1 encouragement line).
+
+NATURAL SPEECH TEXTURE:
+- Explanation ekdum clean-written jaisa mat lagne do — jaise koi bolke samjha raha hai,
+  usme thoda natural flow hona chahiye:
+  - Beech mein "like," "matlab," "wo kya kehte hain," "kaise bolun," jaise chhote filler words use karo —
+    lekin OVERUSE mat karo, ek explanation mein max 1-2 baar.
+  - Kabhi kabhi ek thought ko thoda repeat/rephrase karke bolo, jaise real insaan sochte hue bolta hai —
+    "matlab ye future ki baat hai... like kisi din, pata nahi kab" — is tarah se, ek hi baat do tarike se
+    bol dena, jaise dimaag mein clarity aate hue bol rahe ho.
+  - Poori tarah scripted/robotic mat sunna chahiye — halka sa "sochte hue bolna" wala flow rahe.
+  - Ye sirf EXPLANATION wale hisse mein karo, examples clean/correct hi rakho (examples mein filler
+    mat daalo, sirf correct sentence do).
+- Balance rakhna zaroori hai — itna filler mat daalo ki baat samajhna mushkil ho jaaye. Goal ye hai ki
+  natural sunna chahiye, confusing nahi.
+
+TOUGH-TONE GUIDELINES:
+Sahi: "Aaj improvement dikha — lekin abhi bhi kaafi kaam baaki hai."
+Sahi: "Ye galti baar baar ho rahi hai. Ab dhyan se suniye aur yaad rakhiye."
+Sahi: "Shabaash — lekin ruko mat, aur better ban sakte ho."
+Kabhi mat karo: Insult, roast, ya sarcasm jo user ko chhota mehsoos karaye.
+Kabhi mat karo: Appearance, family, background, ya personal life pe comment.
+Kabhi mat karo: "Tum kuch nahi kar sakte" type discouraging language.
+Kabhi mat karo: Grammar jargon ("tense," "article," "possessive," etc.) explanation mein.
+Kabhi mat karo: 3+ examples per mistake — sirf 2 do.
+
+AGE & SAFETY ADAPTATION:
+- Agar user ki age 18 se kam hai (ya unclear), tone ko "firm coach" tak limit rakho.
+- Agar user genuinely upset/hurt/demotivated lage, turant tone soften karo aur reassure karo.
+
+END OF SESSION: jab user kahe ki bye ya chat ko end kare -
+- Growth-focused summary do: kya sahi kiya, kya galti hui, overall progress %, aur ek
+  challenging-but-warm closing line — naam se address karke.
+
+REFERENCE EXPLANATION PATTERNS (in-context calibration — is tarah ke examples follow karo,
+inhe verbatim mat bolo, sirf style/logic copy karo):
+
+1. Past ki baat: "Yesterday I go to market." → "Ruko — ye 'yesterday' ki baat ho rahi hai na,
+   matlab... pehle ho chuka wo, isliye 'went' aayega, 'go' nahi." (Examples: "I went to the market
+   yesterday." / "She went home early last night.")
+
+2. Kisi cheez ka apna hona: "This is my friend bag." → "Ye bata rahe ho na bag kiska hai — toh
+   'friend's bag' bolte hain, like, akela 'friend bag' nahi sunta theek." (Examples: "This is my
+   friend's bag." / "That is my brother's phone.")
+
+3. Baar baar hone wali baat: "I go gym sometime." → "'Sometime' ka matlab ye nahi hota jo tum
+   sochte ho — wo alag cheez hai, like... kisi din, future mein kabhi, pata nahi kab. Tumhe toh
+   'sometimes' chahiye tha, kyunki tum bata rahe ho ye kabhi kabhi hota hai." (Examples: "I go to
+   the gym sometimes." / "Sometimes I skip breakfast.")
+
+4. Do cheezon ka comparison: "He is elder than me." → "Jab do logon ko seedha compare kar rahe ho
+   na, tab 'older than' sunta hai. 'Elder' toh tab aata hai jab bina compare kiye bolte ho, jaise
+   'elder brother' — samjhe?" (Examples: "He is older than me." / "My sister is older than my
+   cousin.")
+
+5. Kitni cheezein hain: "I have many homeworks." → "Ye wali cheez... ginti mein nahi aati, matlab
+   ek group jaisi hoti hai — isliye 'homework' akela hi use hota hai, 'homeworks' nahi sunta."
+   (Examples: "I have a lot of homework." / "She gave us too much homework.")
+
+6. Jagah ya direction batana: "I reached in the station at 5pm." → "Jab kisi jagah pahunchne ki
+   baat ho na, tab 'reached at' ya seedha 'reached the station' bolte hain — 'reached in' wala
+   thoda ajeeb sunta hai." (Examples: "I reached the station at 5pm." / "We arrived at the airport
+   early.")
+
+7. Kaam abhi ho raha hai ya already ho chuka: "I finished my homework already, I did it." →
+   "Dekho, jab batana ho ki kaam abhi complete hua hai aur uska asar ab tak hai — matlab abhi abhi
+   hua — tab 'I have already finished' zyada sahi sunta hai." (Examples: "I have already finished
+   my homework." / "She has already left for school.")
+
+8. Ek word ka matlab situation ke hisaab se badalna: "The coding part was hardest." → "Jab kisi ek
+   cheez ko group mein se sabse zyada bata rahe ho na, like sabse tough wali — tab 'the' lagana
+   padta hai, 'the hardest' sunta hai, akela 'hardest' adhoora lagta hai." (Examples: "The coding
+   part was the hardest." / "This was the toughest question in the exam.")
+
+9. Kaam kabhi nahi kiya: "I never done this before." → "Jab kabhi kisi cheez ka experience hi na
+   hone ki baat karte ho — matlab pehle kabhi nahi kiya, aisa kuch — tab 'had never done' ya 'have
+   never done' sunta hai." (Examples: "I had never done this before." / "I have never tried this
+   dish.")
+
+10. Kisi word ka sahi tarika na pata hone pe kya bolein: "How you say this word?" → "Jab kisi word
+    ka tarika pucchna ho na — jaise koi word bhool gaye ho, tab 'how do you say' bolte hain, akela
+    'how you say' nahi chalta." (Examples: "How do you say this in English?" / "How do you say
+    'खाना' in English?")`;
+}
+
+function buildSystemInstruction(){
+  const profile = window.__UKTIO_PROFILE || {};
+  // NOTE: fallback ab "dost" nahi hai — kyunki naya persona "dost/bhai" jaise
+  // address words ban karta hai. Agar naam missing hai to "tum" fallback karo,
+  // aur buildBaseInstruction ke andar hi ye handle ho jaata hai (skip-naam clause).
+  const userName = (profile.name && profile.name.trim()) || 'tum';
+  let instruction = buildBaseInstruction(userName);
+
+  const lines = [];
+
+  if (profile.age) {
+    lines.push(`${userName} ki age ${profile.age} saal hai.`);
+  }
+
+  if (profile.occupation_type === 'student' && profile.class_grade) {
+    lines.push(`${userName} student hai — "${profile.class_grade}" mein padhta hai. Tone thoda friendly-mentor jaisa rakho.`);
+  } else if (profile.occupation_type === 'professional' && profile.profession) {
+    lines.push(`${userName} working professional hai — role: "${profile.profession}". Tone thoda more mature/peer-like rakho, kabhi kabhi work-related situations bhi topics mein use kar sakte ho.`);
+  }
+
+  if (profile.city) {
+    lines.push(`${userName} "${profile.city}" se hai — kabhi kabhi casually is city ka reference use kar sakte ho (local jagah/food/context), lekin force mat karna, sirf natural lage tabhi.`);
+  }
+
+  if (lines.length){
+    instruction += '\n\n═══════════════════════════════\nPERSONALIZATION — is specific user ke baare mein\n═══════════════════════════════\n\n' + lines.join('\n\n');
+  }
+
+  if (priorTranscriptText){
+    instruction += `\n\n═══════════════════════════════\nRESUMING A PAST CONVERSATION\n═══════════════════════════════\n\nYe ek naya session nahi hai — ${userName} pichli baatcheet ko resume kar raha hai. Neeche pichli conversation hai (jo ho chuki thi):\n"""\n${priorTranscriptText}\n"""\nIsko yaad rakho aur naturally continue karo — jaise beech mein rukein ho. Shuruaat mein "Hello" ya fresh greeting se shuru mat karo; iski jagah pichli baat ka koi natural reference do (jaise "Haan to hum ye baat kar rahe the na...") phir aage badho.`;
+  }
+  return instruction;
+}
+
+let session = null;
+let playCtx = null;
+let micListenerHandle = null;
+let nextPlayTime = 0;
+let isModelSpeaking = false;
+let scheduledSources = [];
+let currentUserLine = null;
+let currentModelLine = null;
+let isBusy = false;
+let errorAlreadyShown = false;
+
+// Local-write, batch-sync chat history: turns get pushed here live as the
+// conversation happens, persisted to localStorage at each turn boundary
+// (crash-safe), then synced to the backend in ONE call when the session
+// ends. currentTurnIndex tracks which sessionTurns[] entry is "in progress".
+let sessionTurns = [];
+let sessionStartedAt = null;
+let currentTurnIndex = -1;
+
+// Resume support: if ?resume=<session_id> is in the URL, we're
+// continuing a past conversation rather than starting a fresh one.
+// activeSessionId travels with every save so the backend appends to
+// the same session instead of creating a new one. It's `let`, not
+// `const`, because it also gets set the FIRST time a fresh (non-resumed)
+// session gets synced — so if the user stops the mic and starts again
+// without leaving this page, the 2nd+ leg appends to the same session
+// too, instead of creating a new session row each time.
+let activeSessionId = new URLSearchParams(window.location.search).get('resume') || null;
+let priorTranscriptText = '';
+
+const micBtn = document.getElementById('micBtn');
+const statusDot = document.getElementById('statusDot');
+const statusText = document.getElementById('statusText');
+const transcriptEl = document.getElementById('transcript');
+const waveEl = document.getElementById('wave');
+const reportPill = document.getElementById('reportPill');
+const lockedBanner = document.getElementById('lockedBanner');
+
+// Same threshold History uses to decide when a chat is "long enough" to
+// analyze (chatRoutes.js's MIN_TURNS_FOR_ANALYSIS) — duplicated here since
+// this is a static frontend file with no shared-constants import path to
+// the backend. Keep these two in sync if it's ever tuned.
+const MIN_TURNS_FOR_ANALYSIS = 10;
+
+let isLocked = false; // true once this resumed session already has a report — blocks further recording
+let knownTurnCount = 0; // running count for THIS session, seeded from resume data below, incremented locally as turns sync — avoids an extra network round-trip just to re-check the report-eligibility threshold after every save
+
+function showReportPill(sessionId, hasReport){
+  reportPill.textContent = hasReport ? '📊 Report dekho' : '📊 Report banao';
+  reportPill.onclick = () => { window.location.href = 'report.html?session=' + sessionId + (hasReport ? '' : '&generate=1'); };
+  reportPill.classList.add('show');
+}
+
+function lockChatForReport(sessionId){
+  isLocked = true;
+  lockedBanner.classList.add('show');
+  document.getElementById('lockedSeeReport').onclick = () => { window.location.href = 'report.html?session=' + sessionId; };
+  document.getElementById('lockedNewChat').onclick = () => { window.location.href = 'chat.html'; };
+  micBtn.disabled = true;
+  setStatus('Iss chat ka report ban chuka hai.', null);
+}
+
+/* API key ab is page ke saath store nahi hoti — Settings page (settings.html)
+   isi localStorage key mein save karta hai; getApiKey() shared/mic-helpers.js
+   se import hoti hai taaki chat.html/quiz.html mein ye logic do baar na likha ho. */
+
+(function buildWave(){
+  const BARS = 28;
+  for (let i = 0; i < BARS; i++){
+    const bar = document.createElement('span');
+    const h = 6 + Math.round(Math.abs(Math.sin(i * 0.7)) * 26);
+    bar.style.height = h + 'px';
+    waveEl.appendChild(bar);
+  }
+})();
+
+function setStatus(text, mode){
+  statusText.textContent = text;
+  statusDot.className = 'dot' + (mode ? ' ' + mode : '');
+  micBtn.classList.toggle('active', mode === 'live');
+  waveEl.classList.toggle('live', mode === 'live');
+}
+
+function scrollTranscriptToBottom(){
+  transcriptEl.scrollTop = transcriptEl.scrollHeight;
+}
+
+function addLine(role){
+  const div = document.createElement('div');
+  div.className = 'line ' + role;
+  const tag = document.createElement('span');
+  tag.className = 'tag';
+  tag.textContent = role === 'user' ? 'Tum' : 'Bolo';
+  const text = document.createElement('span');
+  text.className = 'text';
+  div.appendChild(tag);
+  div.appendChild(text);
+  transcriptEl.appendChild(div);
+  scrollTranscriptToBottom();
+
+  // A new line always means the previous turn (if any) just finished —
+  // persist it now, then start tracking the new one.
+  persistLocalSession();
+  sessionTurns.push({ role: role === 'user' ? 'user' : 'assistant', content: '' });
+  currentTurnIndex = sessionTurns.length - 1;
+
+  return text;
+}
+
+// Renders a line from a PAST (already-saved) session — used only when
+// resuming. Deliberately does NOT touch sessionTurns/currentTurnIndex,
+// since these turns are already in the database; re-saving them would
+// duplicate them.
+function addHistoricalLine(role, content){
+  const div = document.createElement('div');
+  div.className = 'line historical ' + (role === 'user' ? 'user' : 'model');
+  const tag = document.createElement('span');
+  tag.className = 'tag';
+  tag.textContent = role === 'user' ? 'Tum' : 'Bolo';
+  const text = document.createElement('span');
+  text.className = 'text';
+  text.textContent = content;
+  div.appendChild(tag);
+  div.appendChild(text);
+  transcriptEl.appendChild(div);
+}
+
+// If ?resume=<id> is in the URL, fetch that session's past turns, show
+// them (greyed out) at the top of the transcript, and build the text
+// block that gets folded into the system prompt so Bolo remembers the
+// conversation instead of starting cold.
+async function loadResumeContextIfAny(){
+  if (!activeSessionId) return;
+  try{
+    setStatus('Pichli baatcheet load ho rahi hai...', null);
+    const data = await apiFetch('/chat/sessions/' + activeSessionId);
+    const msgs = data.messages || [];
+
+    if (msgs.length){
+      const divider = document.createElement('div');
+      divider.className = 'history-divider';
+      divider.textContent = '── Pichli baatcheet ──';
+      transcriptEl.appendChild(divider);
+      msgs.forEach(m => addHistoricalLine(m.role, m.content));
+      scrollTranscriptToBottom();
+
+      // Cap the injected text so a very long past session doesn't blow
+      // up the system prompt — keep the most recent ~6000 chars.
+      const full = msgs.map(m => (m.role === 'user' ? 'User' : 'Bolo') + ': ' + m.content).join('\n');
+      priorTranscriptText = full.length > 6000 ? full.slice(full.length - 6000) : full;
+    }
+
+    // Report affordance right here on the chat page (see file header note
+    // in history.html for the same "Generate" vs "See report" logic) —
+    // and the hard lock once a report already exists for this session
+    // (see the matching 409 check server-side, POST /chat/sessions).
+    const turnCount = (data.session && data.session.turn_count) || 0;
+    knownTurnCount = turnCount;
+    if (data.has_report){
+      lockChatForReport(activeSessionId);
+      return; // don't overwrite the locked status message below
+    } else if (turnCount >= MIN_TURNS_FOR_ANALYSIS){
+      showReportPill(activeSessionId, false);
+    }
+
+    setStatus('Shuru karne ke liye niche mic button dabao.', null);
+  } catch(err){
+    console.warn('resume context load failed, starting fresh instead', err);
+    setStatus('Purani chat load nahi ho payi — naya session shuru kar sakte ho.', 'err');
+  }
+}
+loadResumeContextIfAny();
+
+// Writes the in-progress session to localStorage. Called at every turn
+// boundary (see addLine above) and once more when the session stops, so
+// a crash mid-session loses at most the last few words being spoken,
+// never the whole conversation.
+function persistLocalSession(){
+  try {
+    const meaningful = sessionTurns.filter(t => t.content && t.content.trim());
+    if (!meaningful.length) { localStorage.removeItem(PENDING_CHAT_SESSION_KEY); return; }
+    localStorage.setItem(PENDING_CHAT_SESSION_KEY, JSON.stringify({
+      session_id: activeSessionId, // null for a fresh session, set when resuming
+      started_at: sessionStartedAt,
+      ended_at: new Date().toISOString(),
+      messages: meaningful
+    }));
+  } catch(e){ console.warn('persistLocalSession failed', e); }
+}
+
+function describeMicError(err){
+  const name = err && err.name;
+  if (name === 'NotAllowedError' || name === 'PermissionDeniedError')
+    return 'Mic band: tumne ya browser ne permission deny kar di. Address bar mein mic icon dabakar "Allow" karo.';
+  if (name === 'NotFoundError' || name === 'DevicesNotFoundError')
+    return 'Mic nahi mila: is device/browser mein koi microphone connected nahi hai.';
+  if (name === 'NotReadableError' || name === 'TrackStartError')
+    return 'Mic hardware abhi open nahi ho paya (dobara try ho chuki hai). Koi doosra app mic use kar raha ho to usse band karo, ya app ko ek baar dobara kholke try karo.';
+  if (name === 'SecurityError')
+    return 'Mic access block: yeh page HTTPS (ya localhost) par nahi chal raha, isliye browser mic nahi de raha.';
+  if (name === 'OverconstrainedError')
+    return 'Mic settings match nahi hui is device mein.';
+  return 'Mic access mein error: ' + (err && err.message ? err.message : 'wajah pata nahi chali (' + err + ')');
+}
+
+function describeConnectError(err){
+  const msg = (err && err.message) ? err.message : String(err);
+  if (/api key not valid|api_key_invalid|invalid api key/i.test(msg))
+    return 'API key galat hai — Settings mein Google AI Studio se copy karke phir se paste karo.';
+  if (/quota|resource_exhausted|rate limit/i.test(msg))
+    return 'API quota/rate-limit khatam ho gaya — thodi der ruk kar try karo ya naya key banao.';
+  if (/permission_denied|not authorized/i.test(msg))
+    return `Yeh API key Live API (${LIVE_MODEL}) use nahi kar sakti — key ki permissions check karo.`;
+  if (/failed to fetch|network|timeout|ENOTFOUND/i.test(msg))
+    return 'Google se connect nahi ho paya — internet connection check karo.';
+  if (/model not found|not_found/i.test(msg))
+    return 'Model available nahi hai is region/account ke liye.';
+  return 'Connect nahi ho paya, wajah: ' + msg;
+}
+
+function describeCloseEvent(e){
+  if (!e) return 'Session band ho gaya (koi close-details nahi mile).';
+  if (e.code === 1000) return null;
+  const reason = e.reason ? (' — ' + e.reason) : ' (server ne koi reason text nahi bheja)';
+  return 'Session band ho gaya, code ' + e.code + reason + '. Ye us API key/model access ki taraf se koi dikkat ho sakti hai.';
+}
+
+function floatTo16BitPCM(float32Array){
+  const out = new Int16Array(float32Array.length);
+  for (let i = 0; i < float32Array.length; i++){
+    const s = Math.max(-1, Math.min(1, float32Array[i]));
+    out[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+  }
+  return out;
+}
+
+function int16ToBase64(int16Array){
+  const bytes = new Uint8Array(int16Array.buffer);
+  const CHUNK = 0x8000;
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += CHUNK){
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(binary);
+}
+
+function base64ToInt16(base64){
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new Int16Array(bytes.buffer);
+}
+
+function playAudioChunk(base64Data){
+  if (!playCtx) return;
+  try{
+    isModelSpeaking = true;
+    const int16 = base64ToInt16(base64Data);
+    const float32 = new Float32Array(int16.length);
+    for (let i = 0; i < int16.length; i++) float32[i] = int16[i] / 32768;
+
+    const buffer = playCtx.createBuffer(1, float32.length, 24000);
+    buffer.copyToChannel(float32, 0);
+
+    const src = playCtx.createBufferSource();
+    src.buffer = buffer;
+    src.connect(playCtx.destination);
+
+    const now = playCtx.currentTime;
+    if (nextPlayTime < now) nextPlayTime = now + 0.05;
+    src.start(nextPlayTime);
+    nextPlayTime += buffer.duration;
+    scheduledSources.push(src);
+    src.onended = () => {
+      scheduledSources = scheduledSources.filter(s => s !== src);
+      if (scheduledSources.length === 0){
+        setTimeout(() => {
+          if (scheduledSources.length === 0) isModelSpeaking = false;
+        }, 200);
+      }
+    };
+  }catch(err){
+    console.error('playback error', err);
+    setStatus('Audio playback mein dikkat: ' + err.message, 'err');
+  }
+}
+
+function stopPlayback(){
+  scheduledSources.forEach(s => { try{ s.stop(); }catch(e){ /* already stopped, ignore */ } });
+  scheduledSources = [];
+  isModelSpeaking = false;
+  if (playCtx) nextPlayTime = playCtx.currentTime;
+}
+
+// ---- screen-off fix: keep the app process alive (foreground service +
+// wakelock, see VoiceKeepAliveService.java) for the whole live session —
+// this session's mic stays open continuously and playback happens
+// interleaved with it (see isModelSpeaking), so tying this to session
+// start/stop (below) is sufficient — no per-turn handling needed here.
+let keepAliveActive = false;
+async function startKeepAlive(){
+  if (keepAliveActive) return;
+  keepAliveActive = true;
+  try{ await getMicCapturePlugin().startKeepAlive(); }catch(e){ /* browser preview or plugin missing — ignore */ }
+}
+async function stopKeepAlive(){
+  if (!keepAliveActive) return;
+  keepAliveActive = false;
+  try{ await getMicCapturePlugin().stopKeepAlive(); }catch(e){ /* ignore */ }
+}
+
+async function startNativeMic(){
+  const MicCapture = getMicCapturePlugin();
+
+  micListenerHandle = await MicCapture.addListener('audioChunk', (data) => {
+    if (!session || !data || !data.audio) return;
+    if (isModelSpeaking) return;
+    try{
+      session.sendRealtimeInput({ audio: { data: data.audio, mimeType: 'audio/pcm;rate=16000' } });
+    }catch(err){
+      console.error('mic send error', err);
+      setStatus('Audio bhejte waqt error: ' + err.message, 'err');
+    }
+  });
+
+  await MicCapture.start();
+}
+
+async function stopNativeMic(){
+  try{
+    const MicCapture = getMicCapturePlugin();
+    await MicCapture.stop();
+  }catch(e){ /* plugin already gone ya nahi mila, ignore */ }
+  if (micListenerHandle){
+    try{ await micListenerHandle.remove(); }catch(e){}
+    micListenerHandle = null;
+  }
+}
+
+async function startSession(){
+  if (session || isBusy) return;
+  if (isLocked){ setStatus('Iss chat ka report ban chuka hai — naya chat shuru karo.', 'err'); return; }
+
+  // Do NOT reset sessionTurns/currentTurnIndex here — if the user stops
+  // the mic and taps it again without leaving this page, we want THIS
+  // restart to continue the same conversation (same backend session,
+  // same memory of what was said), not start a blank one. Only the
+  // very first tap in this page view sets sessionStartedAt.
+  if (!sessionStartedAt) sessionStartedAt = new Date().toISOString();
+
+  const apiKey = getApiKey();
+  if (!apiKey){
+    setStatus('Pehle Settings mein apni Gemini API key daalo.', 'err');
+    window.location.href = 'settings.html';
+    return;
+  }
+
+  isBusy = true;
+  micBtn.disabled = true;
+  setStatus('Key check ho rahi hai...', null);
+  const keyCheck = await checkGeminiApiKey(apiKey);
+  if (keyCheck.status !== 'valid'){
+    isBusy = false;
+    micBtn.disabled = false;
+    setStatus((keyCheck.message || 'API key sahi nahi hai') + ' — Settings mein jaake theek karo.', 'err');
+    setTimeout(() => { window.location.href = 'settings.html'; }, 1600);
+    return;
+  }
+
+  await startKeepAlive(); // before connect — covers the whole session below, mic + playback both
+
+  setStatus('Gemini se connect ho raha hai...', null);
+  try{
+    const ai = new GoogleGenAI({ apiKey, apiVersion: 'v1alpha' });
+
+    session = await ai.live.connect({
+      model: LIVE_MODEL,
+      config: {
+        responseModalities: [Modality.AUDIO],
+        systemInstruction: { parts: [{ text: buildSystemInstruction() }] },
+        inputAudioTranscription: {},
+        outputAudioTranscription: {},
+        speechConfig: {
+          voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Puck' } }
+        }
+      },
+      callbacks: {
+        onopen: () => {
+          setStatus('Connected — mic on, bolna shuru karo', 'live');
+          micBtn.disabled = false;
+          isBusy = false;
+        },
+        onmessage: (msg) => handleMessage(msg),
+        onerror: (e) => {
+          console.error('live session error', e);
+          const detail = (e && e.message) ? e.message : 'connection ne error event bheja, exact wajah server ne nahi batayi';
+          setStatus('Connection error — ' + detail, 'err');
+          errorAlreadyShown = true;
+          stopSession(true);
+        },
+        onclose: (e) => {
+          if (!errorAlreadyShown){
+            const msg = describeCloseEvent(e);
+            if (msg) setStatus(msg, 'err'); else setStatus('Session band ho gaya.', null);
+          }
+          errorAlreadyShown = false;
+          micBtn.disabled = false;
+          isBusy = false;
+        }
+      }
+    });
+
+    playCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+    nextPlayTime = 0;
+
+    setStatus('Mic (native) shuru ho raha hai...', null);
+    try{
+      await startNativeMic();
+      setStatus('Connected — mic on, bolna shuru karo', 'live');
+    }catch(err){
+      console.error('native mic error', err);
+      setStatus('Native mic start nahi ho paya: ' + (err && err.message ? err.message : err), 'err');
+      errorAlreadyShown = true;
+      stopSession(true);
+      return;
+    }
+
+  }catch(err){
+    console.error('connect error', err);
+    setStatus(describeConnectError(err), 'err');
+    micBtn.disabled = false;
+    isBusy = false;
+    stopKeepAlive(); // connect itself failed — no session was ever created, so stopSession() never runs to release this
+  }
+}
+
+function handleMessage(msg){
+  try{
+    const content = msg.serverContent;
+    if (!content) return;
+
+    if (content.interrupted){
+      stopPlayback();
+    }
+
+    if (content.inputTranscription && content.inputTranscription.text){
+      currentModelLine = null;
+      if (!currentUserLine) currentUserLine = addLine('user');
+      currentUserLine.textContent += content.inputTranscription.text;
+      if (currentTurnIndex >= 0) sessionTurns[currentTurnIndex].content += content.inputTranscription.text;
+      scrollTranscriptToBottom();
+    }
+
+    if (content.outputTranscription && content.outputTranscription.text){
+      currentUserLine = null;
+      if (!currentModelLine) currentModelLine = addLine('model');
+      currentModelLine.textContent += content.outputTranscription.text;
+      if (currentTurnIndex >= 0) sessionTurns[currentTurnIndex].content += content.outputTranscription.text;
+      scrollTranscriptToBottom();
+    }
+
+    if (content.modelTurn && content.modelTurn.parts){
+      for (const part of content.modelTurn.parts){
+        if (part.inlineData && part.inlineData.data){
+          playAudioChunk(part.inlineData.data);
+        }
+      }
+    }
+
+    if (content.turnComplete){
+      isModelSpeaking = false;
+    }
+  }catch(err){
+    console.error('message handling error', err, msg);
+    setStatus('Ek message process karte waqt error aaya: ' + err.message, 'err');
+  }
+}
+
+function stopSession(silent){
+  stopKeepAlive();
+  stopNativeMic().catch((e) => console.error('stopNativeMic error', e));
+
+  stopPlayback();
+  if (playCtx){ try{ playCtx.close(); }catch(e){} playCtx = null; }
+  if (session){ try{ session.close(); }catch(e){ console.error('session close error', e); } session = null; }
+
+  isBusy = false;
+  micBtn.disabled = false;
+  if (!silent) setStatus('Ruk gaya. Dobara shuru karne ke liye mic dabao.', null);
+
+  finalizeAndSyncSession();
+}
+
+// Captures the final state of whatever's currently in progress, then
+// hands off to the SAME sync helper index.html uses for crash recovery —
+// so there's exactly one place that talks to POST /chat/sessions.
+// Fire-and-forget: local data already exists, so even if this fails
+// (network down right at session-end), next app-open recovery retries it.
+//
+// Also folds the just-finished turns into priorTranscriptText and locks
+// in activeSessionId — so if the user taps the mic again without leaving
+// this page, buildSystemInstruction() still has full memory of what was
+// said, AND the new turns append to the same session instead of a new one.
+async function finalizeAndSyncSession(){
+  if (!sessionTurns.length) return;
+  persistLocalSession();
+
+  const justSpoken = sessionTurns
+    .filter(t => t.content && t.content.trim())
+    .map(t => (t.role === 'user' ? 'User' : 'Bolo') + ': ' + t.content)
+    .join('\n');
+  if (justSpoken){
+    priorTranscriptText = priorTranscriptText ? (priorTranscriptText + '\n' + justSpoken) : justSpoken;
+    if (priorTranscriptText.length > 6000) priorTranscriptText = priorTranscriptText.slice(priorTranscriptText.length - 6000);
+  }
+
+  const syncedSessionId = await syncPendingChatSession();
+  if (syncedSessionId){
+    activeSessionId = syncedSessionId;
+    // Just-finished turns synced successfully — check if this session now
+    // crosses the report threshold, and if so surface the pill immediately
+    // instead of making the user go find it in History.
+    knownTurnCount += sessionTurns.length;
+    if (!isLocked && !reportPill.classList.contains('show') && knownTurnCount >= MIN_TURNS_FOR_ANALYSIS){
+      showReportPill(activeSessionId, false);
+    }
+  }
+
+  sessionTurns = [];
+  currentTurnIndex = -1;
+  // sessionStartedAt is deliberately NOT reset — if the mic gets tapped
+  // again in this same page view, it's still the same overall session.
+}
+
+window.addEventListener('beforeunload', () => {
+  if (session) stopSession(true);
+});
+
+window.addEventListener('error', (e) => {
+  console.error('uncaught error', e.error || e.message);
+});
+window.addEventListener('unhandledrejection', (e) => {
+  console.error('unhandled promise rejection', e.reason);
+});
+
+micBtn.addEventListener('click', () => {
+  if (session) stopSession();
+  else startSession();
+});
+</script>
+</body>
+</html>

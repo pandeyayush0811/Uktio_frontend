@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Utkio</string>
+    <string name="title_activity_main">Utkio</string>
+    <string name="package_name">com.utkio.app</string>
+    <string name="custom_url_scheme">com.utkio.app</string>
+</resources>

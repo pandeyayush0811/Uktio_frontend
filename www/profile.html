@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Utkio — Profile</title>
+<link rel="stylesheet" href="shared/style.css">
+<style>
+  .wrap{ overflow-y:auto; }
+  .edit-form{ display:none; }
+  .edit-form.open{ display:block; margin-top:16px; }
+  .view-mode.hidden{ display:none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <a class="icon-btn" href="chat.html" aria-label="Back">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+    </a>
+    <h1 class="app-title" style="font-size:1.3rem;">Profile</h1>
+    <span style="width:38px;"></span>
+  </header>
+
+  <div id="loadingMsg" class="status-msg" style="margin-top:16px;">Loading...</div>
+
+  <div id="viewMode" class="view-mode hidden" style="margin-top:16px;">
+    <div class="profile-head-card">
+      <div class="profile-head-avatar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="26" height="26"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      </div>
+      <div>
+        <div class="profile-head-name" id="vName">—</div>
+        <div class="profile-head-email" id="vEmail">—</div>
+      </div>
+    </div>
+
+    <div class="profile-fields-card">
+      <div class="profile-row">
+        <div class="profile-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+        <div><div class="profile-row-label">Name</div></div>
+        <div class="profile-row-right"><span class="profile-row-value" id="vNameRow">—</span></div>
+      </div>
+      <div class="profile-row">
+        <div class="profile-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+        <div><div class="profile-row-label">Age</div></div>
+        <div class="profile-row-right"><span class="profile-row-value" id="vAge">—</span></div>
+      </div>
+      <div class="profile-row" style="flex-direction:column;align-items:flex-start;">
+        <div style="display:flex;align-items:center;gap:14px;width:100%;">
+          <div class="profile-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg></div>
+          <div class="profile-row-label">Student or Working Professional</div>
+        </div>
+        <div class="profile-toggle-row" style="width:100%;">
+          <div class="profile-toggle" id="vOccStudent">Student</div>
+          <div class="profile-toggle" id="vOccPro">Working Professional</div>
+        </div>
+      </div>
+      <div class="profile-row">
+        <div class="profile-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c0 1.5 3 3 6 3s6-1.5 6-3v-5"/></svg></div>
+        <div><div class="profile-row-label" id="vOccDetailLabel">Class / Degree / Course</div></div>
+        <div class="profile-row-right"><span class="profile-row-value" id="vOccDetail">—</span></div>
+      </div>
+    </div>
+
+    <button class="edit-profile-btn" id="editBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg>
+      Edit Profile
+    </button>
+  </div>
+
+  <!-- Full editable form — same fields as onboarding, reused here for editing. -->
+  <div class="card edit-form" id="editForm">
+    <label for="f_name">Name</label>
+    <input type="text" id="f_name">
+
+    <label for="f_age">Age</label>
+    <input type="text" inputmode="numeric" id="f_age">
+
+    <label>Student or working professional?</label>
+    <div class="chip-group compact" id="f_occ" style="flex-direction:row;flex-wrap:wrap;"></div>
+
+    <label id="occDetailLabel" for="f_occdetail">Class/course</label>
+    <input type="text" id="f_occdetail">
+
+    <label for="f_city">City (optional)</label>
+    <input type="text" id="f_city">
+
+    <label>Goal</label>
+    <div class="chip-group" id="f_goal"></div>
+
+    <label>Self-rated English level</label>
+    <div class="chip-group" id="f_level"></div>
+
+    <label>How much time do you practice each day?</label>
+    <div class="chip-group" id="f_time"></div>
+
+    <label for="f_sample">Tell me about yourself in english(to know your english level)</label>
+    <textarea id="f_sample" maxlength="500"></textarea>
+    <div class="char-hint" id="charHint">0 / 500</div>
+
+    <div class="status-msg" id="saveStatus"></div>
+    <button class="primary" id="saveBtn">Save changes</button>
+    <button class="secondary" id="cancelBtn">Cancel</button>
+  </div>
+</div>
+
+<script type="module">
+import './shared/config.js';
+import { requireAuthOrRedirect, apiFetch, getCachedProfileBasic, setCachedProfileBasic } from './shared/auth.js';
+import { initBackNav } from './shared/back-nav.js';
+
+requireAuthOrRedirect();
+initBackNav('chat.html');
+
+const GOAL_OPTIONS = [
+  { value: 'interview', label: 'Job interview / professional English' },
+  { value: 'daily_confidence', label: 'Roz ki confidence' },
+  { value: 'exam_prep', label: 'Exam prep (IELTS/TOEFL)' },
+  { value: 'travel', label: 'Travel' },
+  { value: 'content_creation', label: 'Content creation' },
+  { value: 'general', label: 'General improvement' }
+];
+const LEVEL_OPTIONS = [
+  { value: 'beginner', label: 'Beginner' }, { value: 'intermediate', label: 'Intermediate' }, { value: 'advanced', label: 'Advanced' }
+];
+const TIME_OPTIONS = [
+  { value: '5_10', label: '5–10 min' }, { value: '15_20', label: '15–20 min' }, { value: '30_plus', label: '30+ min' }
+];
+const OCC_OPTIONS = [ { value: 'student', label: 'Student' }, { value: 'professional', label: 'Professional' } ];
+
+let profile = {};
+let email = '';
+
+function renderChips(container, options, currentValue, onSelect){
+  container.innerHTML = '';
+  options.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'chip' + (currentValue === opt.value ? ' selected' : '');
+    btn.textContent = opt.label;
+    btn.addEventListener('click', () => {
+      container.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
+      btn.classList.add('selected');
+      onSelect(opt.value);
+    });
+    container.appendChild(btn);
+  });
+}
+
+function renderView(){
+  document.getElementById('vName').textContent = profile.name || '—';
+  document.getElementById('vEmail').textContent = email || '—';
+  document.getElementById('vNameRow').textContent = profile.name || '—';
+  document.getElementById('vAge').textContent = profile.age || '—';
+
+  const isStudent = profile.occupation_type === 'student';
+  document.getElementById('vOccStudent').classList.toggle('selected', isStudent);
+  document.getElementById('vOccPro').classList.toggle('selected', !isStudent && profile.occupation_type === 'professional');
+  document.getElementById('vOccDetailLabel').textContent = isStudent ? 'Class / Degree / Course' : 'Profession / Role';
+  document.getElementById('vOccDetail').textContent = (isStudent ? profile.class_grade : profile.profession) || '—';
+}
+
+function fillEditForm(){
+  document.getElementById('f_name').value = profile.name || '';
+  document.getElementById('f_age').value = profile.age || '';
+  document.getElementById('f_city').value = profile.city || '';
+  document.getElementById('f_sample').value = profile.english_sample || '';
+  document.getElementById('charHint').textContent = (profile.english_sample || '').length + ' / 500';
+
+  renderChips(document.getElementById('f_occ'), OCC_OPTIONS, profile.occupation_type, v => {
+    profile.occupation_type = v; updateOccDetailField();
+  });
+  updateOccDetailField();
+  renderChips(document.getElementById('f_goal'), GOAL_OPTIONS, profile.goal, v => profile.goal = v);
+  renderChips(document.getElementById('f_level'), LEVEL_OPTIONS, profile.self_level, v => profile.self_level = v);
+  renderChips(document.getElementById('f_time'), TIME_OPTIONS, profile.daily_time, v => profile.daily_time = v);
+}
+
+function updateOccDetailField(){
+  const isStudent = profile.occupation_type === 'student';
+  document.getElementById('occDetailLabel').textContent = isStudent ? 'Class/course' : 'Profession/role';
+  document.getElementById('f_occdetail').value = isStudent ? (profile.class_grade || '') : (profile.profession || '');
+}
+
+const loadingMsg = document.getElementById('loadingMsg');
+const viewMode = document.getElementById('viewMode');
+const editForm = document.getElementById('editForm');
+
+// Cache-first: if we have a cached name/email from a previous visit,
+// show the header instantly instead of a blank "Loading..." screen.
+// The rest of the fields (age, goal, etc.) still wait for the real
+// fetch below — only name/email are cached, that's all the drawer
+// and this header actually need to feel instant.
+const cachedBasic = getCachedProfileBasic();
+if (cachedBasic) {
+  loadingMsg.style.display = 'none';
+  viewMode.classList.remove('hidden');
+  document.getElementById('vName').textContent = cachedBasic.name || '—';
+  document.getElementById('vEmail').textContent = cachedBasic.email || '—';
+}
+
+(async () => {
+  try {
+    const data = await apiFetch('/users/me');
+    profile = data.profile || {};
+    email = data.email || '';
+    loadingMsg.style.display = 'none';
+    viewMode.classList.remove('hidden');
+    renderView();
+    setCachedProfileBasic({ name: profile.name || '', email }); // keep cache fresh for next time
+  } catch (err) {
+    if (!cachedBasic) { // only show a hard error if we had nothing to fall back on
+      loadingMsg.className = 'status-msg err';
+      loadingMsg.textContent = 'Profile load nahi ho paya: ' + err.message;
+    }
+  }
+})();
+
+document.getElementById('editBtn').addEventListener('click', () => {
+  fillEditForm();
+  viewMode.classList.add('hidden');
+  editForm.classList.add('open');
+});
+
+document.getElementById('cancelBtn').addEventListener('click', () => {
+  editForm.classList.remove('open');
+  viewMode.classList.remove('hidden');
+});
+
+document.getElementById('f_age').addEventListener('input', e => { e.target.value = e.target.value.replace(/[^0-9]/g, ''); });
+document.getElementById('f_sample').addEventListener('input', e => {
+  document.getElementById('charHint').textContent = e.target.value.length + ' / 500';
+});
+
+document.getElementById('saveBtn').addEventListener('click', async () => {
+  const isStudent = profile.occupation_type === 'student';
+  const occDetail = document.getElementById('f_occdetail').value.trim();
+  const payload = {
+    name: document.getElementById('f_name').value.trim(),
+    age: Number(document.getElementById('f_age').value),
+    occupation_type: profile.occupation_type,
+    class_grade: isStudent ? occDetail : undefined,
+    profession: !isStudent ? occDetail : undefined,
+    city: document.getElementById('f_city').value.trim(),
+    goal: profile.goal,
+    self_level: profile.self_level,
+    daily_time: profile.daily_time,
+    english_sample: document.getElementById('f_sample').value.trim()
+  };
+  const saveStatus = document.getElementById('saveStatus');
+  saveStatus.className = 'status-msg'; saveStatus.textContent = 'Saving...';
+  try {
+    const res = await apiFetch('/users/profile', { method: 'PATCH', body: JSON.stringify(payload) });
+    profile = res.profile || profile;
+    saveStatus.textContent = '';
+    editForm.classList.remove('open');
+    viewMode.classList.remove('hidden');
+    renderView();
+  } catch (err) {
+    saveStatus.className = 'status-msg err';
+    saveStatus.textContent = err.message || 'Save nahi ho paya.';
+  }
+});
+
+</script>
+</body>
+</html>

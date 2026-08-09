@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Utkio — Login</title>
+<link rel="stylesheet" href="shared/style.css">
+</head>
+<body>
+<div class="wrap" style="justify-content:center;">
+  <h1 class="app-title" style="text-align:center;margin-bottom:24px;">Utkio</h1>
+
+  <div class="card">
+    <form id="authForm">
+      <label for="email">Email</label>
+      <input type="email" id="email" required autocomplete="email">
+
+      <label for="password">Password</label>
+      <input type="password" id="password" required autocomplete="current-password" minlength="6">
+
+      <div class="status-msg" id="statusMsg"></div>
+
+      <button type="submit" class="primary" id="submitBtn">Login</button>
+    </form>
+
+    <button class="secondary" id="googleBtn">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l6-6C34.5 5.1 29.5 3 24 3 12.4 3 3 12.4 3 24s9.4 21 21 21 21-9.4 21-21c0-1.2-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.6 18.9 13 24 13c3.1 0 5.8 1.1 8 3l6-6C34.5 5.1 29.5 3 24 3 16.3 3 9.6 7.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 45c5.4 0 10.3-2.1 13.9-5.4l-6.4-5.3C29.4 36 26.8 37 24 37c-5.2 0-9.6-3.3-11.3-8l-6.6 5C9.5 40.6 16.2 45 24 45z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.2 4.3-4.1 5.7l6.4 5.3C41.4 35.6 45 30.3 45 24c0-1.2-.1-2.4-.4-3.5z"/></svg>
+      <span id="googleBtnLabel">Continue with Google</span>
+    </button>
+
+    <span class="text-link" id="toggleMode">Create new account?</span>
+  </div>
+
+  <!-- <footer></footer> -->
+</div>
+
+<script type="module">
+import './shared/config.js';
+import { apiFetch, saveSession, getSession, goToPostAuthDestination } from './shared/auth.js';
+import { initBackNav } from './shared/back-nav.js';
+initBackNav(null);
+
+// Already logged in? skip straight to chat/onboarding (whichever applies).
+if (getSession()?.access_token) {
+  goToPostAuthDestination(text => setStatus(text));
+}
+
+let mode = 'login'; // 'login' | 'signup'
+let isAuthBusy = false; // single source of truth — locks BOTH auth flows together
+
+const form = document.getElementById('authForm');
+const submitBtn = document.getElementById('submitBtn');
+const toggleMode = document.getElementById('toggleMode');
+const statusMsg = document.getElementById('statusMsg');
+const googleBtn = document.getElementById('googleBtn');
+const googleBtnLabel = document.getElementById('googleBtnLabel');
+
+const GOOGLE_BTN_DEFAULT_LABEL = googleBtnLabel.textContent;
+
+function setStatus(text, cls){
+  statusMsg.textContent = text || '';
+  statusMsg.className = 'status-msg' + (cls ? ' ' + cls : '');
+}
+
+// Centralized lock/unlock so email/password form and Google button
+// can never both be active at the same time, and neither can be
+// double-fired by rapid taps.
+function setAuthBusy(busy){
+  isAuthBusy = busy;
+
+  submitBtn.disabled = busy;
+  googleBtn.disabled = busy;
+  googleBtn.classList.toggle('btn-loading', busy);
+
+  toggleMode.style.pointerEvents = busy ? 'none' : '';
+  toggleMode.style.opacity = busy ? '0.5' : '';
+}
+
+toggleMode.addEventListener('click', () => {
+  if (isAuthBusy) return;
+  mode = mode === 'login' ? 'signup' : 'login';
+  submitBtn.textContent = mode === 'login' ? 'Login' : 'Sign up';
+  toggleMode.textContent = mode === 'login' ? 'Naya account banao' : 'Already an account? Login';
+  setStatus('');
+});
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (isAuthBusy) return; // race-condition guard against double submit
+
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+
+  setAuthBusy(true);
+  setStatus(mode === 'login' ? 'Logging in...' : 'Account bana rahe hain...', null);
+
+  try {
+    const data = await apiFetch('/auth/' + mode, {
+      method: 'POST',
+      body: JSON.stringify({ email, password })
+    });
+
+    if (data.session) {
+      saveSession(data.session);
+      await goToPostAuthDestination(text => setStatus(text));
+      return; // navigating away — no need to unlock, avoids flicker
+    } else {
+      // signup without immediate session = email confirmation required
+      setStatus(data.message || 'Check your email to confirm your account.', 'ok');
+      setAuthBusy(false);
+    }
+  } catch (err) {
+    setStatus(err.message, 'err');
+    setAuthBusy(false);
+  }
+});
+
+// PASTE your Google Cloud Console WEB Client ID here (same one used for
+// the Supabase redirect URI setup) — NOT the Android client ID.
+const GOOGLE_WEB_CLIENT_ID = '131563191455-5u8fec15l0bfei6pfp4h3befj20b70c1.apps.googleusercontent.com';
+let googleInitialized = false;
+
+async function ensureGoogleInitialized(){
+  if (googleInitialized) return;
+  await window.Capacitor.Plugins.GoogleSignIn.initialize({ clientId: GOOGLE_WEB_CLIENT_ID });
+  googleInitialized = true;
+}
+
+googleBtn.addEventListener('click', async () => {
+  if (isAuthBusy) return; // <-- core fix: blocks double-tap / double-fire
+
+  setAuthBusy(true);
+  googleBtnLabel.textContent = 'Signing in...';
+  setStatus('Opening Google Sign-In...', null);
+
+  try {
+    if (!window.Capacitor?.Plugins?.GoogleSignIn) {
+      throw new Error('Google Sign-In plugin not set up yet in this build — see setup notes.');
+    }
+    await ensureGoogleInitialized();
+    const result = await window.Capacitor.Plugins.GoogleSignIn.signIn();
+    if (!result?.idToken) throw new Error('Google did not return an idToken.');
+
+    setStatus('Verifying with server...', null);
+    const data = await apiFetch('/auth/google', {
+      method: 'POST',
+      body: JSON.stringify({ idToken: result.idToken })
+    });
+    saveSession(data.session);
+    await goToPostAuthDestination(text => setStatus(text));
+    // navigating away — no need to unlock/reset label here
+  } catch (err) {
+    setStatus(err.message, 'err');
+    googleBtnLabel.textContent = GOOGLE_BTN_DEFAULT_LABEL;
+    setAuthBusy(false); // only unlock on failure — success path navigates away
+  }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Utkio — Areas to work on</title>
+<style>
+  :root{
+    --accent: #6a63f1;
+    --g-purple: #8b6cff;
+    --g-blue: #4ea1ff;
+    --g-green: #34d399;
+    --g-gold: #f5b942;
+    --g-pink: #ff6fa5;
+    --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans Devanagari', sans-serif;
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ height:100%; overflow:hidden; overscroll-behavior:none; }
+  body{
+    margin:0; font-family:var(--font); background:#0b0b10; color:#fff;
+    display:flex; flex-direction:column;
+    padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-bottom);
+  }
+  /* subtle ambient glow behind everything */
+  body::before{
+    content:''; position:fixed; inset:-20%; z-index:0; pointer-events:none;
+    background:
+      radial-gradient(circle at 15% 10%, rgba(139,108,255,0.20), transparent 40%),
+      radial-gradient(circle at 85% 80%, rgba(78,161,255,0.14), transparent 40%);
+  }
+
+  .topbar{ position:relative; z-index:2; display:flex; align-items:center; justify-content:space-between; padding:14px 18px 6px; }
+  .close-btn{
+    width:38px; height:38px; border-radius:50%; background:rgba(255,255,255,0.08); border:none;
+    display:flex; align-items:center; justify-content:center; color:#fff; cursor:pointer;
+  }
+  .close-btn svg{ width:18px; height:18px; }
+  .dots{ display:flex; gap:6px; }
+  .dot{ width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,0.22); transition:all 0.25s; }
+  .dot.active{ width:20px; background:#fff; }
+  .spacer38{ width:38px; }
+
+  .stage{ position:relative; z-index:1; flex:1; min-height:0; margin:8px 16px; touch-action:none; }
+  .card{
+    position:absolute; inset:0; border-radius:28px; padding:30px 26px 26px;
+    display:flex; flex-direction:column;
+    -webkit-user-select:none; user-select:none; touch-action:none;
+    transition:transform 0.34s cubic-bezier(.22,.9,.32,1), opacity 0.34s;
+    will-change:transform;
+    background:linear-gradient(160deg,#1b1b26,#111118);
+    border:1px solid rgba(255,255,255,0.07);
+    box-shadow:0 24px 60px -24px rgba(0,0,0,0.6);
+  }
+  .card.behind{ transition:transform 0.34s ease, opacity 0.34s; pointer-events:none; }
+  .card.dragging{ transition:none; }
+
+  .card.glow-purple{ box-shadow:0 0 0 1px rgba(139,108,255,0.35), 0 26px 60px -20px rgba(139,108,255,0.35); }
+  .card.glow-blue{ box-shadow:0 0 0 1px rgba(78,161,255,0.35), 0 26px 60px -20px rgba(78,161,255,0.35); }
+  .card.glow-green{ box-shadow:0 0 0 1px rgba(52,211,153,0.35), 0 26px 60px -20px rgba(52,211,153,0.35); }
+  .card.glow-gold{ box-shadow:0 0 0 1px rgba(245,185,66,0.35), 0 26px 60px -20px rgba(245,185,66,0.35); }
+  .card.glow-pink{ box-shadow:0 0 0 1px rgba(255,111,165,0.35), 0 26px 60px -20px rgba(255,111,165,0.35); }
+
+  .card-icon{
+    width:46px; height:46px; border-radius:14px; display:flex; align-items:center; justify-content:center;
+    margin-bottom:18px;
+  }
+  .icon-purple{ background:rgba(139,108,255,0.18); color:var(--g-purple); }
+  .icon-blue{ background:rgba(78,161,255,0.18); color:var(--g-blue); }
+  .icon-green{ background:rgba(52,211,153,0.18); color:var(--g-green); }
+  .icon-gold{ background:rgba(245,185,66,0.18); color:var(--g-gold); }
+  .icon-pink{ background:rgba(255,111,165,0.18); color:var(--g-pink); }
+  .card-icon svg{ width:22px; height:22px; }
+
+  .count-badge{
+    position:absolute; top:26px; right:24px; font-size:0.7rem; font-weight:700;
+    background:rgba(255,255,255,0.1); border-radius:999px; padding:4px 12px; color:rgba(255,255,255,0.85);
+  }
+
+  .card-title{ font-size:1.4rem; font-weight:800; line-height:1.3; margin-bottom:14px; }
+
+  .card-face{ flex:1; min-height:0; display:flex; flex-direction:column; }
+  .card-reason{ font-size:1.08rem; line-height:1.6; color:rgba(255,255,255,0.88); font-weight:500; }
+  .card-context{ font-size:0.86rem; line-height:1.55; color:rgba(255,255,255,0.5); margin-top:14px; }
+
+  .tap-hint{
+    margin-top:auto; display:flex; align-items:center; justify-content:center; gap:6px;
+    font-size:0.78rem; font-weight:600; color:rgba(255,255,255,0.5);
+    animation:bob 1.6s ease-in-out infinite;
+  }
+  @keyframes bob{ 0%,100%{ transform:translateY(0);} 50%{ transform:translateY(4px);} }
+
+  .examples-view{ flex:1; min-height:0; display:flex; flex-direction:column; }
+  .examples-scroll{ flex:1; min-height:0; overflow-y:auto; margin:2px -6px 0; padding:0 6px; touch-action:pan-y; }
+  .ex-row{
+    background:rgba(255,255,255,0.06); border-radius:14px; padding:13px 14px; margin-bottom:10px; font-size:0.86rem;
+  }
+  .ex-hindi{ color:rgba(255,255,255,0.55); margin-bottom:4px; }
+  .ex-wrong{ color:#ff8a80; text-decoration:line-through; opacity:0.85; }
+  .ex-right{ color:#7ee2a8; font-weight:700; margin-top:2px; }
+  .back-hint{ text-align:center; font-size:0.76rem; color:rgba(255,255,255,0.4); margin-top:10px; }
+
+  .swipe-hint-row{ display:flex; justify-content:space-between; padding:4px 4px 0; font-size:0.7rem; font-weight:700; color:rgba(255,255,255,0.3); }
+
+  /* ---- summary card ---- */
+  .summary-card{ background:linear-gradient(160deg,#2a2470,#151030); align-items:center; text-align:center; justify-content:center; box-shadow:0 0 0 1px rgba(139,108,255,0.4), 0 30px 70px -20px rgba(106,99,241,0.55) !important; }
+  .score-ring{ position:relative; width:150px; height:150px; margin:0 auto 16px; }
+  .score-ring svg{ transform:rotate(-90deg); width:150px; height:150px; }
+  .score-ring circle{ fill:none; stroke-width:9; }
+  .score-ring .bg{ stroke:rgba(255,255,255,0.14); }
+  .score-ring .fg{ stroke:#fff; stroke-linecap:round; transition:stroke-dashoffset 1.1s cubic-bezier(.22,.9,.32,1); }
+  .score-num{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .score-num .big{ font-size:2.3rem; font-weight:800; line-height:1; }
+  .score-num .small{ font-size:0.72rem; opacity:0.7; margin-top:3px; }
+  .summary-card .growth-note{ font-size:0.92rem; line-height:1.6; color:rgba(255,255,255,0.85); padding:0 6px; }
+  .summary-title{ font-size:1.1rem; font-weight:700; margin-bottom:4px; }
+
+  .bottom-actions{ position:relative; z-index:2; padding:14px 20px calc(18px + env(safe-area-inset-bottom)); display:flex; gap:10px; }
+  .bottom-actions button{
+    flex:1; font-family:inherit; font-size:0.94rem; font-weight:700; padding:14px 16px; border-radius:14px; border:none; cursor:pointer;
+  }
+  .btn-primary{ background:linear-gradient(120deg,var(--accent),#8b6cff); color:#fff; }
+  .btn-ghost{ background:rgba(255,255,255,0.08); color:#fff; }
+  .hidden{ display:none !important; }
+
+  .empty-state{ display:flex; flex:1; align-items:center; justify-content:center; text-align:center; padding:40px; color:rgba(255,255,255,0.6); font-size:0.9rem; }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <button class="close-btn" id="closeBtn" aria-label="Close">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <div class="dots" id="dots"></div>
+    <span class="spacer38"></span>
+  </div>
+
+  <div class="stage" id="stage"></div>
+
+  <div class="bottom-actions" id="bottomActions">
+    <button class="btn-ghost" id="backToReportBtn">Report</button>
+    <button class="btn-primary hidden" id="startQuizBtn">Quiz shuru karo 🎯</button>
+  </div>
+
+<script type="module">
+import './shared/config.js';
+import { requireAuthOrRedirect, apiFetch } from './shared/auth.js';
+import { escapeHtml } from './shared/sanitize.js';
+import { buildScoreRingSvg } from './shared/score-ring.js';
+
+requireAuthOrRedirect();
+
+const params = new URLSearchParams(window.location.search);
+const sessionId = params.get('session');
+const stage = document.getElementById('stage');
+const dotsEl = document.getElementById('dots');
+const closeBtn = document.getElementById('closeBtn');
+const backToReportBtn = document.getElementById('backToReportBtn');
+const startQuizBtn = document.getElementById('startQuizBtn');
+
+const GLOWS = ['purple', 'blue', 'green', 'gold', 'pink'];
+const ICONS = {
+  purple: '<path d="M12 9v4M12 17h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>',
+  blue: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>',
+  green: '<path d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16z"/><path d="M9 12l2 2 4-4"/>',
+  gold: '<path d="M18 8A6 6 0 1 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>',
+  pink: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>'
+};
+
+function goBackToReport(){ window.location.href = 'report.html?session=' + encodeURIComponent(sessionId || ''); }
+closeBtn.addEventListener('click', goBackToReport);
+backToReportBtn.addEventListener('click', goBackToReport);
+startQuizBtn.addEventListener('click', () => { window.location.href = 'quiz.html?session=' + encodeURIComponent(sessionId || ''); });
+
+function buildMistakeCardHtml(m, glow, idx){
+  const iconSvg = ICONS[glow];
+  return `
+    <div class="card glow-${glow}" data-flip="front">
+      <span class="count-badge">${m.occurred_count ? escapeHtml(m.occurred_count) + '× is session mein' : ''}</span>
+      <div class="card-icon icon-${glow}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${iconSvg}</svg></div>
+      <div class="card-title">${escapeHtml(m.title)}</div>
+
+      <div class="card-face front-face">
+        <div class="card-reason">${escapeHtml(m.reason)}</div>
+        ${m.context ? `<div class="card-context">${escapeHtml(m.context)}</div>` : ''}
+        <div class="tap-hint">Examples dekhne ke liye tap karo ↓</div>
+      </div>
+
+      <div class="card-face examples-view hidden">
+        <div class="examples-scroll">
+          ${(m.examples || []).map(ex => `
+            <div class="ex-row">
+              ${ex.hindi ? `<div class="ex-hindi">${escapeHtml(ex.hindi)}</div>` : ''}
+              <div class="ex-wrong">✗ ${escapeHtml(ex.wrong_english)}</div>
+              <div class="ex-right">✓ ${escapeHtml(ex.correct_english)}</div>
+            </div>`).join('')}
+        </div>
+        <div class="back-hint">Wapas jaane ke liye tap karo ↑</div>
+      </div>
+    </div>`;
+}
+
+function buildSummaryCardHtml(score, growth){
+  const ringSvg = buildScoreRingSvg(score, { radius: 66, center: 75, viewBoxSize: 150 });
+  return `
+    <div class="card summary-card">
+      <div class="summary-title">Aaj ka session</div>
+      <div class="score-ring">
+        ${ringSvg}
+        <div class="score-num"><span class="big" data-count-target="${score}">0</span><span class="small">/ 10 confidence</span></div>
+      </div>
+      ${growth ? `<div class="growth-note">🌱 ${escapeHtml(growth)}</div>` : ''}
+    </div>`;
+}
+
+function mountDeck(cards, quizAvailable){
+  let index = 0;
+  let animatedSummary = false;
+  dotsEl.innerHTML = cards.map((_, i) => `<span class="dot${i === 0 ? ' active' : ''}"></span>`).join('');
+
+  function animateSummaryIfNeeded(cardEl){
+    if (animatedSummary) return;
+    const circle = cardEl.querySelector('.fg');
+    const numEl = cardEl.querySelector('[data-count-target]');
+    if (!circle || !numEl) return;
+    animatedSummary = true;
+    requestAnimationFrame(() => { circle.style.strokeDashoffset = circle.dataset.targetOffset; });
+    const target = parseInt(numEl.dataset.countTarget, 10) || 0;
+    const start = performance.now(); const dur = 1000;
+    function tick(now){
+      const p = Math.min(1, (now - start) / dur);
+      numEl.textContent = Math.round(target * (1 - Math.pow(1 - p, 3)));
+      if (p < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+
+  function render(){
+    stage.innerHTML = '';
+    [1, 0].forEach(offset => {
+      const i = index + offset;
+      if (i >= cards.length) return;
+      const wrap = document.createElement('div');
+      wrap.innerHTML = cards[i].html;
+      const el = wrap.firstElementChild;
+      if (offset === 1){
+        el.classList.add('behind');
+        el.style.transform = 'translateY(16px) scale(0.93)';
+        el.style.opacity = '0.55';
+      } else {
+        el.style.transform = 'translateY(0) scale(1)';
+        attachInteractions(el, i);
+      }
+      stage.appendChild(el);
+    });
+    dotsEl.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('active', i === index));
+    const isLast = index === cards.length - 1;
+    startQuizBtn.classList.toggle('hidden', !(isLast && quizAvailable));
+    const top = stage.querySelector('.card:not(.behind)');
+    if (top && cards[index].kind === 'summary') animateSummaryIfNeeded(top);
+  }
+
+  function goTo(newIndex){
+    index = Math.max(0, Math.min(cards.length - 1, newIndex));
+    render();
+  }
+
+  function attachInteractions(el, cardIdx){
+    let startX = 0, startY = 0, dx = 0, dragging = false, pointerId = null;
+    const startTime = { t: 0 };
+
+    const onDown = (e) => {
+      dragging = true; pointerId = e.pointerId;
+      el.setPointerCapture(pointerId);
+      el.classList.add('dragging');
+      startX = e.clientX; startY = e.clientY; dx = 0;
+      startTime.t = performance.now();
+    };
+    const onMove = (e) => {
+      if (!dragging) return;
+      dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      // only translate horizontally once intent is clearly horizontal
+      if (Math.abs(dx) > Math.abs(dy)) {
+        el.style.transform = `translateX(${dx}px) rotate(${dx / 20}deg)`;
+        el.style.opacity = String(1 - Math.min(0.5, Math.abs(dx) / 500));
+      }
+    };
+    const onUp = (e) => {
+      if (!dragging) return;
+      dragging = false; el.classList.remove('dragging');
+      try { el.releasePointerCapture(pointerId); } catch (err) {}
+      const elapsed = performance.now() - startTime.t;
+      const dy = e.clientY - startY;
+      const isTap = Math.abs(dx) < 8 && Math.abs(dy) < 8 && elapsed < 350;
+
+      if (isTap && cards[cardIdx].kind === 'mistake'){
+        const front = el.querySelector('.front-face');
+        const back = el.querySelector('.examples-view');
+        const showingBack = !back.classList.contains('hidden');
+        front.classList.toggle('hidden', !showingBack);
+        back.classList.toggle('hidden', showingBack);
+        el.style.transform = 'translateX(0) rotate(0deg)';
+        el.style.opacity = '1';
+        return;
+      }
+
+      if (dx < -80 && cardIdx < cards.length - 1){ goTo(cardIdx + 1); }
+      else if (dx > 80 && cardIdx > 0){ goTo(cardIdx - 1); }
+      else { el.style.transform = 'translateX(0) rotate(0deg)'; el.style.opacity = '1'; }
+      dx = 0;
+    };
+
+    el.addEventListener('pointerdown', onDown);
+    el.addEventListener('pointermove', onMove);
+    el.addEventListener('pointerup', onUp);
+    el.addEventListener('pointercancel', onUp);
+  }
+
+  render();
+}
+
+async function init(){
+  if (!sessionId){
+    stage.innerHTML = '<div class="empty-state">Session ID missing.</div>';
+    return;
+  }
+  try {
+    const data = await apiFetch('/chat/sessions/' + sessionId + '/report');
+    const report = data.report;
+    const mistakes = report.mistakes || [];
+    if (!mistakes.length){
+      stage.innerHTML = '<div class="empty-state">Is session mein koi specific mistake nahi mili — bahut badhiya! 🎉</div>';
+      return;
+    }
+    const cards = mistakes.map((m, i) => ({
+      kind: 'mistake',
+      html: buildMistakeCardHtml(m, GLOWS[i % GLOWS.length], i)
+    }));
+    cards.push({ kind: 'summary', html: buildSummaryCardHtml(report.confidence_score || 5, report.growth_note || '') });
+    const quizAvailable = Array.isArray(report.quiz) && report.quiz.length > 0;
+    mountDeck(cards, quizAvailable);
+  } catch (err) {
+    stage.innerHTML = '<div class="empty-state">Load nahi ho paya: ' + escapeHtml(err.message || 'try again') + '</div>';
+  }
+}
+
+init();
+</script>
+</body>
+</html>
