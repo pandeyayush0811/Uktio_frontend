@@ -27,10 +27,19 @@ initBackNav(null);
 
 const splashStatus = document.getElementById('splashStatus');
 
-setTimeout(() => {
+setTimeout(async () => {
   const session = getSession();
   if (session && session.access_token) {
-    syncPendingChatSession(); // fire-and-forget — never blocks navigation
+    // Wait for any pending offline session to finish syncing BEFORE
+    // navigating away. Previously this was fire-and-forget, racing
+    // against goToPostAuthDestination()'s own navigation — if that
+    // navigation won the race (common: it's often a faster call), the
+    // browser/WebView cancels this still-in-flight request and the
+    // session is lost for good (it only lived in localStorage on this
+    // one device, and never reaches the DB). syncPendingChatSession()
+    // itself is a no-op (resolves immediately) when there's nothing
+    // pending, so this adds no delay for the common case.
+    await syncPendingChatSession();
     goToPostAuthDestination(text => { splashStatus.textContent = text; });
   } else {
     window.location.href = 'login.html';

@@ -514,6 +514,15 @@ let errorAlreadyShown = false;
 let sessionTurns = [];
 let sessionStartedAt = null;
 let currentTurnIndex = -1;
+// Guards finalizeAndSyncSession() against firing twice for the same
+// session — it now gets called both from stopSession() (normal, user-
+// initiated stop) AND from the live-session's onclose callback (covers
+// the case where the connection just dies on its own — e.g. a phone
+// call takes over the mic — without ever going through stopSession()).
+// When the user taps mic to stop, stopSession() closes the SDK session,
+// which then asynchronously fires onclose on its own — without this
+// guard, that would trigger a second, duplicate sync of the same turns.
+let finalizeInFlight = false;
 
 // Resume support: if ?resume=<session_id> is in the URL, we're
 // continuing a past conversation rather than starting a fresh one.
@@ -902,8 +911,22 @@ async function startSession(){
             if (msg) setStatus(msg, 'err'); else setStatus('Session band ho gaya.', null);
           }
           errorAlreadyShown = false;
+          // The connection is already dead by the time this fires — clear
+          // it so the next mic tap starts a fresh session instead of
+          // trying to "stop" one that's already closed. This is the path
+          // a phone call (or the OS otherwise taking the mic away) goes
+          // through: the SDK closes the connection on its own, without
+          // ever going through our own stopSession().
+          session = null;
           micBtn.disabled = false;
           isBusy = false;
+          // Make sure whatever was said in this session actually gets
+          // synced — this is the same recovery path stopSession() uses.
+          // Safe to call unconditionally: if stopSession() already
+          // triggered this (a normal user-initiated stop), sessionTurns
+          // is already empty / finalizeInFlight is already set, so this
+          // is a harmless no-op.
+          finalizeAndSyncSession();
         }
       }
     });
@@ -1000,34 +1023,39 @@ function stopSession(silent){
 // this page, buildSystemInstruction() still has full memory of what was
 // said, AND the new turns append to the same session instead of a new one.
 async function finalizeAndSyncSession(){
-  if (!sessionTurns.length) return;
-  persistLocalSession();
+  if (!sessionTurns.length || finalizeInFlight) return;
+  finalizeInFlight = true;
+  try {
+    persistLocalSession();
 
-  const justSpoken = sessionTurns
-    .filter(t => t.content && t.content.trim())
-    .map(t => (t.role === 'user' ? 'User' : 'Bolo') + ': ' + t.content)
-    .join('\n');
-  if (justSpoken){
-    priorTranscriptText = priorTranscriptText ? (priorTranscriptText + '\n' + justSpoken) : justSpoken;
-    if (priorTranscriptText.length > 6000) priorTranscriptText = priorTranscriptText.slice(priorTranscriptText.length - 6000);
-  }
-
-  const syncedSessionId = await syncPendingChatSession();
-  if (syncedSessionId){
-    activeSessionId = syncedSessionId;
-    // Just-finished turns synced successfully — check if this session now
-    // crosses the report threshold, and if so surface the pill immediately
-    // instead of making the user go find it in History.
-    knownTurnCount += sessionTurns.length;
-    if (!isLocked && !reportPill.classList.contains('show') && knownTurnCount >= MIN_TURNS_FOR_ANALYSIS){
-      showReportPill(activeSessionId, false);
+    const justSpoken = sessionTurns
+      .filter(t => t.content && t.content.trim())
+      .map(t => (t.role === 'user' ? 'User' : 'Bolo') + ': ' + t.content)
+      .join('\n');
+    if (justSpoken){
+      priorTranscriptText = priorTranscriptText ? (priorTranscriptText + '\n' + justSpoken) : justSpoken;
+      if (priorTranscriptText.length > 6000) priorTranscriptText = priorTranscriptText.slice(priorTranscriptText.length - 6000);
     }
-  }
 
-  sessionTurns = [];
-  currentTurnIndex = -1;
-  // sessionStartedAt is deliberately NOT reset — if the mic gets tapped
-  // again in this same page view, it's still the same overall session.
+    const syncedSessionId = await syncPendingChatSession();
+    if (syncedSessionId){
+      activeSessionId = syncedSessionId;
+      // Just-finished turns synced successfully — check if this session now
+      // crosses the report threshold, and if so surface the pill immediately
+      // instead of making the user go find it in History.
+      knownTurnCount += sessionTurns.length;
+      if (!isLocked && !reportPill.classList.contains('show') && knownTurnCount >= MIN_TURNS_FOR_ANALYSIS){
+        showReportPill(activeSessionId, false);
+      }
+    }
+
+    sessionTurns = [];
+    currentTurnIndex = -1;
+    // sessionStartedAt is deliberately NOT reset — if the mic gets tapped
+    // again in this same page view, it's still the same overall session.
+  } finally {
+    finalizeInFlight = false;
+  }
 }
 
 window.addEventListener('beforeunload', () => {
