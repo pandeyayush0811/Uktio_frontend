@@ -94,16 +94,6 @@
   </p>
 </div>
 
-<!--
-  Razorpay's checkout widget is loaded live from their own CDN, not
-  bundled locally like vendor/google-genai.bundle.mjs is — unlike a
-  regular library, self-hosting this script isn't supported by Razorpay:
-  it needs to stay live so their fraud-detection/device-fingerprinting
-  logic and payment-method availability stay current. This is the
-  standard, Razorpay-documented way to embed it.
--->
-<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-
 <script type="module">
 import './shared/config.js';
 import { requireAuthOrRedirect, apiFetch } from './shared/auth.js';
@@ -156,78 +146,61 @@ async function refreshPlanState(){
 refreshPlanState();
 
 // ── Starter: real purchase flow ──────────────────────────────────
+// Razorpay's checkout widget doesn't work reliably inside a Capacitor
+// WebView (fraud-detection/device-fingerprinting scripts get blocked,
+// UPI app-switch-and-return deep linking breaks, bank OTP redirect pages
+// can't host properly) — Razorpay themselves advise against embedding
+// their web checkout inside a hybrid-app WebView.
+//
+// Fix: the backend hands us a one-time checkout_url (see
+// POST /payments/checkout/init in routes/paymentRoutes.js), and we open
+// THAT in the system browser (Chrome Custom Tabs) instead of running
+// Razorpay in this WebView. The hosted page (public/checkout.html on the
+// backend) is a plain, unauthenticated page identified only by a
+// short-lived single-use token in the URL — never the user's real
+// session token, since a system browser tab has no access to this
+// WebView's localStorage anyway.
+//
+// When the user finishes (or bails out) and comes back to the app, this
+// page's refreshPlanState() on next load — and the periodic /payments/status
+// check — will reflect the new plan. The webhook (server-to-server) is
+// still the real source of truth, so the plan activates correctly even
+// if the user never returns to this exact tab.
 starterBtn.addEventListener('click', async () => {
-  if (typeof Razorpay === 'undefined') {
-    starterMsg.textContent = 'Payment abhi load nahi ho paya — internet check karke phir try karo.';
-    starterMsg.className = 'status-msg err';
-    return;
-  }
-
   starterBtn.disabled = true;
-  starterMsg.textContent = 'Order create ho raha hai...';
+  starterMsg.textContent = 'Checkout khul raha hai...';
   starterMsg.className = 'status-msg';
 
   try {
-    const order = await apiFetch('/payments/create-order', {
+    const { checkout_url } = await apiFetch('/payments/checkout/init', {
       method: 'POST',
       body: JSON.stringify({ plan: 'starter' })
     });
 
-    const rzp = new Razorpay({
-      key: order.key_id,
-      amount: order.amount,
-      currency: order.currency,
-      order_id: order.order_id,
-      name: 'Uktio',
-      description: 'Uktio Starter — 30 din',
-      theme: { color: '#6a63f1' },
-      handler: async (response) => {
-        // response = { razorpay_order_id, razorpay_payment_id, razorpay_signature }
-        starterMsg.textContent = 'Payment verify ho raha hai...';
-        try {
-          await apiFetch('/payments/verify', {
-            method: 'POST',
-            body: JSON.stringify(response)
-          });
-          starterMsg.textContent = 'Plan active ho gaya! ✅';
-          starterMsg.className = 'status-msg ok';
-          await refreshPlanState();
-          setTimeout(() => { window.location.href = 'chat.html'; }, 1200);
-        } catch (e) {
-          // Payment DID succeed with Razorpay at this point — this only
-          // means the immediate client-side confirm call failed (e.g. a
-          // dropped connection right after paying). Don't tell the user
-          // their payment failed; the webhook (server-to-server, not
-          // dependent on this browser tab) still activates the plan
-          // shortly on its own. See routes/paymentRoutes.js for why
-          // /verify is a UX nicety, not the actual source of truth.
-          starterMsg.textContent = 'Payment ho gaya — plan activate hone mein thoda time lag sakta hai. Thodi der mein page refresh karo.';
-          starterMsg.className = 'status-msg';
-        } finally {
-          starterBtn.disabled = false;
-        }
-      },
-      modal: {
-        ondismiss: () => {
-          starterMsg.textContent = '';
-          starterBtn.disabled = false;
-        }
-      }
-    });
+    const BrowserPlugin = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Browser;
+    if (BrowserPlugin) {
+      await BrowserPlugin.open({ url: checkout_url });
+    } else {
+      // Not running inside the native app (e.g. testing in a desktop
+      // browser preview) — a normal new tab is the equivalent fallback.
+      window.open(checkout_url, '_blank');
+    }
 
-    rzp.on('payment.failed', (resp) => {
-      starterMsg.textContent = 'Payment fail ho gaya: ' + (resp.error && resp.error.description ? resp.error.description : 'try again');
-      starterMsg.className = 'status-msg err';
-      starterBtn.disabled = false;
-    });
-
-    rzp.open();
-    starterMsg.textContent = '';
+    starterMsg.textContent = 'Payment browser mein khul gaya hai. Complete karke wapas app par aa jao.';
+    starterMsg.className = 'status-msg';
   } catch (e) {
-    starterMsg.textContent = 'Order banane mein dikkat hui: ' + (e.message || 'try again');
+    starterMsg.textContent = 'Checkout shuru karne mein dikkat hui: ' + (e.message || 'try again');
     starterMsg.className = 'status-msg err';
+  } finally {
     starterBtn.disabled = false;
   }
+});
+
+// Re-check plan status whenever the user comes back to this page (e.g.
+// switching back from the system browser after paying) — catches the
+// case where the payment finished while they were away.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') refreshPlanState();
 });
 
 // ── Unlimited: waitlist only ──────────────────────────────────────
