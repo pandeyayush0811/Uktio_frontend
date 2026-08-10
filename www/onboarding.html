@@ -67,18 +67,18 @@ const TIME_OPTIONS = [
 // true/error-string; optional flag skips the "required" check.
 const steps = [
   {
-    title: 'What is your name?',
-    sub: 'Utkio will call you by this name.',
+    title: "What's your name? 👋",
+    sub: 'So Utkio can talk to you personally, not like a stranger.',
     render(el){
-      el.innerHTML = `<input type="text" id="f_name" placeholder="e.g. Ayush" autocomplete="name">`;
+      el.innerHTML = `<input type="text" id="f_name" placeholder="e.g. Ayush" autocomplete="name" maxlength="100">`;
       el.querySelector('#f_name').value = answers.name;
       el.querySelector('#f_name').addEventListener('input', e => answers.name = e.target.value);
     },
     validate(){ return answers.name.trim() ? true : 'Please enter your name 🙂'; }
   },
   {
-    title: 'What is your age?',
-    sub: 'Enter numbers only.',
+    title: "What's your age?",
+    sub: 'This helps Utkio pick examples and topics that actually fit your life — numbers only.',
     render(el){
       el.innerHTML = `<input type="text" inputmode="numeric" id="f_age" placeholder="e.g. 22">`;
       el.querySelector('#f_age').value = answers.age;
@@ -97,7 +97,7 @@ const steps = [
 
   {
     title: 'Are you a student or a working professional?',
-    sub: '',
+    sub: 'This shapes the kind of conversations and vocabulary Utkio practices with you.',
     render(el){
       el.innerHTML = `<div class="chip-group" id="f_occ"></div>`;
       renderChips(el.querySelector('#f_occ'), OCCUPATION_OPTIONS, 'occupation_type');
@@ -112,7 +112,7 @@ const steps = [
       const isStudent = answers.occupation_type === 'student';
       const key = isStudent ? 'class_grade' : 'profession';
       const placeholder = isStudent ? 'e.g. Class 10' : 'e.g. Software Engineer';
-      el.innerHTML = `<input type="text" id="f_occdetail" placeholder="${placeholder}">`;
+      el.innerHTML = `<input type="text" id="f_occdetail" placeholder="${placeholder}" maxlength="150">`;
       el.querySelector('#f_occdetail').value = answers[key];
       el.querySelector('#f_occdetail').addEventListener('input', e => answers[key] = e.target.value);
     },
@@ -123,9 +123,9 @@ const steps = [
   },
   {
     title: 'Which city are you from?',
-    sub: '(Optional — you can skip this)',
+    sub: "(Optional) Helps Utkio relate examples to places and things you know.",
     render(el){
-      el.innerHTML = `<input type="text" id="f_city" placeholder="e.g. Patna">`;
+      el.innerHTML = `<input type="text" id="f_city" placeholder="e.g. Patna" maxlength="100">`;
       el.querySelector('#f_city').value = answers.city;
       el.querySelector('#f_city').addEventListener('input', e => answers.city = e.target.value);
     },

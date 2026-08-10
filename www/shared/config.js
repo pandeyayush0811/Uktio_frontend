@@ -39,5 +39,6 @@ window.UKTIO_CONFIG = {
   // Change only this one string whenever the Telegram group URL changes —
   // every page that shows the "Contact" button reads from here. No redeploy
   // of HTML files needed; just update this file and run `npx cap sync android`.
-  TELEGRAM_URL: 'https://t.me/REPLACE_ME',
+  TELEGRAM_URL: 'https://t.me/uktio',
+  
 };
