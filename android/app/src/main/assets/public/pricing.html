@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Utkio — Plans</title>
+<link rel="stylesheet" href="shared/style.css">
+<style>
+  .wrap{ overflow-y:auto; }
+
+  .plan-card{
+    background:var(--card); border-radius:22px; padding:22px 20px; margin-top:16px;
+    box-shadow:0 20px 40px -20px rgba(60,60,120,0.18); position:relative;
+    border:2px solid transparent;
+  }
+  .plan-card.current{ border-color:var(--accent); }
+  .plan-badge{
+    position:absolute; top:-10px; right:18px; background:var(--accent); color:#fff;
+    font-size:0.68rem; font-weight:700; padding:4px 10px; border-radius:999px; letter-spacing:0.3px;
+  }
+  .plan-name{ font-family:var(--font-display); font-size:1.15rem; font-weight:700; margin:0; }
+  .plan-tagline{ font-size:0.82rem; color:var(--ink-dim); margin-top:4px; }
+  .plan-price{ margin-top:14px; display:flex; align-items:baseline; gap:6px; }
+  .plan-price .amount{ font-size:1.7rem; font-weight:800; font-family:var(--font-display); }
+  .plan-price .period{ font-size:0.85rem; color:var(--ink-dim); }
+  .plan-features{ list-style:none; padding:0; margin:16px 0 0; display:flex; flex-direction:column; gap:9px; }
+  .plan-features li{ font-size:0.87rem; display:flex; gap:9px; align-items:flex-start; line-height:1.4; }
+  .plan-features svg{ flex-shrink:0; margin-top:2px; color:var(--accent); width:16px; height:16px; }
+  .plan-features li.dim{ color:var(--ink-dim); }
+  .plan-features li.dim svg{ color:var(--ink-dim); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <a class="icon-btn" id="backBtn" href="settings.html" aria-label="Back">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+    </a>
+    <h1 class="app-title" style="font-size:1.2rem;">Plans</h1>
+    <span style="width:38px;"></span>
+  </header>
+
+  <p style="font-size:0.85rem;color:var(--ink-dim);margin:6px 4px 0;">
+    Practice sessions ke liye ek active plan chahiye. Dono plans mein tum apni khud ki Google Gemini
+    API key use karte ho voice practice ke liye — plan ke saath tumhe reports, quizzes, aur poora app access milta hai.
+  </p>
+
+  <!-- ═══ STARTER — ₹99 ═══ -->
+  <div class="plan-card" id="starterCard">
+    <span class="plan-badge" id="starterBadge" style="display:none;">Current plan</span>
+    <h2 class="plan-name">Uktio Starter</h2>
+    <div class="plan-tagline">Apni Gemini key use karo — full app access</div>
+    <div class="plan-price"><span class="amount">₹99</span><span class="period">/ 30 din</span></div>
+    <ul class="plan-features">
+      <li>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        Unlimited voice practice sessions (apni API key se)
+      </li>
+      <li>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        Har session ke baad detailed analysis report
+      </li>
+      <li>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        Session-wise quiz aur mistake tracking
+      </li>
+    </ul>
+    <button class="primary" id="starterBtn" style="margin-top:18px;">Buy now — ₹99</button>
+    <div class="status-msg" id="starterMsg"></div>
+  </div>
+
+  <!-- ═══ UNLIMITED — ₹1199, waitlist only ═══ -->
+  <div class="plan-card" id="unlimitedCard">
+    <span class="plan-badge" id="unlimitedBadge" style="display:none;">Current plan</span>
+    <h2 class="plan-name">Uktio Unlimited</h2>
+    <div class="plan-tagline">Apni key ki zaroorat nahi — hum sab handle karte hain</div>
+    <div class="plan-price"><span class="amount">₹1199</span><span class="period">/ 30 din</span></div>
+    <ul class="plan-features">
+      <li class="dim">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        Koi API key setup nahi — seedha practice shuru karo
+      </li>
+      <li class="dim">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        Starter ke saare features included
+      </li>
+    </ul>
+    <button class="secondary" id="unlimitedBtn" style="margin-top:18px;">Join waitlist</button>
+    <div class="status-msg" id="unlimitedMsg"></div>
+  </div>
+
+  <p style="font-size:0.76rem;color:var(--ink-dim);text-align:center;margin:20px 4px;">
+    Payment Razorpay ke through secure hai. Koi bhi dikkat ho to Settings → Contact the Co-Founder.
+  </p>
+</div>
+
+<!--
+  Razorpay's checkout widget is loaded live from their own CDN, not
+  bundled locally like vendor/google-genai.bundle.mjs is — unlike a
+  regular library, self-hosting this script isn't supported by Razorpay:
+  it needs to stay live so their fraud-detection/device-fingerprinting
+  logic and payment-method availability stay current. This is the
+  standard, Razorpay-documented way to embed it.
+-->
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+<script type="module">
+import './shared/config.js';
+import { requireAuthOrRedirect, apiFetch } from './shared/auth.js';
+import { getPlanStatus } from './shared/plan.js';
+import { initBackNav } from './shared/back-nav.js';
+
+requireAuthOrRedirect();
+initBackNav('settings.html');
+
+const starterBtn = document.getElementById('starterBtn');
+const starterMsg = document.getElementById('starterMsg');
+const unlimitedBtn = document.getElementById('unlimitedBtn');
+const unlimitedMsg = document.getElementById('unlimitedMsg');
+
+// ── Reflect current plan state on load ──────────────────────────
+async function refreshPlanState(){
+  try {
+    const status = await getPlanStatus();
+    if (!status) return;
+
+    if (status.plan === 'starter') {
+      document.getElementById('starterBadge').style.display = '';
+      document.getElementById('starterCard').classList.add('current');
+      if (status.active) {
+        const d = new Date(status.plan_expires_at);
+        starterBtn.textContent = 'Renew now — ₹99';
+        starterMsg.textContent = 'Valid till ' + d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+        starterMsg.className = 'status-msg ok';
+      } else {
+        starterMsg.textContent = 'Tumhara plan expire ho gaya hai — renew karo.';
+        starterMsg.className = 'status-msg err';
+      }
+    }
+
+    if (status.plan === 'unlimited') {
+      document.getElementById('unlimitedBadge').style.display = '';
+      document.getElementById('unlimitedCard').classList.add('current');
+    }
+  } catch (e) { /* non-critical — page still fully usable without this */ }
+
+  // Independent of plan state — has this user already joined the waitlist?
+  try {
+    const w = await apiFetch('/payments/unlimited/waitlist');
+    if (w.joined) {
+      unlimitedBtn.textContent = "You're on the waitlist ✓";
+      unlimitedBtn.disabled = true;
+    }
+  } catch (e) { /* non-critical */ }
+}
+refreshPlanState();
+
+// ── Starter: real purchase flow ──────────────────────────────────
+starterBtn.addEventListener('click', async () => {
+  if (typeof Razorpay === 'undefined') {
+    starterMsg.textContent = 'Payment abhi load nahi ho paya — internet check karke phir try karo.';
+    starterMsg.className = 'status-msg err';
+    return;
+  }
+
+  starterBtn.disabled = true;
+  starterMsg.textContent = 'Order create ho raha hai...';
+  starterMsg.className = 'status-msg';
+
+  try {
+    const order = await apiFetch('/payments/create-order', {
+      method: 'POST',
+      body: JSON.stringify({ plan: 'starter' })
+    });
+
+    const rzp = new Razorpay({
+      key: order.key_id,
+      amount: order.amount,
+      currency: order.currency,
+      order_id: order.order_id,
+      name: 'Uktio',
+      description: 'Uktio Starter — 30 din',
+      theme: { color: '#6a63f1' },
+      handler: async (response) => {
+        // response = { razorpay_order_id, razorpay_payment_id, razorpay_signature }
+        starterMsg.textContent = 'Payment verify ho raha hai...';
+        try {
+          await apiFetch('/payments/verify', {
+            method: 'POST',
+            body: JSON.stringify(response)
+          });
+          starterMsg.textContent = 'Plan active ho gaya! ✅';
+          starterMsg.className = 'status-msg ok';
+          await refreshPlanState();
+          setTimeout(() => { window.location.href = 'chat.html'; }, 1200);
+        } catch (e) {
+          // Payment DID succeed with Razorpay at this point — this only
+          // means the immediate client-side confirm call failed (e.g. a
+          // dropped connection right after paying). Don't tell the user
+          // their payment failed; the webhook (server-to-server, not
+          // dependent on this browser tab) still activates the plan
+          // shortly on its own. See routes/paymentRoutes.js for why
+          // /verify is a UX nicety, not the actual source of truth.
+          starterMsg.textContent = 'Payment ho gaya — plan activate hone mein thoda time lag sakta hai. Thodi der mein page refresh karo.';
+          starterMsg.className = 'status-msg';
+        } finally {
+          starterBtn.disabled = false;
+        }
+      },
+      modal: {
+        ondismiss: () => {
+          starterMsg.textContent = '';
+          starterBtn.disabled = false;
+        }
+      }
+    });
+
+    rzp.on('payment.failed', (resp) => {
+      starterMsg.textContent = 'Payment fail ho gaya: ' + (resp.error && resp.error.description ? resp.error.description : 'try again');
+      starterMsg.className = 'status-msg err';
+      starterBtn.disabled = false;
+    });
+
+    rzp.open();
+    starterMsg.textContent = '';
+  } catch (e) {
+    starterMsg.textContent = 'Order banane mein dikkat hui: ' + (e.message || 'try again');
+    starterMsg.className = 'status-msg err';
+    starterBtn.disabled = false;
+  }
+});
+
+// ── Unlimited: waitlist only ──────────────────────────────────────
+unlimitedBtn.addEventListener('click', async () => {
+  if (unlimitedBtn.disabled) return;
+  unlimitedBtn.disabled = true;
+  unlimitedMsg.textContent = 'Adding you...';
+  unlimitedMsg.className = 'status-msg';
+  try {
+    await apiFetch('/payments/unlimited/waitlist', { method: 'POST' });
+    unlimitedBtn.textContent = "You're on the waitlist ✓";
+    unlimitedMsg.textContent = 'Launch hote hi tumhe sabse pehle batayenge.';
+    unlimitedMsg.className = 'status-msg ok';
+  } catch (e) {
+    unlimitedMsg.textContent = 'Kuch gadbad hui — phir try karo.';
+    unlimitedMsg.className = 'status-msg err';
+    unlimitedBtn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>

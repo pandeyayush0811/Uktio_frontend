@@ -224,6 +224,7 @@ footer{margin-top:16px;color:var(--ink-dim);font-size:0.72rem;line-height:1.6;te
 .profile-row-icon svg{ width:17px; height:17px; }
 .profile-row-label{ font-size:0.8rem; color:var(--ink-dim); }
 .profile-row-value{ font-weight:600; font-size:0.94rem; }
+.profile-row-value.err{ color:var(--bad); }
 .profile-row-right{ flex:1; text-align:right; }
 .profile-toggle-row{ display:flex; gap:10px; margin-top:8px; }
 .profile-toggle{

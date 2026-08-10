@@ -97,12 +97,14 @@
 import { GoogleGenAI } from "./vendor/google-genai.bundle.mjs";
 import './shared/config.js';
 import { requireAuthOrRedirect, apiFetch } from './shared/auth.js';
+import { requireActivePlan } from './shared/plan.js';
 import { initBackNav } from './shared/back-nav.js';
 import { checkGeminiApiKey } from './shared/gemini-key-check.js';
 import { getApiKey, getMicCapturePluginOrNull } from './shared/mic-helpers.js';
 import { escapeHtml } from './shared/sanitize.js';
 
 requireAuthOrRedirect();
+await requireActivePlan(); // see shared/plan.js — UX nicety, backend is the real gate
 
 const params = new URLSearchParams(window.location.search);
 const sessionId = params.get('session');

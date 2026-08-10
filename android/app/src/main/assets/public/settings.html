@@ -47,6 +47,31 @@
   </div>
 
   <div class="settings-section">
+    <div class="settings-section-label">Plan</div>
+    <div class="profile-fields-card" id="planCard">
+      <div class="profile-row">
+        <div class="profile-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg></div>
+        <div><div class="profile-row-label">Current plan</div></div>
+        <div class="profile-row-right"><span class="profile-row-value" id="vPlan">—</span></div>
+      </div>
+      <div class="profile-row" id="planExpiryRow" style="display:none;">
+        <div class="profile-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+        <div><div class="profile-row-label" id="planExpiryLabel">Valid till</div></div>
+        <div class="profile-row-right"><span class="profile-row-value" id="vPlanExpiry">—</span></div>
+      </div>
+    </div>
+    <a href="pricing.html" class="telegram-btn" style="margin-top:10px;">
+      <div class="telegram-icon" style="background:var(--accent);">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
+      </div>
+      <div>
+        <div class="telegram-text-title" id="planCtaTitle">Manage plan</div>
+        <div class="telegram-text-sub" id="planCtaSub">Renew, upgrade, ya plans compare karo</div>
+      </div>
+    </a>
+  </div>
+
+  <div class="settings-section">
     <div class="settings-section-label">AI Setup</div>
     <div class="card">
       <label for="apiKey">Google Gemini API key</label>
@@ -95,11 +120,43 @@ For your security: <strong>when you log out, the key is automatically deleted fr
 <script type="module">
 import './shared/config.js';
 import { requireAuthOrRedirect, apiFetch, logout, API_KEY_STORAGE_KEY } from './shared/auth.js';
+import { getPlanStatus } from './shared/plan.js';
 import { initBackNav } from './shared/back-nav.js';
 import { checkGeminiApiKey } from './shared/gemini-key-check.js';
 
 requireAuthOrRedirect();
 initBackNav('chat.html');
+
+const PLAN_LABELS = { none: 'No active plan', starter: 'Uktio Starter', unlimited: 'Uktio Unlimited' };
+
+getPlanStatus().then(status => {
+  if (!status) { document.getElementById('vPlan').textContent = 'Load nahi ho paya'; return; }
+
+  document.getElementById('vPlan').textContent = PLAN_LABELS[status.plan] || status.plan;
+
+  const expiryRow = document.getElementById('planExpiryRow');
+  const ctaTitle = document.getElementById('planCtaTitle');
+  const ctaSub = document.getElementById('planCtaSub');
+
+  if (status.plan_expires_at) {
+    expiryRow.style.display = '';
+    const d = new Date(status.plan_expires_at);
+    const dateStr = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+    document.getElementById('planExpiryLabel').textContent = status.active ? 'Valid till' : 'Expired on';
+    document.getElementById('vPlanExpiry').textContent = dateStr;
+    document.getElementById('vPlanExpiry').className = 'profile-row-value ' + (status.active ? '' : 'err');
+  }
+
+  if (!status.active) {
+    ctaTitle.textContent = status.plan === 'none' ? 'Choose a plan' : 'Renew plan';
+    ctaSub.textContent = 'Practice continue karne ke liye plan activate karo';
+  } else {
+    ctaTitle.textContent = 'Manage plan';
+    ctaSub.textContent = 'Renew, upgrade, ya plans compare karo';
+  }
+}).catch(() => {
+  document.getElementById('vPlan').textContent = 'Load nahi ho paya';
+});
 
 document.getElementById('telegramBtn').href =
   getComputedStyle(document.documentElement).getPropertyValue('--telegram-group-url').trim().replace(/^"|"$/g, '');
