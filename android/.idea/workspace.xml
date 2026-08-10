@@ -4,94 +4,7 @@
     <option name="autoReloadType" value="NONE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="a9290705-c354-4871-9e50-654ac448cc40" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/app/build.gradle" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/proguard-rules.pro" beforeDir="false" afterPath="$PROJECT_DIR$/app/proguard-rules.pro" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/androidTest/java/com/getcapacitor/myapp/ExampleInstrumentedTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/androidTest/java/com/getcapacitor/myapp/ExampleInstrumentedTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/AndroidManifest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/AndroidManifest.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/chat.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/chat.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/history.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/history.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/login.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/login.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/mistakes.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/mistakes.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/onboarding.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/onboarding.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/profile.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/profile.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/quiz.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/quiz.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/report.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/report.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/settings.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/settings.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/shared/auth.js" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/shared/auth.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/shared/back-nav.js" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/shared/back-nav.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/shared/config.js" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/shared/config.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/shared/drawer.js" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/shared/drawer.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/shared/gemini-key-check.js" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/shared/gemini-key-check.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/shared/style.css" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/shared/style.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/utkio/app/MainActivity.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/utkio/app/MainActivity.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/utkio/app/MicCapturePlugin.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/utkio/app/MicCapturePlugin.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/utkio/app/VoiceKeepAliveService.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/utkio/app/VoiceKeepAliveService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable-v24/ic_launcher_foreground.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/drawable-v24/ic_launcher_foreground.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/ic_launcher_background.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/drawable/ic_launcher_background.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/activity_main.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/activity_main.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/values/ic_launcher_background.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/values/ic_launcher_background.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/values/strings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/values/strings.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/values/styles.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/values/styles.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/xml/file_paths.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/xml/file_paths.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/xml/network_security_config.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/xml/network_security_config.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/test/java/com/getcapacitor/myapp/ExampleUnitTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/test/java/com/getcapacitor/myapp/ExampleUnitTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/build.gradle" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build/reports/problems/problems-report.html" beforeDir="false" afterPath="$PROJECT_DIR$/build/reports/problems/problems-report.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/capacitor-cordova-android-plugins/build/.transforms/856cdfd6939c687212d931f7ef5fba39/results.bin" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/capacitor-cordova-android-plugins/build/.transforms/8e862365ee245f5519145661a65a8239/results.bin" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/capacitor-cordova-android-plugins/build/.transforms/8e862365ee245f5519145661a65a8239/transformed/bundleLibRuntimeToDirDebug/desugar_graph.bin" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/capacitor-cordova-android-plugins/build/intermediates/aapt_friendly_merged_manifests/debug/processDebugManifest/aapt/AndroidManifest.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/capacitor-cordova-android-plugins/build/intermediates/aapt_friendly_merged_manifests/debug/processDebugManifest/aapt/output-metadata.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/capacitor-cordova-android-plugins/build/intermediates/aar_metadata/debug/writeDebugAarMetadata/aar-metadata.properties" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/capacitor-cordova-android-plugins/build/intermediates/annotation_processor_list/debug/javaPreCompileDebug/annotationProcessors.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/capacitor-cordova-android-plugins/build/intermediates/compile_library_classes_jar/debug/bundleLibCompileToJarDebug/classes.jar" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/capacitor-cordova-android-plugins/build/intermediates/compile_r_class_jar/debug/generateDebugRFile/R.jar" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/capacitor-cordova-android-plugins/build/intermediates/compile_symbol_list/debug/generateDebugRFile/R.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/capacitor-cordova-android-plugins/build/intermediates/incremental/debug/packageDebugResources/compile-file-map.properties" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/capacitor-cordova-android-plugins/build/intermediates/incremental/debug/packageDebugResources/merger.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/capacitor-cordova-android-plugins/build/intermediates/incremental/mergeDebugAssets/merger.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/capacitor-cordova-android-plugins/build/intermediates/incremental/mergeDebugJniLibFolders/merger.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/capacitor-cordova-android-plugins/build/intermediates/incremental/mergeDebugShaders/merger.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/capacitor-cordova-android-plugins/build/intermediates/local_only_symbol_list/debug/parseDebugLocalResources/R-def.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/capacitor-cordova-android-plugins/build/intermediates/manifest_merge_blame_file/debug/processDebugManifest/manifest-merger-blame-debug-report.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/capacitor-cordova-android-plugins/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/capacitor-cordova-android-plugins/build/intermediates/navigation_json/debug/extractDeepLinksDebug/navigation.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/capacitor-cordova-android-plugins/build/intermediates/nested_resources_validation_report/debug/generateDebugResources/nestedResourcesValidationReport.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/capacitor-cordova-android-plugins/build/intermediates/runtime_library_classes_jar/debug/bundleLibRuntimeToJarDebug/classes.jar" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/capacitor-cordova-android-plugins/build/intermediates/symbol_list_with_package_name/debug/generateDebugRFile/package-aware-r.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/capacitor-cordova-android-plugins/build/outputs/logs/manifest-merger-debug-report.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/gradle.properties" beforeDir="false" afterPath="$PROJECT_DIR$/gradle.properties" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/gradle/wrapper/gradle-wrapper.properties" beforeDir="false" afterPath="$PROJECT_DIR$/gradle/wrapper/gradle-wrapper.properties" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/gradlew" beforeDir="false" afterPath="$PROJECT_DIR$/gradlew" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/gradlew.bat" beforeDir="false" afterPath="$PROJECT_DIR$/gradlew.bat" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/settings.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/settings.gradle" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/variables.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/variables.gradle" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../capacitor.config.json" beforeDir="false" afterPath="$PROJECT_DIR$/../capacitor.config.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/../package-lock.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../package.json" beforeDir="false" afterPath="$PROJECT_DIR$/../package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../www/chat.html" beforeDir="false" afterPath="$PROJECT_DIR$/../www/chat.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../www/history.html" beforeDir="false" afterPath="$PROJECT_DIR$/../www/history.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../www/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/../www/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../www/login.html" beforeDir="false" afterPath="$PROJECT_DIR$/../www/login.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../www/mistakes.html" beforeDir="false" afterPath="$PROJECT_DIR$/../www/mistakes.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../www/onboarding.html" beforeDir="false" afterPath="$PROJECT_DIR$/../www/onboarding.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../www/profile.html" beforeDir="false" afterPath="$PROJECT_DIR$/../www/profile.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../www/quiz.html" beforeDir="false" afterPath="$PROJECT_DIR$/../www/quiz.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../www/report.html" beforeDir="false" afterPath="$PROJECT_DIR$/../www/report.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../www/settings.html" beforeDir="false" afterPath="$PROJECT_DIR$/../www/settings.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../www/shared/auth.js" beforeDir="false" afterPath="$PROJECT_DIR$/../www/shared/auth.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../www/shared/back-nav.js" beforeDir="false" afterPath="$PROJECT_DIR$/../www/shared/back-nav.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../www/shared/config.js" beforeDir="false" afterPath="$PROJECT_DIR$/../www/shared/config.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../www/shared/drawer.js" beforeDir="false" afterPath="$PROJECT_DIR$/../www/shared/drawer.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../www/shared/gemini-key-check.js" beforeDir="false" afterPath="$PROJECT_DIR$/../www/shared/gemini-key-check.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../www/shared/style.css" beforeDir="false" afterPath="$PROJECT_DIR$/../www/shared/style.css" afterDir="false" />
-    </list>
+    <list default="true" id="a9290705-c354-4871-9e50-654ac448cc40" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -100,7 +13,7 @@
   <component name="ClangdSettings">
     <option name="formatViaClangd" value="false" />
   </component>
-  <component name="ExecutionTargetManager" SELECTED_TARGET="device_and_snapshot_combo_box_target[LocalEmulator::path=C:\Users\pande\.android\avd\Medium_Phone_2.avd]" />
+  <component name="ExecutionTargetManager" SELECTED_TARGET="device_and_snapshot_combo_box_target[PhysicalDevice::serial=T4YXJ7USR4SCIRSG]" />
   <component name="ExternalProjectsData">
     <projectState path="$PROJECT_DIR$">
       <ProjectState />

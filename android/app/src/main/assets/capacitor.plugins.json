@@ -6,5 +6,9 @@
 	{
 		"pkg": "@capawesome/capacitor-google-sign-in",
 		"classpath": "io.capawesome.capacitorjs.plugins.googlesignin.GoogleSignInPlugin"
+	},
+	{
+		"pkg": "@capacitor/browser",
+		"classpath": "com.capacitorjs.plugins.browser.BrowserPlugin"
 	}
 ]
