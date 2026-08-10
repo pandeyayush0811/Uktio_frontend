@@ -98,6 +98,8 @@
     <span id="statusText">Shuru karne ke liye niche mic button dabao</span>
   </div>
 
+  <div id="trialBanner" class="trial-banner hidden" style="display:none; font-size:13px; text-align:center; padding:6px 12px; opacity:0.8;"></div>
+
   <button class="report-pill" id="reportPill" type="button"></button>
 
   <div class="locked-banner" id="lockedBanner">
@@ -127,7 +129,7 @@
 <script type="module">
   import './shared/config.js';
   import { requireCompleteProfile } from './shared/auth.js';
-  import { requireActivePlan } from './shared/plan.js';
+  import { requireActivePlan, trialBannerText } from './shared/plan.js';
   import { mountDrawer } from './shared/drawer.js';
   import { initBackNav } from './shared/back-nav.js';
 
@@ -149,7 +151,15 @@
   // for why this is a UX nicety, not the real security boundary (the
   // backend's requirePlan middleware on POST /chat/sessions is what
   // actually enforces this).
-  await requireActivePlan();
+  const planStatus = await requireActivePlan();
+  window.__UKTIO_PLAN_STATUS = planStatus; // stashed for the 2nd module script below (separate scope)
+  const bannerText = trialBannerText(planStatus);
+  if (bannerText) {
+    const el = document.getElementById('trialBanner');
+    el.textContent = bannerText;
+    el.style.display = 'block';
+    el.classList.remove('hidden');
+  }
 </script>
 
 <script type="module">
@@ -157,6 +167,8 @@ import { GoogleGenAI, Modality } from "./vendor/google-genai.bundle.mjs";
 import { PENDING_CHAT_SESSION_KEY, syncPendingChatSession, apiFetch } from './shared/auth.js';
 import { checkGeminiApiKey } from './shared/gemini-key-check.js';
 import { getApiKey, getMicCapturePlugin } from './shared/mic-helpers.js';
+import { getPlanStatus } from './shared/plan.js';
+import { maybeShowPostSessionUpsell } from './shared/upsell.js';
 
 // Single source of truth — used both for the actual connect() call below
 // AND in the permission-denied error message, so the two can never drift
@@ -1054,6 +1066,13 @@ async function finalizeAndSyncSession(){
       if (!isLocked && !reportPill.classList.contains('show') && knownTurnCount >= MIN_TURNS_FOR_ANALYSIS){
         showReportPill(activeSessionId, false);
       }
+
+      // Post-session membership nudge — fetch FRESH status (trial credits
+      // just decremented server-side by this save) rather than reusing the
+      // page-load snapshot, so the numbers shown are accurate. Fire-and-forget:
+      // never blocks the UI, and silently no-ops for paying members or on
+      // network failure (see maybeShowPostSessionUpsell / getPlanStatus).
+      getPlanStatus().then(maybeShowPostSessionUpsell).catch(() => {});
     }
 
     sessionTurns = [];

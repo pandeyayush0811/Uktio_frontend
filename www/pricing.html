@@ -45,6 +45,29 @@
     API key use karte ho voice practice ke liye — plan ke saath tumhe reports, quizzes, aur poora app access milta hai.
   </p>
 
+  <!-- ═══ FREE TRIAL — shown only while no paid plan is active ═══ -->
+  <div class="plan-card current" id="trialCard" style="display:none;">
+    <span class="plan-badge" id="trialBadge">Aap abhi yahan ho</span>
+    <h2 class="plan-name">Free Trial</h2>
+    <div class="plan-tagline" id="trialTagline">3 din free — 5 chats + 5 reports included</div>
+    <div class="plan-price"><span class="amount">₹0</span><span class="period">/ 3 din</span></div>
+    <ul class="plan-features">
+      <li>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        <span id="trialChatsLine">5 voice practice sessions</span>
+      </li>
+      <li>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        <span id="trialReportsLine">5 detailed analysis reports + quizzes</span>
+      </li>
+      <li>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        Apne mistakes ka quiz-review — hamesha free, trial ke baad bhi
+      </li>
+    </ul>
+    <div class="status-msg" id="trialMsg" style="margin-top:14px;"></div>
+  </div>
+
   <!-- ═══ STARTER — ₹99 ═══ -->
   <div class="plan-card" id="starterCard">
     <span class="plan-badge" id="starterBadge" style="display:none;">Current plan</span>
@@ -131,6 +154,28 @@ async function refreshPlanState(){
     if (status.plan === 'unlimited') {
       document.getElementById('unlimitedBadge').style.display = '';
       document.getElementById('unlimitedCard').classList.add('current');
+    }
+
+    // Trial card — only meaningful while the user has no paid plan at all.
+    // Once they've ever paid (even if currently expired), showing "Free
+    // Trial — you are here" would be confusing/wrong, so it stays hidden
+    // and the Starter card's own expired-state messaging takes over instead.
+    const trialCard = document.getElementById('trialCard');
+    if ((!status.plan || status.plan === 'none') && status.trial) {
+      trialCard.style.display = '';
+      const t = status.trial;
+      document.getElementById('trialChatsLine').textContent = `${t.chats_remaining} / ${t.chat_limit} voice practice sessions bache hain`;
+      document.getElementById('trialReportsLine').textContent = `${t.reports_remaining} / ${t.report_limit} analysis reports + quizzes bache hain`;
+      const trialMsg = document.getElementById('trialMsg');
+      if (t.active) {
+        trialMsg.textContent = `${t.days_left} din baaki hain trial ke.`;
+        trialMsg.className = 'status-msg ok';
+      } else {
+        trialMsg.textContent = 'Tumhara free trial khatam ho gaya hai — neeche se plan lo.';
+        trialMsg.className = 'status-msg err';
+      }
+    } else {
+      trialCard.style.display = 'none';
     }
   } catch (e) { /* non-critical — page still fully usable without this */ }
 

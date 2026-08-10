@@ -1,6 +1,9 @@
 import { apiFetch } from './auth.js';
 
-// Returns { plan, plan_expires_at, active } or null on network/auth error.
+// Returns { plan, plan_expires_at, active, trial } or null on network/auth
+// error. `trial` is null once the user has a paid plan; otherwise it's
+// { active, days_left, chats_remaining, reports_remaining, chat_limit,
+// report_limit } — see GET /payments/status on the backend.
 export async function getPlanStatus() {
   try {
     return await apiFetch('/payments/status');
@@ -33,4 +36,14 @@ export async function requireActivePlan() {
     return null;
   }
   return status;
+}
+
+// Short Hinglish banner text for "X chats / Y reports left" during an
+// active trial, or null if there's nothing worth showing (paid plan, or
+// status unavailable). Pages like chat.html/pricing.html can drop this
+// straight into a banner element.
+export function trialBannerText(status) {
+  if (!status || !status.trial || !status.trial.active) return null;
+  const { chats_remaining, reports_remaining, days_left } = status.trial;
+  return `Free trial: ${chats_remaining} chat aur ${reports_remaining} report bache hain (${days_left} din baaki).`;
 }
