@@ -45,5 +45,5 @@ export async function requireActivePlan() {
 export function trialBannerText(status) {
   if (!status || !status.trial || !status.trial.active) return null;
   const { chats_remaining, reports_remaining, days_left } = status.trial;
-  return `Free trial: ${chats_remaining} chat aur ${reports_remaining} report bache hain (${days_left} din baaki).`;
+  return `Free trial: ${chats_remaining} chat${chats_remaining !== 1 ? 's' : ''} and ${reports_remaining} report${reports_remaining !== 1 ? 's' : ''} remaining (${days_left} day${days_left !== 1 ? 's' : ''} left).`;
 }

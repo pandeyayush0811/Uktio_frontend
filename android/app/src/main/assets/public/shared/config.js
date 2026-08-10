@@ -33,5 +33,11 @@ if (ACTIVE_BACKEND === 'local') {
 window.UKTIO_CONFIG = {
   SUPABASE_URL: 'https://pwdglktwuquoswqoyely.supabase.co',
   SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB3ZGdsa3R3dXF1b3N3cW95ZWx5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU2MTYyODAsImV4cCI6MjEwMTE5MjI4MH0.GdwAJAXx8x98QvkvW1HAZh7F3PIZiV3Uqeoqm54ohRo',
-  BACKEND_URL: BACKENDS[ACTIVE_BACKEND] // no trailing slash
+  BACKEND_URL: BACKENDS[ACTIVE_BACKEND], // no trailing slash
+
+  // ── Community / support link ────────────────────────────────────────────
+  // Change only this one string whenever the Telegram group URL changes —
+  // every page that shows the "Contact" button reads from here. No redeploy
+  // of HTML files needed; just update this file and run `npx cap sync android`.
+  TELEGRAM_URL: 'https://t.me/REPLACE_ME',
 };

@@ -37,7 +37,13 @@
     <input type="text" id="searchInput" placeholder="Search Chats">
   </div>
 
-  <div id="listMsg" class="status-msg">Loading...</div>
+  <!-- Centered spinner shown while the session list is fetching.
+       JS hides this and reveals sessionList once data arrives. -->
+  <div class="page-loader" id="listMsg">
+    <div class="loader-ring"></div>
+    <span class="loader-label">Loading chats…</span>
+  </div>
+  <div class="status-msg err" id="listErr" style="display:none;"></div>
   <div id="sessionList"></div>
 </div>
 
@@ -76,7 +82,11 @@ function formatDateTime(iso){
 }
 
 async function loadTranscript(sessionId, container){
-  container.innerHTML = '<div class="status-msg">Loading...</div>';
+  container.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;padding:12px 0;">
+      <div class="loader-ring" style="width:20px;height:20px;border-width:2px;"></div>
+      <span style="font-size:0.82rem;color:var(--ink-dim);">Loading transcript…</span>
+    </div>`;
   try {
     const data = await apiFetch('/chat/sessions/' + sessionId);
     const msgs = data.messages || [];
@@ -94,7 +104,7 @@ async function loadTranscript(sessionId, container){
     resumeBtn.addEventListener('click', (e) => { e.stopPropagation(); window.location.href = 'chat.html?resume=' + sessionId; });
     container.appendChild(resumeBtn);
   } catch (err) {
-    container.innerHTML = `<div class="status-msg err">Failed to load. Please try again: ${escapeHtml(err.message)}</div>`;
+    container.innerHTML = `<div class="status-msg err">Failed to load transcript. Please try again: ${escapeHtml(err.message)}</div>`;
   }
 }
 
@@ -154,8 +164,10 @@ searchInput.addEventListener('input', () => {
     listMsg.style.display = 'none';
     renderList(allSessions);
   } catch (err) {
-    listMsg.className = 'status-msg err';
-    listMsg.textContent = 'History load nahi ho payi: ' + err.message;
+    listMsg.style.display = 'none';
+    const errEl = document.getElementById('listErr');
+    errEl.style.display = '';
+    errEl.textContent = 'Could not load chat history: ' + err.message;
   }
 })();
 </script>

@@ -95,7 +95,7 @@
 
   <div class="status-row">
     <div class="dot" id="statusDot"></div>
-    <span id="statusText">Shuru karne ke liye niche mic button dabao</span>
+    <span id="statusText">Tap the mic button below to start</span>
   </div>
 
   <div id="trialBanner" class="trial-banner hidden" style="display:none; font-size:13px; text-align:center; padding:6px 12px; opacity:0.8;"></div>
@@ -103,7 +103,7 @@
   <button class="report-pill" id="reportPill" type="button"></button>
 
   <div class="locked-banner" id="lockedBanner">
-    <span>Iss chat ka report ban chuka hai — is chat mein aage baat nahi ho sakti.</span>
+    <span>This chat has a report — you cannot continue this conversation.</span>
     <div class="locked-actions">
       <button class="primary" id="lockedSeeReport" type="button">📊 Report dekho</button>
       <button id="lockedNewChat" type="button">+ Naya chat</button>
@@ -116,7 +116,7 @@
 
   <div class="mic-dock">
     <div class="wave" id="wave" aria-hidden="true"></div>
-    <button id="micBtn" class="mic-btn" aria-label="Baat shuru/band karo">
+    <button id="micBtn" class="mic-btn" aria-label="Start/stop talking">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
     </button>
   </div>
@@ -583,7 +583,7 @@ function lockChatForReport(sessionId){
   document.getElementById('lockedSeeReport').onclick = () => { window.location.href = 'report.html?session=' + sessionId; };
   document.getElementById('lockedNewChat').onclick = () => { window.location.href = 'chat.html'; };
   micBtn.disabled = true;
-  setStatus('Iss chat ka report ban chuka hai.', null);
+  setStatus('This chat already has a report.', null);
 }
 
 /* API key ab is page ke saath store nahi hoti — Settings page (settings.html)
@@ -658,14 +658,14 @@ function addHistoricalLine(role, content){
 async function loadResumeContextIfAny(){
   if (!activeSessionId) return;
   try{
-    setStatus('Pichli baatcheet load ho rahi hai...', null);
+    setStatus('Loading previous conversation…', null);
     const data = await apiFetch('/chat/sessions/' + activeSessionId);
     const msgs = data.messages || [];
 
     if (msgs.length){
       const divider = document.createElement('div');
       divider.className = 'history-divider';
-      divider.textContent = '── Pichli baatcheet ──';
+      divider.textContent = '── Previous conversation ──';
       transcriptEl.appendChild(divider);
       msgs.forEach(m => addHistoricalLine(m.role, m.content));
       scrollTranscriptToBottom();
@@ -689,10 +689,10 @@ async function loadResumeContextIfAny(){
       showReportPill(activeSessionId, false);
     }
 
-    setStatus('Shuru karne ke liye niche mic button dabao.', null);
+    setStatus('Tap the mic button below to start.', null);
   } catch(err){
     console.warn('resume context load failed, starting fresh instead', err);
-    setStatus('Purani chat load nahi ho payi — naya session shuru kar sakte ho.', 'err');
+    setStatus('Could not load previous chat — you can start a new session.', 'err');
   }
 }
 loadResumeContextIfAny();
@@ -717,11 +717,11 @@ function persistLocalSession(){
 function describeMicError(err){
   const name = err && err.name;
   if (name === 'NotAllowedError' || name === 'PermissionDeniedError')
-    return 'Mic band: tumne ya browser ne permission deny kar di. Address bar mein mic icon dabakar "Allow" karo.';
+    return 'Microphone access was denied. Tap the mic icon in your address bar and select Allow.';
   if (name === 'NotFoundError' || name === 'DevicesNotFoundError')
     return 'Mic nahi mila: is device/browser mein koi microphone connected nahi hai.';
   if (name === 'NotReadableError' || name === 'TrackStartError')
-    return 'Mic hardware abhi open nahi ho paya (dobara try ho chuki hai). Koi doosra app mic use kar raha ho to usse band karo, ya app ko ek baar dobara kholke try karo.';
+    return 'Could not open the microphone (already retried). If another app is using it, close that app and try again.';
   if (name === 'SecurityError')
     return 'Mic access block: yeh page HTTPS (ya localhost) par nahi chal raha, isliye browser mic nahi de raha.';
   if (name === 'OverconstrainedError')
@@ -732,13 +732,13 @@ function describeMicError(err){
 function describeConnectError(err){
   const msg = (err && err.message) ? err.message : String(err);
   if (/api key not valid|api_key_invalid|invalid api key/i.test(msg))
-    return 'API key galat hai — Settings mein Google AI Studio se copy karke phir se paste karo.';
+    return 'Invalid API key — go to Settings and paste a valid key from Google AI Studio.';
   if (/quota|resource_exhausted|rate limit/i.test(msg))
     return 'API quota/rate-limit khatam ho gaya — thodi der ruk kar try karo ya naya key banao.';
   if (/permission_denied|not authorized/i.test(msg))
-    return `Yeh API key Live API (${LIVE_MODEL}) use nahi kar sakti — key ki permissions check karo.`;
+    return `This API key cannot use Live API (${LIVE_MODEL}) — check the key's permissions in Google AI Studio.`;
   if (/failed to fetch|network|timeout|ENOTFOUND/i.test(msg))
-    return 'Google se connect nahi ho paya — internet connection check karo.';
+    return 'Could not connect to Google — please check your internet connection.';
   if (/model not found|not_found/i.test(msg))
     return 'Model available nahi hai is region/account ke liye.';
   return 'Connect nahi ho paya, wajah: ' + msg;
@@ -807,7 +807,7 @@ function playAudioChunk(base64Data){
     };
   }catch(err){
     console.error('playback error', err);
-    setStatus('Audio playback mein dikkat: ' + err.message, 'err');
+    setStatus('Audio playback error: ' + err.message, 'err');
   }
 }
 
@@ -865,7 +865,7 @@ async function stopNativeMic(){
 
 async function startSession(){
   if (session || isBusy) return;
-  if (isLocked){ setStatus('Iss chat ka report ban chuka hai — naya chat shuru karo.', 'err'); return; }
+  if (isLocked){ setStatus('This chat already has a report — start a new chat to continue.', 'err'); return; }
 
   // Do NOT reset sessionTurns/currentTurnIndex here — if the user stops
   // the mic and taps it again without leaving this page, we want THIS
@@ -888,7 +888,7 @@ async function startSession(){
   if (keyCheck.status !== 'valid'){
     isBusy = false;
     micBtn.disabled = false;
-    setStatus((keyCheck.message || 'API key sahi nahi hai') + ' — Settings mein jaake theek karo.', 'err');
+    setStatus((keyCheck.message || 'Invalid API key') + ' — go to Settings to fix this.', 'err');
     setTimeout(() => { window.location.href = 'settings.html'; }, 1600);
     return;
   }

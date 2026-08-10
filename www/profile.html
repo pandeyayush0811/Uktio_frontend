@@ -22,7 +22,10 @@
     <span style="width:38px;"></span>
   </header>
 
-  <div id="loadingMsg" class="status-msg" style="margin-top:16px;">Loading...</div>
+  <div class="page-loader" id="loadingMsg" style="margin-top:8px;">
+    <div class="loader-ring"></div>
+    <span class="loader-label">Loading profile…</span>
+  </div>
 
   <div id="viewMode" class="view-mode hidden" style="margin-top:16px;">
     <div class="profile-head-card">
@@ -211,8 +214,8 @@ if (cachedBasic) {
     setCachedProfileBasic({ name: profile.name || '', email }); // keep cache fresh for next time
   } catch (err) {
     if (!cachedBasic) { // only show a hard error if we had nothing to fall back on
-      loadingMsg.className = 'status-msg err';
-      loadingMsg.textContent = 'Profile load nahi ho paya: ' + err.message;
+      loadingMsg.innerHTML =
+        `<span class="status-msg err" style="text-align:center;">Could not load profile: ${err.message}</span>`;
     }
   }
 })();

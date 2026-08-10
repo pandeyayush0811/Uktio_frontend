@@ -236,7 +236,7 @@ function renderChoose(q, colorClass, isHindi){
         if (norm(b.textContent) === norm(q.correct_option)) b.classList.add('correct');
         else if (b === btn) b.classList.add('wrong');
       });
-      showFeedback(isRight, isRight ? '' : ('Sahi jawab: ' + escapeHtml(q.correct_option)));
+      showFeedback(isRight, isRight ? '' : ('Correct answer: ' + escapeHtml(q.correct_option)));
       nextAfterDelay(1100);
     });
   });
@@ -293,8 +293,8 @@ function renderSpeak(q, colorClass){
       <button class="mic-round" id="micBtn" aria-label="Record">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
       </button>
-      <div class="mic-status" id="micStatus">Bolne ke liye tap karo, dobara tap karo rokne ke liye</div>
-      <button class="skip-link" id="skipBtn">skip karo</button>
+      <div class="mic-status" id="micStatus">Tap to speak, tap again to stop</div>
+      <button class="skip-link" id="skipBtn">skip</button>
     </div>
   `, colorClass);
 
@@ -311,7 +311,7 @@ function renderSpeak(q, colorClass){
     resolved = true;
     attemptedCount += 1;
     if (isRight) correctCount += 1;
-    showFeedback(isRight, heard ? ('Tumne bola: "' + escapeHtml(heard) + '"') : (isRight ? '' : 'Sahi jawab: ' + escapeHtml(q.expected_answer)));
+    showFeedback(isRight, heard ? ('You said: "' + escapeHtml(heard) + '"') : (isRight ? '' : 'Correct answer: ' + escapeHtml(q.expected_answer)));
     nextAfterDelay(1300);
   }
 
@@ -325,7 +325,7 @@ function renderSpeak(q, colorClass){
 
   const MicCapture = getMicCapturePluginOrNull();
   if (!MicCapture){
-    micStatus.textContent = 'Is device pe mic recording available nahi hai — skip kar rahe hai.';
+    micStatus.textContent = 'Microphone recording is not available on this device — skipping.';
     micBtn.disabled = true;
     setTimeout(skip, 1200);
     return;
@@ -336,7 +336,7 @@ function renderSpeak(q, colorClass){
   ensureKeyChecked().then((keyStatus) => {
     if (resolved) return; // user already moved past this question by the time this resolves
     if (keyStatus.status !== 'valid') {
-      micStatus.textContent = (keyStatus.message || 'API key sahi nahi hai') + ' — Settings mein jaake theek karo, phir wapas aao.';
+      micStatus.textContent = (keyStatus.message || 'Invalid API key') + ' — Go to Settings to fix this, then come back.';
       micBtn.disabled = true;
     }
   });
@@ -356,19 +356,19 @@ function renderSpeak(q, colorClass){
         await MicCapture.start();
         recording = true;
         micBtn.classList.add('rec');
-        micStatus.textContent = 'Sun raha hu... bol ke dobara tap karo';
+        micStatus.textContent = 'Listening… tap again when done';
       }catch(e){
-        micStatus.textContent = 'Mic start nahi ho paya: ' + (e.message || e);
+        micStatus.textContent = 'Could not start mic: ' + (e.message || e);
       }
     } else {
       recording = false;
       micBtn.classList.remove('rec');
-      micStatus.textContent = 'Check kar raha hu...';
+      micStatus.textContent = 'Checking…';
       try{ await MicCapture.stop(); }catch(e){}
       if (listenerHandle){ try{ await listenerHandle.remove(); }catch(e){} listenerHandle = null; }
 
       const total = chunks.reduce((n, c) => n + c.length, 0);
-      if (total === 0){ micStatus.textContent = 'Kuch sunayi nahi diya, dobara try karo.'; return; }
+      if (total === 0){ micStatus.textContent = 'Nothing was heard — please try again.'; return; }
       const merged = new Uint8Array(total);
       let off = 0; for (const c of chunks){ merged.set(c, off); off += c.length; }
 
@@ -379,11 +379,11 @@ function renderSpeak(q, colorClass){
         console.error('speech eval failed', e);
         const keyStatus = await checkGeminiApiKey(getApiKey());
         if (keyStatus.status !== 'valid') {
-          micStatus.textContent = (keyStatus.message || 'API key sahi nahi hai') + ' — Settings mein jaake theek karo.';
+          micStatus.textContent = (keyStatus.message || 'Invalid API key') + ' — Go to Settings to fix this.';
           micBtn.disabled = true;
           return; // don't auto-skip — the person needs to see the real reason, not just watch it move on
         }
-        micStatus.textContent = 'Check nahi ho paya — skip kar rahe hai.';
+        micStatus.textContent = 'Could not check your answer — skipping.';
         setTimeout(skip, 800);
       }
     }
@@ -444,7 +444,7 @@ async function init(){
     }
     renderCurrentQuestion();
   }catch(e){
-    content.innerHTML = '<div class="qempty">Quiz load nahi ho paya: ' + escapeHtml(e.message || 'try again') + '</div>';
+    content.innerHTML = '<div class="qempty">Could not load the quiz: ' + escapeHtml(e.message || 'try again') + '</div>';
   }
 }
 

@@ -33,7 +33,12 @@ export async function mountDrawer(triggerEl, activePage){
       </a>
       <div class="drawer-divider"></div>
       <div class="drawer-section-label">Recent chats</div>
-      <div id="drawerRecent"><div class="status-msg">Loading...</div></div>
+      <div id="drawerRecent">
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 10px;">
+          <div style="width:18px;height:18px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--accent);animation:spin 0.75s linear infinite;flex-shrink:0;"></div>
+          <span style="font-size:0.8rem;color:var(--ink-dim);">Loading chats…</span>
+        </div>
+      </div>
       <div class="drawer-more" id="drawerMore">
         More chats
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg>
@@ -73,7 +78,7 @@ export async function mountDrawer(triggerEl, activePage){
     const recent = (data.sessions || []).slice(0, 5);
     const recentEl = overlay.querySelector('#drawerRecent');
     if (!recent.length) {
-      recentEl.innerHTML = '<div class="status-msg" style="font-size:0.8rem;">Abhi koi chat nahi hai.</div>';
+      recentEl.innerHTML = '<div class="status-msg" style="font-size:0.8rem;">No chats yet.</div>';
     } else {
       recentEl.innerHTML = '';
       recent.forEach(s => {
@@ -94,7 +99,7 @@ export async function mountDrawer(triggerEl, activePage){
       });
     }
   } catch (e) {
-    overlay.querySelector('#drawerRecent').innerHTML = '<div class="status-msg err" style="font-size:0.8rem;">Load nahi ho paya.</div>';
+    overlay.querySelector('#drawerRecent').innerHTML = '<div class="status-msg err" style="font-size:0.8rem;">Could not load chats.</div>';
   }
 
   return { open, close };

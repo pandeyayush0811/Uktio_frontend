@@ -130,6 +130,42 @@ textarea:focus{border-color:var(--accent);}
 }
 @keyframes spin{ to{ transform:rotate(360deg); } }
 
+/* ---- Page-level centered loader ---- */
+/* Drop <div class="page-loader" id="..."></div> anywhere that needs a
+   centered spinner while async data is fetching. Toggle display:none to
+   hide once data arrives. Works inside flex columns (wrap) or standalone. */
+.page-loader{
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:14px; padding:48px 20px; width:100%;
+}
+.page-loader .loader-ring{
+  width:40px; height:40px; border-radius:50%;
+  border:3px solid var(--line); border-top-color:var(--accent);
+  animation:spin 0.75s linear infinite; flex-shrink:0;
+}
+.page-loader .loader-label{
+  font-size:0.82rem; color:var(--ink-dim); letter-spacing:0.02em;
+}
+
+/* ---- Collapsible detail panel (Gemini key hint / delete) ---- */
+.collapsible-panel{
+  overflow:hidden; max-height:0;
+  transition:max-height 0.3s ease, opacity 0.25s ease;
+  opacity:0; pointer-events:none;
+}
+.collapsible-panel.open{
+  max-height:600px; opacity:1; pointer-events:auto;
+}
+.key-expand-row{
+  display:flex; align-items:center; justify-content:space-between;
+  cursor:pointer; padding:6px 0 2px; margin-top:-6px;
+  color:var(--ink-dim); font-size:0.78rem; font-weight:600; user-select:none;
+}
+.key-expand-row svg{
+  width:16px; height:16px; transition:transform 0.25s;
+}
+.key-expand-row.open svg{ transform:rotate(180deg); }
+
 footer{margin-top:16px;color:var(--ink-dim);font-size:0.72rem;line-height:1.6;text-align:center;}
 /* ==== New light "Chats" design system (drawer, chats list, profile view) ==== */
 :root{

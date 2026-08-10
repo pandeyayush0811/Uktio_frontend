@@ -139,7 +139,7 @@ function buildMistakesPreviewHtml(count){
       </span>
       <span class="mp-text">
         <div class="mp-title">${count} ${count === 1 ? 'cheez' : 'cheezein'} mili is session mein</div>
-        <div class="mp-sub">Dekhne ke liye tap karo — swipe karke jao</div>
+        <div class="mp-sub">Tap to view — swipe to navigate</div>
       </span>
       <span class="mp-arrow">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
@@ -157,8 +157,8 @@ function renderReport(report){
     ${report.opening_line ? `<div class="report-summary">${escapeHtml(report.opening_line)}</div>` : ''}
     ${strengthsHtml ? `<div class="drawer-section-label" style="margin-top:20px;">What you did well</div><div class="report-summary"><ul class="strengths-list">${strengthsHtml}</ul></div>` : ''}
     ${mistakes.length ? `<div class="drawer-section-label" style="margin-top:20px;">Areas to work on</div>${buildMistakesPreviewHtml(mistakes.length)}` : ''}
-    ${report.focus_next ? `<div class="practice-tip-card"><strong>🎯 Next session mein focus karo</strong>${escapeHtml(report.focus_next)}</div>` : ''}
-    ${hasQuiz ? `<div class="quiz-cta"><button id="startQuizBtn">Quiz shuru karo — 2 min mein confirm karo kya seekha 🎯</button></div>` : ''}
+    ${report.focus_next ? `<div class="practice-tip-card"><strong>🎯 Focus on next session</strong>${escapeHtml(report.focus_next)}</div>` : ''}
+    ${hasQuiz ? `<div class="quiz-cta"><button id="startQuizBtn">Start quiz — confirm what you learned in 2 min 🎯</button></div>` : ''}
   `;
 
   animateScorePill();
@@ -197,7 +197,7 @@ async function init(){
       if (shouldAutoGenerate) generateReport();
       else renderGenerateState('Is chat ka abhi tak koi report nahi bana hai.', true);
     } else {
-      renderGenerateState('Report load nahi ho paya: ' + escapeHtml(err.message), true);
+      renderGenerateState('Could not load the report: ' + escapeHtml(err.message), true);
     }
   }
 }

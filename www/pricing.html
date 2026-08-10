@@ -14,9 +14,13 @@
     border:2px solid transparent;
   }
   .plan-card.current{ border-color:var(--accent); }
+  .plan-card.dimmed{ opacity:0.6; }
   .plan-badge{
     position:absolute; top:-10px; right:18px; background:var(--accent); color:#fff;
     font-size:0.68rem; font-weight:700; padding:4px 10px; border-radius:999px; letter-spacing:0.3px;
+  }
+  .plan-badge.badge-done{
+    background:var(--ink-dim);
   }
   .plan-name{ font-family:var(--font-display); font-size:1.15rem; font-weight:700; margin:0; }
   .plan-tagline{ font-size:0.82rem; color:var(--ink-dim); margin-top:4px; }
@@ -40,80 +44,95 @@
     <span style="width:38px;"></span>
   </header>
 
-  <p style="font-size:0.85rem;color:var(--ink-dim);margin:6px 4px 0;">
-    Practice sessions ke liye ek active plan chahiye. Dono plans mein tum apni khud ki Google Gemini
-    API key use karte ho voice practice ke liye — plan ke saath tumhe reports, quizzes, aur poora app access milta hai.
-  </p>
+  <!-- <p style="font-size:0.85rem;color:var(--ink-dim);margin:6px 4px 0;">
+    An active plan is required to start practice sessions. Both plans use your own
+    Google Gemini API key for voice practice — your plan gives you access to reports,
+    quizzes, and the full app experience.
+  </p> -->
 
-  <!-- ═══ FREE TRIAL — shown only while no paid plan is active ═══ -->
-  <div class="plan-card current" id="trialCard" style="display:none;">
-    <span class="plan-badge" id="trialBadge">Aap abhi yahan ho</span>
-    <h2 class="plan-name">Free Trial</h2>
-    <div class="plan-tagline" id="trialTagline">3 din free — 5 chats + 5 reports included</div>
-    <div class="plan-price"><span class="amount">₹0</span><span class="period">/ 3 din</span></div>
-    <ul class="plan-features">
-      <li>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-        <span id="trialChatsLine">5 voice practice sessions</span>
-      </li>
-      <li>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-        <span id="trialReportsLine">5 detailed analysis reports + quizzes</span>
-      </li>
-      <li>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-        Apne mistakes ka quiz-review — hamesha free, trial ke baad bhi
-      </li>
-    </ul>
-    <div class="status-msg" id="trialMsg" style="margin-top:14px;"></div>
+  <!-- Loading state — centered spinner while plan data is fetching -->
+  <div class="page-loader" id="plansLoader">
+    <div class="loader-ring"></div>
+    <span class="loader-label">Loading your plan…</span>
   </div>
 
-  <!-- ═══ STARTER — ₹99 ═══ -->
-  <div class="plan-card" id="starterCard">
-    <span class="plan-badge" id="starterBadge" style="display:none;">Current plan</span>
-    <h2 class="plan-name">Uktio Starter</h2>
-    <div class="plan-tagline">Apni Gemini key use karo — full app access</div>
-    <div class="plan-price"><span class="amount">₹99</span><span class="period">/ 30 din</span></div>
-    <ul class="plan-features">
-      <li>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-        Unlimited voice practice sessions (apni API key se)
-      </li>
-      <li>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-        Har session ke baad detailed analysis report
-      </li>
-      <li>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-        Session-wise quiz aur mistake tracking
-      </li>
-    </ul>
-    <button class="primary" id="starterBtn" style="margin-top:18px;">Buy now — ₹99</button>
-    <div class="status-msg" id="starterMsg"></div>
-  </div>
+  <!-- Plan cards — hidden until data loads, then revealed -->
+  <div id="plansContent" style="display:none;">
 
-  <!-- ═══ UNLIMITED — ₹1199, waitlist only ═══ -->
-  <div class="plan-card" id="unlimitedCard">
-    <span class="plan-badge" id="unlimitedBadge" style="display:none;">Current plan</span>
-    <h2 class="plan-name">Uktio Unlimited</h2>
-    <div class="plan-tagline">Apni key ki zaroorat nahi — hum sab handle karte hain</div>
-    <div class="plan-price"><span class="amount">₹1199</span><span class="period">/ 30 din</span></div>
-    <ul class="plan-features">
-      <li class="dim">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-        Koi API key setup nahi — seedha practice shuru karo
-      </li>
-      <li class="dim">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-        Starter ke saare features included
-      </li>
-    </ul>
-    <button class="secondary" id="unlimitedBtn" style="margin-top:18px;">Join waitlist</button>
-    <div class="status-msg" id="unlimitedMsg"></div>
-  </div>
+    <!-- ═══ FREE TRIAL ═══
+         Always shown. When the user has no paid plan → shows trial status.
+         When the user has a paid plan → shown dimmed as "Completed", so they
+         can see where they started without the card simply vanishing. -->
+    <div class="plan-card" id="trialCard">
+      <span class="plan-badge" id="trialBadge" style="display:none;">You are here</span>
+      <h2 class="plan-name">Free Trial</h2>
+      <div class="plan-tagline" id="trialTagline">3 days free — 5 chats + 5 reports included</div>
+      <div class="plan-price"><span class="amount">₹0</span><span class="period">/ 3 days</span></div>
+      <ul class="plan-features">
+        <li>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          <span id="trialChatsLine">5 voice practice sessions</span>
+        </li>
+        <li>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          <span id="trialReportsLine">5 detailed analysis reports + quizzes</span>
+        </li>
+        <li>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Quiz review of your mistakes — always free, even after the trial
+        </li>
+      </ul>
+      <div class="status-msg" id="trialMsg" style="margin-top:14px;"></div>
+    </div>
+
+    <!-- ═══ STARTER — ₹99 ═══ -->
+    <div class="plan-card" id="starterCard">
+      <span class="plan-badge" id="starterBadge" style="display:none;">Current plan</span>
+      <h2 class="plan-name">Uktio Starter</h2>
+      <div class="plan-tagline">Use your own Gemini key — full app access</div>
+      <div class="plan-price"><span class="amount">₹99</span><span class="period">/ 30 days</span></div>
+      <ul class="plan-features">
+        <li>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Unlimited voice practice sessions (using your API key)
+        </li>
+        <li>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Detailed analysis report after every session
+        </li>
+        <li>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Per-session quiz and mistake tracking
+        </li>
+      </ul>
+      <button class="primary" id="starterBtn" style="margin-top:18px;">Buy now — ₹99</button>
+      <div class="status-msg" id="starterMsg"></div>
+    </div>
+
+    <!-- ═══ UNLIMITED — ₹1199, waitlist only ═══ -->
+    <div class="plan-card" id="unlimitedCard">
+      <span class="plan-badge" id="unlimitedBadge" style="display:none;">Current plan</span>
+      <h2 class="plan-name">Uktio Unlimited</h2>
+      <div class="plan-tagline">No API key needed — we handle everything</div>
+      <div class="plan-price"><span class="amount">₹1199</span><span class="period">/ 30 days</span></div>
+      <ul class="plan-features">
+        <li class="dim">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          No API key setup — start practicing right away
+        </li>
+        <li class="dim">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          All Starter features included
+        </li>
+      </ul>
+      <button class="secondary" id="unlimitedBtn" style="margin-top:18px;">Join waitlist</button>
+      <div class="status-msg" id="unlimitedMsg"></div>
+    </div>
+
+  </div><!-- /plansContent -->
 
   <p style="font-size:0.76rem;color:var(--ink-dim);text-align:center;margin:20px 4px;">
-    Payment Razorpay ke through secure hai. Koi bhi dikkat ho to Settings → Contact the Co-Founder.
+    Payments are processed securely via Razorpay. For any issues, go to Settings → Contact the Co-Founder.
   </p>
 </div>
 
@@ -126,60 +145,92 @@ import { initBackNav } from './shared/back-nav.js';
 requireAuthOrRedirect();
 initBackNav('settings.html');
 
-const starterBtn = document.getElementById('starterBtn');
-const starterMsg = document.getElementById('starterMsg');
-const unlimitedBtn = document.getElementById('unlimitedBtn');
-const unlimitedMsg = document.getElementById('unlimitedMsg');
+const starterBtn    = document.getElementById('starterBtn');
+const starterMsg    = document.getElementById('starterMsg');
+const unlimitedBtn  = document.getElementById('unlimitedBtn');
+const unlimitedMsg  = document.getElementById('unlimitedMsg');
+const plansLoader   = document.getElementById('plansLoader');
+const plansContent  = document.getElementById('plansContent');
 
-// ── Reflect current plan state on load ──────────────────────────
-async function refreshPlanState(){
+// ── Show plan state ────────────────────────────────────────────────────────
+async function refreshPlanState() {
   try {
     const status = await getPlanStatus();
+
+    // Reveal cards, hide loader
+    plansLoader.style.display = 'none';
+    plansContent.style.display = '';
+
     if (!status) return;
+
+    const trialCard   = document.getElementById('trialCard');
+    const trialBadge  = document.getElementById('trialBadge');
+    const trialMsg    = document.getElementById('trialMsg');
 
     if (status.plan === 'starter') {
       document.getElementById('starterBadge').style.display = '';
       document.getElementById('starterCard').classList.add('current');
+
       if (status.active) {
         const d = new Date(status.plan_expires_at);
-        starterBtn.textContent = 'Renew now — ₹99';
-        starterMsg.textContent = 'Valid till ' + d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+        starterBtn.textContent = 'Renew — ₹99';
+        starterMsg.textContent = 'Active until ' + d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
         starterMsg.className = 'status-msg ok';
       } else {
-        starterMsg.textContent = 'Tumhara plan expire ho gaya hai — renew karo.';
+        starterMsg.textContent = 'Your plan has expired — please renew to continue.';
         starterMsg.className = 'status-msg err';
       }
+
+      // Trial card: user has upgraded — show it dimmed so they can see
+      // where they started, but make it clear they've moved on.
+      trialCard.classList.add('dimmed');
+      trialBadge.textContent = 'Completed';
+      trialBadge.classList.add('badge-done');
+      trialBadge.style.display = '';
+      trialMsg.textContent = 'You have upgraded to Starter. The free trial is no longer active.';
+      trialMsg.className = 'status-msg';
     }
 
     if (status.plan === 'unlimited') {
       document.getElementById('unlimitedBadge').style.display = '';
       document.getElementById('unlimitedCard').classList.add('current');
+
+      // Trial card: same dimmed treatment for unlimited users
+      trialCard.classList.add('dimmed');
+      trialBadge.textContent = 'Completed';
+      trialBadge.classList.add('badge-done');
+      trialBadge.style.display = '';
+      trialMsg.textContent = 'You have upgraded to Unlimited. The free trial is no longer active.';
+      trialMsg.className = 'status-msg';
     }
 
-    // Trial card — only meaningful while the user has no paid plan at all.
-    // Once they've ever paid (even if currently expired), showing "Free
-    // Trial — you are here" would be confusing/wrong, so it stays hidden
-    // and the Starter card's own expired-state messaging takes over instead.
-    const trialCard = document.getElementById('trialCard');
+    // Trial card active state — only for users with no paid plan
     if ((!status.plan || status.plan === 'none') && status.trial) {
-      trialCard.style.display = '';
       const t = status.trial;
-      document.getElementById('trialChatsLine').textContent = `${t.chats_remaining} / ${t.chat_limit} voice practice sessions bache hain`;
-      document.getElementById('trialReportsLine').textContent = `${t.reports_remaining} / ${t.report_limit} analysis reports + quizzes bache hain`;
-      const trialMsg = document.getElementById('trialMsg');
+      document.getElementById('trialChatsLine').textContent =
+        `${t.chats_remaining} / ${t.chat_limit} voice practice sessions remaining`;
+      document.getElementById('trialReportsLine').textContent =
+        `${t.reports_remaining} / ${t.report_limit} analysis reports + quizzes remaining`;
+
+      trialCard.classList.add('current');
+      trialBadge.textContent = 'You are here';
+      trialBadge.style.display = '';
+
       if (t.active) {
-        trialMsg.textContent = `${t.days_left} din baaki hain trial ke.`;
+        trialMsg.textContent = `${t.days_left} day${t.days_left !== 1 ? 's' : ''} remaining in your free trial.`;
         trialMsg.className = 'status-msg ok';
       } else {
-        trialMsg.textContent = 'Tumhara free trial khatam ho gaya hai — neeche se plan lo.';
+        trialMsg.textContent = 'Your free trial has ended — choose a plan below to continue.';
         trialMsg.className = 'status-msg err';
       }
-    } else {
-      trialCard.style.display = 'none';
     }
-  } catch (e) { /* non-critical — page still fully usable without this */ }
+  } catch (e) {
+    // Non-fatal — page is still usable without this data
+    plansLoader.style.display = 'none';
+    plansContent.style.display = '';
+  }
 
-  // Independent of plan state — has this user already joined the waitlist?
+  // Independent of plan state — check waitlist status
   try {
     const w = await apiFetch('/payments/unlimited/waitlist');
     if (w.joined) {
@@ -188,32 +239,21 @@ async function refreshPlanState(){
     }
   } catch (e) { /* non-critical */ }
 }
+
 refreshPlanState();
 
-// ── Starter: real purchase flow ──────────────────────────────────
-// Razorpay's checkout widget doesn't work reliably inside a Capacitor
-// WebView (fraud-detection/device-fingerprinting scripts get blocked,
-// UPI app-switch-and-return deep linking breaks, bank OTP redirect pages
-// can't host properly) — Razorpay themselves advise against embedding
-// their web checkout inside a hybrid-app WebView.
-//
-// Fix: the backend hands us a one-time checkout_url (see
-// POST /payments/checkout/init in routes/paymentRoutes.js), and we open
-// THAT in the system browser (Chrome Custom Tabs) instead of running
-// Razorpay in this WebView. The hosted page (public/checkout.html on the
-// backend) is a plain, unauthenticated page identified only by a
-// short-lived single-use token in the URL — never the user's real
-// session token, since a system browser tab has no access to this
-// WebView's localStorage anyway.
-//
-// When the user finishes (or bails out) and comes back to the app, this
-// page's refreshPlanState() on next load — and the periodic /payments/status
-// check — will reflect the new plan. The webhook (server-to-server) is
-// still the real source of truth, so the plan activates correctly even
-// if the user never returns to this exact tab.
+// ── Starter: real purchase flow ────────────────────────────────────────────
+// Razorpay's checkout widget does not work reliably inside a Capacitor
+// WebView — Razorpay themselves advise against it. The backend issues a
+// one-time checkout_url (POST /payments/checkout/init) which we open in
+// the system browser (Chrome Custom Tabs). The hosted checkout page is
+// identified only by a short-lived single-use token — never the user's
+// real session token. The webhook (server-to-server) is the real source
+// of truth, so the plan activates correctly even if the user closes the
+// browser tab without returning to this screen.
 starterBtn.addEventListener('click', async () => {
   starterBtn.disabled = true;
-  starterMsg.textContent = 'Checkout khul raha hai...';
+  starterMsg.textContent = 'Opening checkout…';
   starterMsg.className = 'status-msg';
 
   try {
@@ -222,45 +262,42 @@ starterBtn.addEventListener('click', async () => {
       body: JSON.stringify({ plan: 'starter' })
     });
 
-    const BrowserPlugin = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Browser;
+    const BrowserPlugin = window.Capacitor?.Plugins?.Browser;
     if (BrowserPlugin) {
       await BrowserPlugin.open({ url: checkout_url });
     } else {
-      // Not running inside the native app (e.g. testing in a desktop
-      // browser preview) — a normal new tab is the equivalent fallback.
+      // Fallback for desktop browser testing
       window.open(checkout_url, '_blank');
     }
 
-    starterMsg.textContent = 'Payment browser mein khul gaya hai. Complete karke wapas app par aa jao.';
+    starterMsg.textContent = 'Payment page opened in your browser. Return here once done.';
     starterMsg.className = 'status-msg';
   } catch (e) {
-    starterMsg.textContent = 'Checkout shuru karne mein dikkat hui: ' + (e.message || 'try again');
+    starterMsg.textContent = 'Could not start checkout: ' + (e.message || 'please try again');
     starterMsg.className = 'status-msg err';
   } finally {
     starterBtn.disabled = false;
   }
 });
 
-// Re-check plan status whenever the user comes back to this page (e.g.
-// switching back from the system browser after paying) — catches the
-// case where the payment finished while they were away.
+// Re-check plan when user returns from the system browser (after paying)
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') refreshPlanState();
 });
 
-// ── Unlimited: waitlist only ──────────────────────────────────────
+// ── Unlimited: waitlist only ───────────────────────────────────────────────
 unlimitedBtn.addEventListener('click', async () => {
   if (unlimitedBtn.disabled) return;
   unlimitedBtn.disabled = true;
-  unlimitedMsg.textContent = 'Adding you...';
+  unlimitedMsg.textContent = 'Adding you to the waitlist…';
   unlimitedMsg.className = 'status-msg';
   try {
     await apiFetch('/payments/unlimited/waitlist', { method: 'POST' });
     unlimitedBtn.textContent = "You're on the waitlist ✓";
-    unlimitedMsg.textContent = 'Launch hote hi tumhe sabse pehle batayenge.';
+    unlimitedMsg.textContent = "We'll notify you as soon as it launches.";
     unlimitedMsg.className = 'status-msg ok';
   } catch (e) {
-    unlimitedMsg.textContent = 'Kuch gadbad hui — phir try karo.';
+    unlimitedMsg.textContent = 'Something went wrong — please try again.';
     unlimitedMsg.className = 'status-msg err';
     unlimitedBtn.disabled = false;
   }
