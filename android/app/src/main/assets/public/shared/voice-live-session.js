@@ -70,22 +70,11 @@ export function describeCloseEvent(e) {
 // that used to be five separate module-level variables in chat.html —
 // bundled into one object so a caller (scenario.html) doesn't have to
 // juggle them by hand.
-function createAudioPlayer(onSpeakingChange) {
+function createAudioPlayer() {
   let playCtx = null;
   let nextPlayTime = 0;
   let scheduledSources = [];
   let isModelSpeaking = false;
-
-  // Fires whenever isModelSpeaking flips, so a caller (scenario.html)
-  // can show a real "mic is closed right now because Utkio is talking"
-  // state — not just silently drop audio chunks in the background like
-  // before. This is what makes the mute/unmute actually VISIBLE to the
-  // user, especially important during the phase-2 feedback monologue.
-  function setSpeaking(val) {
-    if (isModelSpeaking === val) return;
-    isModelSpeaking = val;
-    if (onSpeakingChange) onSpeakingChange(val);
-  }
 
   return {
     open() {
@@ -96,7 +85,7 @@ function createAudioPlayer(onSpeakingChange) {
     playChunk(base64Data) {
       if (!playCtx) return;
       try {
-        setSpeaking(true);
+        isModelSpeaking = true;
         const int16 = base64ToInt16(base64Data);
         const float32 = new Float32Array(int16.length);
         for (let i = 0; i < int16.length; i++) float32[i] = int16[i] / 32768;
@@ -117,7 +106,7 @@ function createAudioPlayer(onSpeakingChange) {
           scheduledSources = scheduledSources.filter(s => s !== src);
           if (scheduledSources.length === 0) {
             setTimeout(() => {
-              if (scheduledSources.length === 0) setSpeaking(false);
+              if (scheduledSources.length === 0) isModelSpeaking = false;
             }, 200);
           }
         };
@@ -129,7 +118,7 @@ function createAudioPlayer(onSpeakingChange) {
     stop() {
       scheduledSources.forEach(s => { try { s.stop(); } catch (e) { /* already stopped, ignore */ } });
       scheduledSources = [];
-      setSpeaking(false);
+      isModelSpeaking = false;
       if (playCtx) nextPlayTime = playCtx.currentTime;
     },
     close() {
@@ -172,15 +161,6 @@ async function stopKeepAlive() {
 //   onTurnComplete()                  — model finished a turn
 //   onOpen()                          — connection established
 //   onClose(closeEvent)               — connection ended (any reason)
-//   onSpeakingChange(isSpeaking)      — Utkio started/stopped talking —
-//                                        this is the real "mic is
-//                                        live-muted right now" signal;
-//                                        the mic never actually sends
-//                                        audio while this is true (see
-//                                        startNativeMic below), so a
-//                                        page should mirror this in the
-//                                        UI rather than just guessing
-//                                        from turn boundaries.
 export function createVoiceSession({ getSystemInstruction, voiceName = 'Puck', callbacks = {} }) {
   let session = null;
   let audioPlayer = null;
@@ -304,9 +284,7 @@ export function createVoiceSession({ getSystemInstruction, voiceName = 'Puck', c
         }
       });
 
-      audioPlayer = createAudioPlayer((isSpeaking) => {
-        callbacks.onSpeakingChange && callbacks.onSpeakingChange(isSpeaking);
-      });
+      audioPlayer = createAudioPlayer();
       audioPlayer.open();
 
       callbacks.onStatus && callbacks.onStatus('Mic (native) shuru ho raha hai...', null);
