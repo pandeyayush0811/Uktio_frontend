@@ -17,6 +17,11 @@
     background:transparent; color:var(--accent); font-weight:700; font-size:0.85rem; cursor:pointer; font-family:inherit;
   }
   .empty-state{ text-align:center; color:var(--ink-dim); padding:60px 20px; font-size:0.9rem; }
+  .scenario-badge{
+    display:inline-block; font-size:0.66rem; font-weight:700; letter-spacing:0.02em; text-transform:uppercase;
+    color:var(--accent); background:var(--accent-soft); padding:2px 8px; border-radius:99px; margin-left:8px;
+    vertical-align:middle;
+  }
 </style>
 </head>
 <body>
@@ -81,7 +86,7 @@ function formatDateTime(iso){
     ' · ' + d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
 }
 
-async function loadTranscript(sessionId, container){
+async function loadTranscript(sessionId, container, sessionType){
   container.innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;padding:12px 0;">
       <div class="loader-ring" style="width:20px;height:20px;border-width:2px;"></div>
@@ -98,11 +103,20 @@ async function loadTranscript(sessionId, container){
       line.appendChild(document.createTextNode(m.content));
       container.appendChild(line);
     });
-    const resumeBtn = document.createElement('button');
-    resumeBtn.className = 'resume-btn';
-    resumeBtn.textContent = 'Resume this chat';
-    resumeBtn.addEventListener('click', (e) => { e.stopPropagation(); window.location.href = 'chat.html?resume=' + sessionId; });
-    container.appendChild(resumeBtn);
+    // Resume only makes sense for freeform sessions — chat.html's resume
+    // flow builds a freeform system prompt, which would silently (and
+    // confusingly) drop the scenario's character/context if pointed at a
+    // scenario session. scenario.html itself has no resume flow (a
+    // scenario is a single continuous 3-min-roleplay-plus-feedback take,
+    // not a multi-visit conversation), so there's nowhere correct to
+    // send a "resume" tap for these — omit the button entirely.
+    if (sessionType !== 'scenario') {
+      const resumeBtn = document.createElement('button');
+      resumeBtn.className = 'resume-btn';
+      resumeBtn.textContent = 'Resume this chat';
+      resumeBtn.addEventListener('click', (e) => { e.stopPropagation(); window.location.href = 'chat.html?resume=' + sessionId; });
+      container.appendChild(resumeBtn);
+    }
   } catch (err) {
     container.innerHTML = `<div class="status-msg err">Failed to load transcript. Please try again: ${escapeHtml(err.message)}</div>`;
   }
@@ -120,7 +134,7 @@ function renderList(sessions){
     const card = document.createElement('div');
     card.className = 'chat-card';
     card.innerHTML = `
-      <div class="chat-card-date">${formatDateTime(s.started_at)}</div>
+      <div class="chat-card-date">${formatDateTime(s.started_at)}${s.session_type === 'scenario' ? '<span class="scenario-badge">Scenario</span>' : ''}</div>
       <div class="chat-card-meta">${formatDuration(s.started_at, s.ended_at)} · ${s.turn_count} turns</div>
       <div class="expanded-transcript"></div>`;
 
@@ -145,7 +159,7 @@ function renderList(sessions){
     card.addEventListener('click', () => {
       const willOpen = !card.classList.contains('open');
       card.classList.toggle('open');
-      if (willOpen && !loaded){ loaded = true; loadTranscript(s.id, card.querySelector('.expanded-transcript')); }
+      if (willOpen && !loaded){ loaded = true; loadTranscript(s.id, card.querySelector('.expanded-transcript'), s.session_type); }
     });
     sessionList.appendChild(card);
   });

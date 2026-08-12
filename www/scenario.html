@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Utkio — Today's Scenario</title>
+<link rel="stylesheet" href="shared/style.css">
+<style>
+  /* Mostly mirrors chat.html's chat-card/transcript/mic-dock styling
+     (same visual language across both voice-session pages), plus
+     scenario-specific additions: the scenario title card, phase badge,
+     and countdown chip. */
+  .status-row{
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    margin:14px 0 10px;
+  }
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--ink-dim);flex-shrink:0;transition:background 0.2s;}
+  .dot.live{ background:#3fb950; }
+  .dot.err{ background:var(--bad); }
+  #statusText{font-size:0.95rem;font-weight:500;}
+
+  .scenario-card{
+    background:var(--card); border-radius:20px; padding:16px 18px; margin-bottom:14px;
+    box-shadow:0 12px 28px -18px rgba(60,60,120,0.18);
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+  }
+  .scenario-card .info{ min-width:0; }
+  .scenario-card .category{ font-size:0.7rem; font-weight:700; letter-spacing:0.03em; color:var(--accent); text-transform:uppercase; }
+  .scenario-card .title{ font-size:1rem; font-weight:700; margin-top:2px; line-height:1.3; }
+  .phase-chip{
+    flex-shrink:0; display:flex; flex-direction:column; align-items:center; gap:2px;
+    padding:8px 12px; border-radius:14px; background:var(--panel-2); min-width:64px;
+  }
+  .phase-chip .label{ font-size:0.62rem; color:var(--ink-dim); font-weight:600; text-transform:uppercase; letter-spacing:0.02em; }
+  .phase-chip .value{ font-size:0.92rem; font-weight:700; font-variant-numeric:tabular-nums; }
+  .phase-chip.feedback .value{ color:var(--accent); font-size:0.78rem; }
+
+  .chat-card{
+    flex:1; min-height:0; background:var(--card); border-radius:26px; padding:20px 16px;
+    box-shadow:0 20px 40px -20px rgba(60,60,120,0.18);
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  .transcript{
+    flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column;
+    gap:14px; padding-right:2px; padding-bottom:4px; scroll-behavior:smooth;
+    scrollbar-width:none; -ms-overflow-style:none;
+  }
+  .transcript::-webkit-scrollbar{ display:none; }
+  .transcript:empty::before{
+    content:"Tap the mic — the scene starts as soon as you connect";
+    color:var(--ink-dim); font-size:0.85rem; font-style:italic; margin:auto;
+  }
+  .line{ padding:12px 16px; border-radius:16px; font-size:0.95rem; line-height:1.5; max-width:82%; }
+  .line.user{ background:var(--accent-soft); color:var(--ink); align-self:flex-end; border-bottom-right-radius:6px; }
+  .line.model{ background:var(--panel-2); color:var(--ink); align-self:flex-start; border-bottom-left-radius:6px; }
+  .line.feedback{ background:#fff4e5; border:1px solid #ffd9a0; }
+
+  .mic-dock{ position:relative; display:flex; align-items:center; justify-content:center; height:96px; margin-top:8px; }
+  .wave{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; gap:4px; opacity:0.35; pointer-events:none; }
+  .wave span{ width:3px; border-radius:2px; background:var(--accent); opacity:0.55; }
+  .mic-btn{
+    position:relative; z-index:1; width:74px; height:74px; border-radius:50%;
+    background:var(--card); border:none; box-shadow:0 6px 16px -6px rgba(30,30,60,0.18);
+    display:flex; align-items:center; justify-content:center; cursor:pointer;
+    transition:transform 0.15s, box-shadow 0.2s, background 0.2s;
+    -webkit-tap-highlight-color: transparent; -webkit-user-select:none; user-select:none;
+    touch-action:manipulation; outline:none;
+  }
+  .mic-btn:focus, .mic-btn:focus-visible{ outline:none; }
+  .mic-btn:hover:not(:disabled){transform:scale(1.04);}
+  .mic-btn:disabled{opacity:0.5;cursor:not-allowed;}
+  .mic-btn svg{width:28px;height:28px;color:var(--accent);}
+  .mic-btn.active{
+    background:var(--accent);
+    box-shadow: 0 0 0 14px rgba(106,99,241,0.16), 0 0 26px 6px rgba(106,99,241,0.55);
+  }
+  .mic-btn.active svg{color:#fff;}
+
+  footer{margin-top:16px;color:var(--ink-dim);font-size:0.72rem;line-height:1.6;text-align:center;}
+
+  .locked-banner{
+    display:none; flex-direction:column; align-items:center; gap:10px; text-align:center;
+    padding:16px 18px; margin-bottom:14px; border-radius:16px;
+    background:var(--panel-2); color:var(--ink-dim); font-size:0.85rem; line-height:1.5;
+  }
+  .locked-banner.show{ display:flex; }
+  .locked-banner button{
+    padding:9px 16px; border-radius:10px; border:1.5px solid var(--accent); background:transparent;
+    color:var(--accent); font-weight:700; font-size:0.82rem; cursor:pointer; font-family:inherit;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <button class="icon-btn" id="drawerTrigger" aria-label="Menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <h1 class="app-title">Today's Scenario</h1>
+    <a class="icon-btn" href="settings.html" aria-label="Settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </a>
+  </header>
+
+  <div class="status-row">
+    <div class="dot" id="statusDot"></div>
+    <span id="statusText">Loading today's scenario...</span>
+  </div>
+
+  <div id="trialBanner" class="trial-banner hidden" style="display:none; font-size:13px; text-align:center; padding:6px 12px; opacity:0.8;"></div>
+
+  <div class="scenario-card" id="scenarioCard" style="display:none;">
+    <div class="info">
+      <div class="category" id="scenarioCategory"></div>
+      <div class="title" id="scenarioTitle"></div>
+    </div>
+    <div class="phase-chip" id="phaseChip">
+      <span class="label" id="phaseLabel">Scene</span>
+      <span class="value" id="phaseValue">3:00</span>
+    </div>
+  </div>
+
+  <div class="locked-banner" id="lockedBanner">
+    <span>Aaj ka scenario already complete ho chuka hai — kal ek naya milega.</span>
+    <button id="lockedSeeHistory" type="button">Chat history dekho</button>
+  </div>
+
+  <div class="chat-card">
+    <div class="transcript" id="transcript"></div>
+  </div>
+
+  <div class="mic-dock">
+    <div class="wave" id="wave" aria-hidden="true"></div>
+    <button id="micBtn" class="mic-btn" aria-label="Start/stop talking" disabled>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+    </button>
+  </div>
+
+  <footer>
+    Mic access chahiye hoga (browser permission maangega). 3 minute ka roleplay, phir turant voice feedback.
+  </footer>
+</div>
+
+<script type="module">
+  import './shared/config.js';
+  import { requireCompleteProfile } from './shared/auth.js';
+  import { requireActivePlan, trialBannerText } from './shared/plan.js';
+  import { mountDrawer } from './shared/drawer.js';
+  import { initBackNav } from './shared/back-nav.js';
+
+  mountDrawer(document.getElementById('drawerTrigger'), 'scenario');
+  initBackNav('chat.html'); // scenario.html is a sub-screen off the main hub
+
+  const profile = await requireCompleteProfile();
+  if (profile) window.__UKTIO_PROFILE = profile;
+
+  const planStatus = await requireActivePlan();
+  window.__UKTIO_PLAN_STATUS = planStatus;
+  const bannerText = trialBannerText(planStatus);
+  if (bannerText) {
+    const el = document.getElementById('trialBanner');
+    el.textContent = bannerText;
+    el.style.display = 'block';
+    el.classList.remove('hidden');
+  }
+</script>
+
+<script type="module">
+import { PENDING_CHAT_SESSION_KEY, syncPendingChatSession, apiFetch } from './shared/auth.js';
+import { createVoiceSession } from './shared/voice-live-session.js';
+
+// Same 3-minute roleplay window the feature spec calls for. A constant
+// (not scenario-config-driven) since every scenario shares the same
+// timing — only the CONTENT differs per scenario, not the pacing.
+const PHASE_1_DURATION_SECONDS = 180;
+
+// ─────────────────────────────────────────────────────────────
+// System instruction builders — phase 1 (in-character roleplay) and
+// phase 2 (out-of-character voice feedback). Style/tone conventions
+// (Hinglish narration, "tum" not "aap", no grammar jargon) intentionally
+// match chat.html's buildSystemInstruction() so the voice feels like the
+// same app, not a bolted-on separate product.
+// ─────────────────────────────────────────────────────────────
+
+function toneHintForAge(age) {
+  if (!age) return '';
+  const ageNum = Number(age);
+  if (!Number.isFinite(ageNum)) return '';
+  if (ageNum < 22) return 'User young hai — thoda casual/friendly tone rakho character ke andar bhi.';
+  if (ageNum > 45) return 'User thodi zyada age ka hai — character thoda zyada respectful/formal tone use kare (jaise "sir" jaisa address, agar character ke context mein natural lage).';
+  return '';
+}
+
+function buildPhase1Instruction(scenario, profile) {
+  const userName = (profile.name && profile.name.trim()) || null;
+  const nameNote = userName
+    ? `User ka naam "${userName}" hai — agar scene mein naturally naam poochna/use karna banta ho to karo, force mat karo.`
+    : `User ka naam pata nahi hai is scene ke character ko — agar zaroorat pade to naturally poochh sakte ho.`;
+
+  return `ROLE — TUM EK CHARACTER HO, AI NAHI:
+Tum "Utkio" ke ek roleplay character ho jo user ke saath EK REAL-LIFE SCENARIO simulate kar raha hai, taaki wo English speaking practice kar sake. Tum teacher ya app nahi ho — tum ek GENUINE INSAAN ki tarah act karoge, poori tarah in-character, jab tak isi message mein tumhe explicitly bola na jaaye character chhodne ko.
+
+CHARACTER BRIEF:
+${scenario.character_brief}
+
+SCENE:
+${scenario.opening_situation}
+
+SABSE ZAROORI RULE — TUMHE SIRF ENGLISH AATI HAI:
+Tumhara character ek genuine non-Hindi-speaking insaan hai. Tumhe Hindi ya Hinglish BILKUL nahi samajh aati — sirf English. Agar user Hindi/Hinglish bole:
+- System-error jaisa mat react karo ("I don't understand" jaisa robotic line kabhi mat bolo).
+- Ek real confused insaan ki tarah react karo — jaise "Sorry, I don't understand — do you speak English?" ya "Hmm? I didn't catch that."
+- Tuti-futi/broken English tumhe samajh aati hai, context ke through — jaise ek real insaan samajhta hai. Perfect grammar ki zaroorat nahi user ko.
+
+AGAR USER KA MATLAB SAMAJH NA AAYE (broken English ki wajah se):
+- Robotic "I don't understand" kabhi mat bolo.
+- Apne tareeke se dobara poochho, context ke saath — jaise "Wait, sorry — you mean...?" ya "Hmm, I didn't quite catch that, can you say it again?"
+- Adhura samjho to guess karke confirm karo.
+- Agar user DOOSRI baar bhi samajh na paaye, character ke through ek chhota hint do (jaise "Are you trying to tell me...?") — taaki user stuck na ho, frustrate na ho.
+
+SCENE KAISE SHURU HOGA:
+User ko wait nahi karna — TUM khud pehla step logo, jaise real life mein hota hai. Ek dynamic, natural opening line do based on the scene above — HARDCODED/fixed line kabhi mat bolo, har baar thoda alag/naturally banti hui line do.
+
+CONVERSATION FLOW:
+- Jaise hi user react kare (chahe broken English ho), naturally aage badho character mein rehte hue — jaise real insaan karta hai.
+- Khud creative follow-up sawaal bhi poochho — jaise real insaan baaton-baaton mein curiosity dikhata hai. Poori conversation fixed-script jaisi mat lagne do, thoda unpredictable/flowing rakho.
+- ${nameNote}
+- ${toneHintForAge(profile.age)}
+
+TONE:
+Judge karne wala kabhi mat bano. Agar scene "fail" ho jaaye (user baar-baar confuse kare ya samajh na paaye), negative treat mat karo — bas encourage karte raho apne character ke through, guilt trip kabhi mat do.
+
+CHARACTER LOCK:
+Jab tak agla message tumhe explicitly na kahe "character chhodo", tum HAMESHA is character mein raho — kabhi khud se AI/tutor mode mein switch mat karo.`;
+}
+
+function buildPhase2Instruction(profile) {
+  const userName = (profile.name && profile.name.trim()) || 'tum';
+  return `CHARACTER CHHODO — AB TUTOR MODE:
+Scene khatam ho gaya hai. Ab tum apna roleplay character bilkul chhod do — turant aur poori tarah. Ab tum "Utkio" ho, ${userName} ke apne warm, caring bade-bhai/dost jaise mentor, seedha apni normal awaaz mein baat kar rahe ho. Koi character ka trace nahi rehna chahiye — tone turant badalni chahiye, koi awkward mix nahi.
+
+Tumhe transcript dobara nahi diya ja raha — is poori session ki memory tumhare paas already hai (jo abhi scene mein hua), usi ko analyze karke seedha bolke feedback do, LIVE VOICE mein, is order mein:
+
+1. PEHLE JO SAHI KIYA (positive-first): ${userName} ne is scene mein kya achha kiya, specific moments ke saath — generic "good job" nahi.
+2. SPECIFIC GALTIYAN (ek-ek karke): Har galti ke liye — kaunsa sentence tha, kya galat tha, tum (character ke through) kyun confuse hue agar hue. Grammar jargon (tense/article/preposition) kabhi mat bolo — ekdum simple, rozmarra ki bhasha mein.
+3. SAHI TARIKA: Har galti ke baad turant bolo "Agar tum aisa bolte, to zyada clear hota" — aur sahi version bolo.
+4. CHHOTA ENCOURAGEMENT: Ek chhota next-step nudge de ke khatam karo — jaise "Kal ek naya scenario milega, aur behtar karo."
+
+TONE: Judge karne wale teacher jaisa bilkul nahi — genuinely ek dost jaisa jo help karna chahta hai. Agar scene mein user struggle kiya, usko negative mat banao — sirf encourage karo.
+
+Ek baar mein bahut lamba mat bolo — natural conversational chunks mein bolo, jaise real baat cheet hoti hai, ek hi saans mein poora lecture nahi.`;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Page state + DOM refs
+// ─────────────────────────────────────────────────────────────
+
+const micBtn = document.getElementById('micBtn');
+const statusDot = document.getElementById('statusDot');
+const statusText = document.getElementById('statusText');
+const transcriptEl = document.getElementById('transcript');
+const waveEl = document.getElementById('wave');
+const scenarioCard = document.getElementById('scenarioCard');
+const scenarioCategoryEl = document.getElementById('scenarioCategory');
+const scenarioTitleEl = document.getElementById('scenarioTitle');
+const phaseChip = document.getElementById('phaseChip');
+const phaseLabel = document.getElementById('phaseLabel');
+const phaseValue = document.getElementById('phaseValue');
+const lockedBanner = document.getElementById('lockedBanner');
+
+document.getElementById('lockedSeeHistory').onclick = () => { window.location.href = 'history.html'; };
+
+let todaysScenario = null; // { key, category, title, character_brief, opening_situation }
+let phase = 'idle'; // 'idle' | 'roleplay' | 'feedback'
+let phaseTimerHandle = null;
+let phaseSecondsLeft = PHASE_1_DURATION_SECONDS;
+
+let sessionStartedAt = null;
+let sessionTurns = []; // { role: 'user'|'assistant', content, phase: 'roleplay'|'feedback' }
+let currentTurnIndex = -1;
+let currentUserLine = null;
+let currentModelLine = null;
+let finalizeInFlight = false;
+
+(function buildWave(){
+  const BARS = 28;
+  for (let i = 0; i < BARS; i++){
+    const bar = document.createElement('span');
+    const h = 6 + Math.round(Math.abs(Math.sin(i * 0.7)) * 26);
+    bar.style.height = h + 'px';
+    waveEl.appendChild(bar);
+  }
+})();
+
+function setStatus(text, mode){
+  statusText.textContent = text;
+  statusDot.className = 'dot' + (mode ? ' ' + mode : '');
+  micBtn.classList.toggle('active', mode === 'live');
+  waveEl.classList.toggle('live', mode === 'live');
+}
+
+function scrollTranscriptToBottom(){
+  transcriptEl.scrollTop = transcriptEl.scrollHeight;
+}
+
+function addLine(role){
+  const div = document.createElement('div');
+  div.className = 'line ' + role + (phase === 'feedback' ? ' feedback' : '');
+  const text = document.createElement('span');
+  text.className = 'text';
+  div.appendChild(text);
+  transcriptEl.appendChild(div);
+  scrollTranscriptToBottom();
+
+  persistLocalSession();
+  sessionTurns.push({ role: role === 'user' ? 'user' : 'assistant', content: '', phase });
+  currentTurnIndex = sessionTurns.length - 1;
+
+  return text;
+}
+
+// Writes the in-progress session to the SAME PENDING_CHAT_SESSION_KEY
+// chat.html uses — deliberately reused rather than a second key, so
+// app-open crash recovery (index.html's syncPendingChatSession call)
+// picks this up too without any changes there. POST /chat/sessions
+// already accepts session_type/scenario_key as optional passthrough
+// fields, so this payload works with zero backend-side special-casing
+// beyond what chatRoutes.js already validates.
+//
+// NOTE: this assumes at most one pending (chat OR scenario) session at a
+// time, same assumption chat.html already makes with this key — if a
+// user somehow abandons a freeform chat mid-session and immediately
+// starts a scenario before it synced, the earlier one could be
+// overwritten. This mirrors an existing edge case in the app rather than
+// introducing a new one, and is safe in practice because both pages sync
+// aggressively (every turn boundary) rather than only at the very end.
+function persistLocalSession(){
+  try {
+    const meaningful = sessionTurns.filter(t => t.content && t.content.trim());
+    if (!meaningful.length) { localStorage.removeItem(PENDING_CHAT_SESSION_KEY); return; }
+    localStorage.setItem(PENDING_CHAT_SESSION_KEY, JSON.stringify({
+      session_id: null, // scenario sessions never resume — see startSession() below
+      started_at: sessionStartedAt,
+      ended_at: new Date().toISOString(),
+      session_type: 'scenario',
+      scenario_key: todaysScenario ? todaysScenario.key : null,
+      // Backend's messages schema only knows role/content — the local
+      // `phase` tag is UI-only (drives the amber "feedback" bubble
+      // styling) and intentionally dropped here rather than sent, since
+      // chatRoutes.js's validateMessages() would reject an unexpected field.
+      messages: meaningful.map(t => ({ role: t.role, content: t.content }))
+    }));
+  } catch(e){ console.warn('persistLocalSession failed', e); }
+}
+
+function updatePhaseChip(){
+  if (phase === 'roleplay'){
+    phaseChip.classList.remove('feedback');
+    phaseLabel.textContent = 'Scene';
+    const m = Math.floor(phaseSecondsLeft / 60);
+    const s = phaseSecondsLeft % 60;
+    phaseValue.textContent = m + ':' + String(s).padStart(2, '0');
+  } else if (phase === 'feedback'){
+    phaseChip.classList.add('feedback');
+    phaseLabel.textContent = 'Mode';
+    phaseValue.textContent = 'Feedback';
+  }
+}
+
+function startPhaseTimer(){
+  phaseSecondsLeft = PHASE_1_DURATION_SECONDS;
+  updatePhaseChip();
+  phaseTimerHandle = setInterval(() => {
+    phaseSecondsLeft -= 1;
+    updatePhaseChip();
+    if (phaseSecondsLeft <= 0) switchToFeedbackPhase();
+  }, 1000);
+}
+
+function stopPhaseTimer(){
+  if (phaseTimerHandle){ clearInterval(phaseTimerHandle); phaseTimerHandle = null; }
+}
+
+// The client-triggered "mode switch" the feature spec describes — see
+// shared/voice-live-session.js's sendTextTurn() doc comment for why this
+// has to be client-side (the Live session is a direct browser<->Gemini
+// socket the backend never touches) rather than literally
+// backend-pushed, while still functionally being "a new instruction/turn
+// sent into the same session" as specified.
+function switchToFeedbackPhase(){
+  if (phase !== 'roleplay') return;
+  stopPhaseTimer();
+  phase = 'feedback';
+  updatePhaseChip();
+  currentUserLine = null;
+  currentModelLine = null;
+  const sent = voiceSession.sendTextTurn(buildPhase2Instruction(window.__UKTIO_PROFILE || {}));
+  if (!sent) setStatus('Feedback switch nahi bhej paya — session shayad already band ho gayi.', 'err');
+}
+
+// ─────────────────────────────────────────────────────────────
+// Voice session wiring — thin glue over shared/voice-live-session.js.
+// ─────────────────────────────────────────────────────────────
+
+const voiceSession = createVoiceSession({
+  getSystemInstruction: () => buildPhase1Instruction(todaysScenario, window.__UKTIO_PROFILE || {}),
+  callbacks: {
+    onStatus: (text, mode) => setStatus(text, mode),
+    onUserText: (text) => {
+      currentModelLine = null;
+      if (!currentUserLine) currentUserLine = addLine('user');
+      currentUserLine.textContent += text;
+      if (currentTurnIndex >= 0) sessionTurns[currentTurnIndex].content += text;
+      scrollTranscriptToBottom();
+    },
+    onModelText: (text) => {
+      currentUserLine = null;
+      if (!currentModelLine) currentModelLine = addLine('model');
+      currentModelLine.textContent += text;
+      if (currentTurnIndex >= 0) sessionTurns[currentTurnIndex].content += text;
+      scrollTranscriptToBottom();
+    },
+    onTurnComplete: () => { /* no-op today — kept for parity with chat.html's isModelSpeaking reset, which voice-live-session.js already owns internally */ },
+    onOpen: () => {
+      micBtn.disabled = false;
+      startPhaseTimer();
+    },
+    onClose: () => {
+      micBtn.disabled = false;
+      stopPhaseTimer();
+      finalizeAndSyncSession();
+    }
+  }
+});
+
+async function startSession(){
+  if (voiceSession.isActive() || !todaysScenario) return;
+
+  sessionStartedAt = new Date().toISOString();
+  phase = 'roleplay';
+  updatePhaseChip();
+  micBtn.disabled = true;
+
+  const { GoogleGenAI, Modality } = await import('./vendor/google-genai.bundle.mjs');
+  const result = await voiceSession.start({ GoogleGenAI, Modality });
+
+  if (!result.ok){
+    micBtn.disabled = false;
+    if (result.reason === 'no_api_key'){
+      setStatus('Pehle Settings mein apni Gemini API key daalo.', 'err');
+      setTimeout(() => { window.location.href = 'settings.html'; }, 1200);
+    } else if (result.reason === 'invalid_api_key'){
+      setStatus((result.message || 'Invalid API key') + ' — go to Settings to fix this.', 'err');
+      setTimeout(() => { window.location.href = 'settings.html'; }, 1600);
+    } else {
+      setStatus(result.message || 'Connect nahi ho paya.', 'err');
+    }
+  }
+}
+
+function stopSession(){
+  voiceSession.stop(); // triggers onClose -> finalizeAndSyncSession
+}
+
+// Same fire-and-forget, crash-safe sync pattern as chat.html: local data
+// already persisted at every turn boundary, so even if this call fails
+// (network down right at session-end), the next app-open recovery
+// (syncPendingChatSession in index.html) picks it up and retries.
+async function finalizeAndSyncSession(){
+  if (!sessionTurns.length || finalizeInFlight) return;
+  finalizeInFlight = true;
+  try {
+    persistLocalSession();
+    const syncedSessionId = await syncPendingChatSession();
+    if (syncedSessionId){
+      setStatus('Session saved. Kal ek naya scenario milega.', null);
+      lockChatForToday();
+    }
+    sessionTurns = [];
+    currentTurnIndex = -1;
+  } finally {
+    finalizeInFlight = false;
+  }
+}
+
+function lockChatForToday(){
+  lockedBanner.classList.add('show');
+  micBtn.disabled = true;
+}
+
+window.addEventListener('beforeunload', () => {
+  if (voiceSession.isActive()) voiceSession.stop();
+});
+window.addEventListener('error', (e) => console.error('uncaught error', e.error || e.message));
+window.addEventListener('unhandledrejection', (e) => console.error('unhandled promise rejection', e.reason));
+
+micBtn.addEventListener('click', () => {
+  if (voiceSession.isActive()) stopSession(); else startSession();
+});
+
+// ─────────────────────────────────────────────────────────────
+// Boot: load today's scenario (server is the source of truth for both
+// WHICH scenario and whether it's already been completed).
+// ─────────────────────────────────────────────────────────────
+(async function loadTodaysScenario(){
+  try {
+    const data = await apiFetch('/chat/scenario/today');
+    todaysScenario = data.scenario;
+
+    scenarioCard.style.display = 'flex';
+    scenarioCategoryEl.textContent = todaysScenario.category;
+    scenarioTitleEl.textContent = todaysScenario.title;
+
+    if (data.already_completed_today){
+      lockChatForToday();
+      setStatus('Aaj ka scenario complete ho chuka hai.', null);
+    } else {
+      setStatus('Tap the mic to start today\'s scenario.', null);
+      micBtn.disabled = false;
+    }
+  } catch (err) {
+    console.error('failed to load today\'s scenario', err);
+    setStatus('Scenario load nahi ho paya — internet check karke page reload karo.', 'err');
+  }
+})();
+</script>
+</body>
+</html>
+
