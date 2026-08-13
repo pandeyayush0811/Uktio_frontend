@@ -68,6 +68,7 @@
         <div class="telegram-text-sub" id="planCtaSub">View, renew or upgrade your plan</div>
       </div>
     </a>
+    <div class="status-msg err" id="commitModeTerminatedMsg" style="display:none;margin-top:10px;"></div>
   </div>
 
   <!-- ── AI Setup ──────────────────────────────────────────────── -->
@@ -148,7 +149,8 @@ document.getElementById('telegramBtn').href =
 const PLAN_LABELS = {
   none: 'No active plan',
   starter: 'Uktio Starter',
-  unlimited: 'Uktio Unlimited'
+  unlimited: 'Uktio Unlimited',
+  commit_mode: 'Commit Mode'
 };
 
 getPlanStatus().then(status => {
@@ -175,6 +177,16 @@ getPlanStatus().then(status => {
   } else {
     ctaTitle.textContent = 'Manage plan';
     ctaSub.textContent = 'View, renew or upgrade your plan';
+  }
+
+  // One-time-per-page-visit explanation for a Commit Mode termination —
+  // this is the disclosed, expected outcome of missing a day, shown here
+  // (not just buried on pricing.html) so it's visible wherever the user
+  // is checking "what happened to my plan".
+  if (status.commit_mode_termination_reason === 'missed_daily_commitment') {
+    const el = document.getElementById('commitModeTerminatedMsg');
+    el.style.display = '';
+    el.textContent = 'Aapka Commit Mode membership ek din ka daily commitment (5 min chat + 1 scenario) miss hone ki wajah se complete ho gaya — jaisa purchase ke time disclose kiya gaya tha, iska koi refund nahi hai.';
   }
 }).catch(() => {
   document.getElementById('vPlan').textContent = 'Could not load';
