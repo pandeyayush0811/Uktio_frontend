@@ -109,7 +109,20 @@ function renderGenerateState(message, showButton){
       <p>${message}</p>
       ${showButton ? '<button class="primary" id="genBtn" style="width:auto;padding:12px 28px;">Generate Report</button>' : ''}
     </div>`;
-  if (showButton) document.getElementById('genBtn').addEventListener('click', generateReport);
+  if (showButton) {
+    const genBtn = document.getElementById('genBtn');
+    // Disable + relabel the SAME click the user just made, synchronously,
+    // before generateReport()'s own async work even starts — belt-and-
+    // suspenders alongside generateReport() immediately re-rendering this
+    // whole block away (which already removes genBtn from the DOM). This
+    // is what stops a user from firing this off twice in the small window
+    // before that re-render happens.
+    genBtn.addEventListener('click', () => {
+      genBtn.disabled = true;
+      genBtn.textContent = 'Generating…';
+      generateReport();
+    });
+  }
 }
 
 // ---- Confidence score pill (top of page, glanceable, animated ring) ----
@@ -174,13 +187,58 @@ function renderReport(report){
   }
 }
 
+// Guards against this exact page instance somehow calling generateReport()
+// twice concurrently (e.g. the auto-generate-on-load path in init() below
+// racing with a manual click, in some odd navigation-timing edge case).
+// The real, authoritative guard against duplicate *requests to the server*
+// is the backend's atomic claim (see routes/chatRoutes.js) — this is just
+// an extra local safety net so this tab never even tries.
+let generateInFlight = false;
+
 async function generateReport(){
+  if (generateInFlight) return;
+  generateInFlight = true;
   renderGenerateState('Report generate ho raha hai... isme 10-20 seconds lag sakte hain.', false);
   try {
     const data = await apiFetch('/chat/sessions/' + sessionId + '/analyze', { method: 'POST' });
     renderReport(data.report);
   } catch (err) {
+    if (err.status === 409){
+      // Someone else's request for this exact session (another tab, a
+      // previous click that hasn't finished yet, etc.) already claimed
+      // generation — see routes/chatRoutes.js. Don't show this as an
+      // error or offer a "Generate" button (clicking it would just 409
+      // again); instead wait for the other request to actually finish.
+      pollForReport();
+      return;
+    }
     renderGenerateState('Report banane mein dikkat hui: ' + escapeHtml(err.message || 'Try again') + '.', true);
+  } finally {
+    generateInFlight = false;
+  }
+}
+
+// Polls GET /report every few seconds until it succeeds — used only when
+// we know generation is already happening (via a 409 from /analyze above),
+// so this is "wait for the result", not "keep guessing if anything is
+// happening at all".
+async function pollForReport(attempt){
+  attempt = attempt || 0;
+  const MAX_ATTEMPTS = 12; // ~40s total — generous vs. the normal ~10-20s generation time
+  const DELAY_MS = 3000;
+
+  renderGenerateState('Report already generate ho raha hai — thoda ruko...', false);
+  try {
+    const data = await apiFetch('/chat/sessions/' + sessionId + '/report');
+    renderReport(data.report);
+  } catch (err) {
+    if (err.status === 404 && attempt < MAX_ATTEMPTS){
+      setTimeout(() => pollForReport(attempt + 1), DELAY_MS);
+    } else if (attempt >= MAX_ATTEMPTS){
+      renderGenerateState('Report banne mein expected se zyada time lag raha hai — thodi der baad wapas aake dekho.', true);
+    } else {
+      renderGenerateState('Could not load the report: ' + escapeHtml(err.message), true);
+    }
   }
 }
 

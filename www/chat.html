@@ -573,7 +573,15 @@ let knownTurnCount = 0; // running count for THIS session, seeded from resume da
 
 function showReportPill(sessionId, hasReport){
   reportPill.textContent = hasReport ? '📊 Report dekho' : '📊 Report banao';
-  reportPill.onclick = () => { window.location.href = 'report.html?session=' + sessionId + (hasReport ? '' : '&generate=1'); };
+  reportPill.onclick = () => {
+    // Disable immediately so a fast double-tap can't fire this twice —
+    // the actual duplicate-request protection is server-side (see the
+    // atomic claim in routes/chatRoutes.js), this is just so the UI
+    // itself never looks/feels double-clickable while we navigate away.
+    reportPill.disabled = true;
+    if (!hasReport) reportPill.textContent = '📊 Generating…';
+    window.location.href = 'report.html?session=' + sessionId + (hasReport ? '' : '&generate=1');
+  };
   reportPill.classList.add('show');
 }
 
