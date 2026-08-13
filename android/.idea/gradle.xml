@@ -14,6 +14,7 @@
             <option value="$PROJECT_DIR$/capacitor-cordova-android-plugins" />
             <option value="$PROJECT_DIR$/../node_modules/@capacitor/android/capacitor" />
             <option value="$PROJECT_DIR$/../node_modules/@capacitor/app/android" />
+            <option value="$PROJECT_DIR$/../node_modules/@capacitor/browser/android" />
             <option value="$PROJECT_DIR$/../node_modules/@capawesome/capacitor-google-sign-in/android" />
           </set>
         </option>

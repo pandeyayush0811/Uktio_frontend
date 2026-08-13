@@ -5,11 +5,18 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="a9290705-c354-4871-9e50-654ac448cc40" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/caches/deviceStreaming.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/caches/deviceStreaming.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/gradle.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/gradle.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/assets/capacitor.config.json" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/capacitor.config.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/onboarding.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/onboarding.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/shared/config.js" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/shared/config.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/history.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/history.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/scenario.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/scenario.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/shared/drawer.js" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/shared/drawer.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/shared/voice-live-session.js" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/shared/voice-live-session.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/capacitor-cordova-android-plugins/build/.transforms/856cdfd6939c687212d931f7ef5fba39/results.bin" beforeDir="false" afterPath="$PROJECT_DIR$/capacitor-cordova-android-plugins/build/.transforms/856cdfd6939c687212d931f7ef5fba39/results.bin" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/capacitor-cordova-android-plugins/build/.transforms/8e862365ee245f5519145661a65a8239/results.bin" beforeDir="false" afterPath="$PROJECT_DIR$/capacitor-cordova-android-plugins/build/.transforms/8e862365ee245f5519145661a65a8239/results.bin" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/capacitor-cordova-android-plugins/build/intermediates/aapt_friendly_merged_manifests/debug/processDebugManifest/aapt/AndroidManifest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/capacitor-cordova-android-plugins/build/intermediates/aapt_friendly_merged_manifests/debug/processDebugManifest/aapt/AndroidManifest.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/capacitor-cordova-android-plugins/build/intermediates/incremental/debug/packageDebugResources/compile-file-map.properties" beforeDir="false" afterPath="$PROJECT_DIR$/capacitor-cordova-android-plugins/build/intermediates/incremental/debug/packageDebugResources/compile-file-map.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/capacitor-cordova-android-plugins/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/capacitor-cordova-android-plugins/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -19,7 +26,7 @@
   <component name="ClangdSettings">
     <option name="formatViaClangd" value="false" />
   </component>
-  <component name="ExecutionTargetManager" SELECTED_TARGET="device_and_snapshot_combo_box_target[PhysicalDevice::serial=T4YXJ7USR4SCIRSG]" />
+  <component name="ExecutionTargetManager" SELECTED_TARGET="device_and_snapshot_combo_box_target[LocalEmulator::path=C:\Users\pande\.android\avd\Medium_Phone_2.avd]" />
   <component name="ExternalProjectsData">
     <projectState path="$PROJECT_DIR$">
       <ProjectState />
