@@ -20,6 +20,7 @@ import { checkGeminiApiKey } from './gemini-key-check.js';
 // in one shared constant, but chat.html isn't importing from here (see
 // note above), so for now this is the second (and only other) copy.
 // Keep in sync with chat.html's LIVE_MODEL if that ever changes.
+// export const LIVE_MODEL = 'gemini-2.5-flash-native-audio-preview-12-2025';
 export const LIVE_MODEL = 'gemini-3.1-flash-live-preview';
 
 function base64ToInt16(base64) {

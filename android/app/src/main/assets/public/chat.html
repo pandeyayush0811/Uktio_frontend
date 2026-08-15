@@ -99,6 +99,7 @@
   </div>
 
   <div id="trialBanner" class="trial-banner hidden" style="display:none; font-size:13px; text-align:center; padding:6px 12px; opacity:0.8;"></div>
+  <div id="commitModeBanner" style="display:none;"></div>
 
   <button class="report-pill" id="reportPill" type="button"></button>
 
@@ -130,6 +131,7 @@
   import './shared/config.js';
   import { requireCompleteProfile } from './shared/auth.js';
   import { requireActivePlan, trialBannerText } from './shared/plan.js';
+  import { renderCommitModeBanner } from './shared/commit-mode-widget.js';
   import { mountDrawer } from './shared/drawer.js';
   import { initBackNav } from './shared/back-nav.js';
 
@@ -160,6 +162,14 @@
     el.style.display = 'block';
     el.classList.remove('hidden');
   }
+
+  // Commit Mode: today's progress toward the daily chat+scenario
+  // requirement. Only renders anything if planStatus.plan === 'commit_mode'
+  // (see shared/commit-mode-widget.js) — a no-op, hidden element for
+  // everyone else. Re-rendered after every saved session below (see the
+  // finalizeAndSyncSession/report-pill flow) so it stays live within the
+  // same app-open, not just on page load.
+  renderCommitModeBanner(document.getElementById('commitModeBanner'), planStatus);
 </script>
 
 <script type="module">
@@ -168,6 +178,7 @@ import { PENDING_CHAT_SESSION_KEY, syncPendingChatSession, apiFetch } from './sh
 import { checkGeminiApiKey } from './shared/gemini-key-check.js';
 import { getApiKey, getMicCapturePlugin } from './shared/mic-helpers.js';
 import { getPlanStatus } from './shared/plan.js';
+import { renderCommitModeBanner } from './shared/commit-mode-widget.js';
 import { maybeShowPostSessionUpsell } from './shared/upsell.js';
 
 // Single source of truth — used both for the actual connect() call below
@@ -573,7 +584,15 @@ let knownTurnCount = 0; // running count for THIS session, seeded from resume da
 
 function showReportPill(sessionId, hasReport){
   reportPill.textContent = hasReport ? '📊 Report dekho' : '📊 Report banao';
-  reportPill.onclick = () => { window.location.href = 'report.html?session=' + sessionId + (hasReport ? '' : '&generate=1'); };
+  reportPill.onclick = () => {
+    // Disable immediately so a fast double-tap can't fire this twice —
+    // the actual duplicate-request protection is server-side (see the
+    // atomic claim in routes/chatRoutes.js), this is just so the UI
+    // itself never looks/feels double-clickable while we navigate away.
+    reportPill.disabled = true;
+    if (!hasReport) reportPill.textContent = '📊 Generating…';
+    window.location.href = 'report.html?session=' + sessionId + (hasReport ? '' : '&generate=1');
+  };
   reportPill.classList.add('show');
 }
 
@@ -1072,7 +1091,14 @@ async function finalizeAndSyncSession(){
       // page-load snapshot, so the numbers shown are accurate. Fire-and-forget:
       // never blocks the UI, and silently no-ops for paying members or on
       // network failure (see maybeShowPostSessionUpsell / getPlanStatus).
-      getPlanStatus().then(maybeShowPostSessionUpsell).catch(() => {});
+      getPlanStatus().then(status => {
+        maybeShowPostSessionUpsell(status);
+        // Same fresh-status fetch also drives a refresh of the Commit
+        // Mode banner — this save may have just crossed today's 5-minute
+        // chat requirement, and the user should see that reflected
+        // immediately, not on next app-open.
+        renderCommitModeBanner(document.getElementById('commitModeBanner'), status);
+      }).catch(() => {});
     }
 
     sessionTurns = [];

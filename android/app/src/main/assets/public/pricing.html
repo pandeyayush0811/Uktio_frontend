@@ -109,6 +109,30 @@
       <div class="status-msg" id="starterMsg"></div>
     </div>
 
+    <!-- ═══ COMMIT MODE — ₹121 ═══ -->
+    <div class="plan-card" id="commitModeCard">
+      <span class="plan-badge" id="commitModeBadge" style="display:none;">Current plan</span>
+      <h2 class="plan-name">Commit Mode</h2>
+      <div class="plan-tagline">Starter + a daily habit contract — for people who keep skipping practice</div>
+      <div class="plan-price"><span class="amount">₹121</span><span class="period">/ 30 days</span></div>
+      <ul class="plan-features">
+        <li>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Everything in Starter — unlimited sessions, reports, quizzes
+        </li>
+        <li>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Daily target: 5 min chat + 1 scenario, before 12 AM IST
+        </li>
+        <li>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Miss a day → membership ends, no refund (this is the whole point)
+        </li>
+      </ul>
+      <button class="primary" id="commitModeBtn" style="margin-top:18px;">View rules &amp; buy — ₹121</button>
+      <div class="status-msg" id="commitModeMsg"></div>
+    </div>
+
     <!-- ═══ UNLIMITED — ₹1199, waitlist only ═══ -->
     <div class="plan-card" id="unlimitedCard">
       <span class="plan-badge" id="unlimitedBadge" style="display:none;">Current plan</span>
@@ -136,6 +160,43 @@
   </p>
 </div>
 
+<!-- ═══ Commit Mode: pre-purchase disclosure — must be read + acknowledged
+     BEFORE payment starts. Backend also refuses to create an order for
+     plan=commit_mode without a matching consent record (see
+     routes/paymentRoutes.js), so this can't be silently skipped by
+     tampering with the frontend. ═══ -->
+<div class="commit-mode-disclosure-overlay" id="commitModeOverlay" style="display:none;">
+  <div class="commit-mode-disclosure-card">
+    <h2>Commit Mode — read this first</h2>
+    <div class="sub">Ye ek normal membership nahi hai — isme ek daily commitment hai. Sab kuch niche saaf-saaf likha hai.</div>
+
+    <div class="commit-mode-rule">
+      <span class="num">1</span>
+      <span>Commit Mode me Starter ke saare features milte hain (unlimited sessions, reports, quizzes) — full price sirf ₹121 hai, ₹99 wale se ₹22 zyada.</span>
+    </div>
+    <div class="commit-mode-rule">
+      <span class="num">2</span>
+      <span>Har din (12 AM IST reset ke pehle) tumhe karna hoga: kam se kam <strong>5 minute ka freeform chat</strong> + <strong>1 scenario practice</strong> — dono zaroori hain, sirf ek nahi chalega.</span>
+    </div>
+    <div class="commit-mode-rule warn">
+      <span class="num">!</span>
+      <span><strong>Agar ek bhi din miss hua</strong> (12 AM IST tak dono complete nahi hue), to tumhari Commit Mode membership turant khatam ho jaayegi — cancel nahi, <strong>complete</strong>. Koi refund nahi milega, chahe kitne bhi din baaki ho.</span>
+    </div>
+    <div class="commit-mode-rule">
+      <span class="num">3</span>
+      <span>Ye feature business ke fayde ke liye nahi hai — ye sirf unke liye hai jo khud se daily practice ki habit banana chahte hain aur ek real commitment chahte hain. Koi force nahi kar raha — ye tumhara apna choice hai.</span>
+    </div>
+
+    <label class="commit-mode-consent-row">
+      <input type="checkbox" id="commitModeConsentCheck">
+      <span>Maine upar ke saare rules padh liye hain aur samajh gaya/gayi hoon — mujhe pata hai ki ek din miss karne par membership bina refund ke khatam ho jaayegi.</span>
+    </label>
+
+    <button class="primary" id="commitModeConfirmBtn" style="width:100%;margin-top:14px;" disabled>I understand and agree — continue to payment</button>
+    <button class="secondary" id="commitModeCancelBtn" style="width:100%;margin-top:10px;">Cancel</button>
+  </div>
+</div>
+
 <script type="module">
 import './shared/config.js';
 import { requireAuthOrRedirect, apiFetch } from './shared/auth.js';
@@ -147,6 +208,8 @@ initBackNav('settings.html');
 
 const starterBtn    = document.getElementById('starterBtn');
 const starterMsg    = document.getElementById('starterMsg');
+const commitModeBtn = document.getElementById('commitModeBtn');
+const commitModeMsg = document.getElementById('commitModeMsg');
 const unlimitedBtn  = document.getElementById('unlimitedBtn');
 const unlimitedMsg  = document.getElementById('unlimitedMsg');
 const plansLoader   = document.getElementById('plansLoader');
@@ -189,6 +252,42 @@ async function refreshPlanState() {
       trialBadge.style.display = '';
       trialMsg.textContent = 'You have upgraded to Starter. The free trial is no longer active.';
       trialMsg.className = 'status-msg';
+    }
+
+    if (status.plan === 'commit_mode') {
+      const commitModeCard = document.getElementById('commitModeCard');
+      commitModeCard.classList.add('current');
+      document.getElementById('commitModeBadge').style.display = '';
+
+      if (status.active) {
+        const d = new Date(status.plan_expires_at);
+        commitModeBtn.style.display = 'none'; // no renew mid-cycle — the daily contract is the whole point, nothing to "renew" early
+        commitModeMsg.textContent = 'Active until ' + d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) + ' — as long as you keep the daily streak.';
+        commitModeMsg.className = 'status-msg ok';
+      } else if (status.commit_mode_termination_reason === 'missed_daily_commitment') {
+        commitModeBtn.style.display = '';
+        commitModeBtn.textContent = 'Start Commit Mode again — ₹121';
+        commitModeMsg.textContent = 'Ek din ka commitment miss hone ki wajah se membership complete ho gayi thi — no refund, as disclosed. Dobara shuru kar sakte ho.';
+        commitModeMsg.className = 'status-msg err';
+      } else {
+        commitModeBtn.style.display = '';
+        commitModeMsg.textContent = 'Your plan has expired.';
+        commitModeMsg.className = 'status-msg err';
+      }
+
+      trialCard.classList.add('dimmed');
+      trialBadge.textContent = 'Completed';
+      trialBadge.classList.add('badge-done');
+      trialBadge.style.display = '';
+      trialMsg.textContent = 'You have upgraded to Commit Mode. The free trial is no longer active.';
+      trialMsg.className = 'status-msg';
+    } else if (status.commit_mode_termination_reason === 'missed_daily_commitment') {
+      // Not currently on commit_mode (it ended), but show the same
+      // explanation on the Commit Mode card itself so it isn't just a
+      // silent gap — this is the disclosed, expected outcome of missing
+      // a day, not an error.
+      commitModeMsg.textContent = 'Pichli baar ek din ka commitment miss hone ki wajah se membership complete ho gayi thi — no refund, as disclosed. Dobara try kar sakte ho.';
+      commitModeMsg.className = 'status-msg err';
     }
 
     if (status.plan === 'unlimited') {
@@ -283,6 +382,66 @@ starterBtn.addEventListener('click', async () => {
 // Re-check plan when user returns from the system browser (after paying)
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') refreshPlanState();
+});
+
+// ── Commit Mode: disclosure card -> consent -> same browser-checkout flow ──
+const commitModeOverlay     = document.getElementById('commitModeOverlay');
+const commitModeConsentCheck = document.getElementById('commitModeConsentCheck');
+const commitModeConfirmBtn  = document.getElementById('commitModeConfirmBtn');
+const commitModeCancelBtn   = document.getElementById('commitModeCancelBtn');
+
+function openCommitModeDisclosure() {
+  commitModeConsentCheck.checked = false;
+  commitModeConfirmBtn.disabled = true;
+  commitModeOverlay.style.display = 'flex';
+}
+function closeCommitModeDisclosure() {
+  commitModeOverlay.style.display = 'none';
+}
+
+commitModeBtn.addEventListener('click', openCommitModeDisclosure);
+commitModeCancelBtn.addEventListener('click', closeCommitModeDisclosure);
+commitModeConsentCheck.addEventListener('change', () => {
+  commitModeConfirmBtn.disabled = !commitModeConsentCheck.checked;
+});
+
+// Same browser-based checkout as Starter (see the big comment above
+// starterBtn's handler) — the only difference is the consent call that
+// MUST happen first. The backend independently re-checks this consent
+// exists before creating the order (routes/paymentRoutes.js), so this
+// button being tapped is a UX nicety, not the actual enforcement.
+commitModeConfirmBtn.addEventListener('click', async () => {
+  if (!commitModeConsentCheck.checked) return;
+  commitModeConfirmBtn.disabled = true;
+  commitModeConfirmBtn.textContent = 'Opening checkout…';
+
+  try {
+    await apiFetch('/payments/commit-mode/consent', { method: 'POST' });
+
+    const { checkout_url } = await apiFetch('/payments/checkout/init', {
+      method: 'POST',
+      body: JSON.stringify({ plan: 'commit_mode' })
+    });
+
+    closeCommitModeDisclosure();
+
+    const BrowserPlugin = window.Capacitor?.Plugins?.Browser;
+    if (BrowserPlugin) {
+      await BrowserPlugin.open({ url: checkout_url });
+    } else {
+      window.open(checkout_url, '_blank');
+    }
+
+    commitModeMsg.textContent = 'Payment page opened in your browser. Return here once done.';
+    commitModeMsg.className = 'status-msg';
+  } catch (e) {
+    commitModeMsg.textContent = 'Could not start checkout: ' + (e.message || 'please try again');
+    commitModeMsg.className = 'status-msg err';
+    closeCommitModeDisclosure();
+  } finally {
+    commitModeConfirmBtn.disabled = false;
+    commitModeConfirmBtn.textContent = 'I understand and agree — continue to payment';
+  }
 });
 
 // ── Unlimited: waitlist only ───────────────────────────────────────────────
