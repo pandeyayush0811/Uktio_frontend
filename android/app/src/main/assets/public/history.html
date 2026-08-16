@@ -6,40 +6,56 @@
 <title>Utkio — Chats</title>
 <link rel="stylesheet" href="shared/style.css">
 <style>
-  .wrap{ overflow-y:auto; }
-  .expanded-transcript{ display:none; margin-top:12px; padding-top:12px; border-top:1px solid var(--line); }
+  .wrap{ overflow-y:auto; padding-bottom:96px; padding-top: 0 !important; }
+  /* Sticky header block (icon bar + title + search) — bleeds edge-to-edge
+     behind the status bar (negative margin cancels .wrap's own 20px
+     inset) then re-adds safe-area-aware padding, so it reads as one
+     solid pinned bar instead of floating with a gap above it while stuck. */
+  .history-sticky-head{
+    position:sticky; top:0; z-index:20; background:var(--bg);
+    margin:0 -20px 0; padding:calc(20px + env(safe-area-inset-top, 0px)) 20px 10px;
+  }
+  .expanded-transcript{
+    display:none; margin-top:12px; padding-top:12px; border-top:1px solid var(--line);
+    max-height:320px; overflow-y:auto; -webkit-overflow-scrolling:touch;
+  }
   .chat-card.open .expanded-transcript{ display:block; }
-  .t-line{ font-size:0.85rem; line-height:1.5; margin-bottom:8px; }
+  .t-line{ font-size:0.85rem; line-height:1.5; margin-bottom:8px; word-break:break-word; overflow-wrap:break-word; }
   .t-line .t-tag{ font-weight:700; margin-right:6px; }
   .t-line.user .t-tag{ color:var(--accent); }
-  .resume-btn{
-    margin-top:10px; width:100%; padding:10px; border-radius:10px; border:1.5px solid var(--accent);
-    background:transparent; color:var(--accent); font-weight:700; font-size:0.85rem; cursor:pointer; font-family:inherit;
-  }
-  .empty-state{ text-align:center; color:var(--ink-dim); padding:60px 20px; font-size:0.9rem; }
-  .scenario-badge{
-    display:inline-block; font-size:0.66rem; font-weight:700; letter-spacing:0.02em; text-transform:uppercase;
-    color:var(--accent); background:var(--accent-soft); padding:2px 8px; border-radius:99px; margin-left:8px;
-    vertical-align:middle;
+  .t-line-empty{ font-size:0.82rem; color:var(--ink-dim); padding:4px 0 8px; }
+  /* Distinct "no results for this search" state — lighter-weight than
+     the true empty-state (no illustration), since the person does
+     have chats, just none matching. Conflating the two would wrongly
+     imply a brand-new account. */
+  .search-empty-state{ text-align:center; padding:36px 20px; color:var(--ink-dim); font-size:0.88rem; }
+  .search-empty-state button{
+    display:block; margin:10px auto 0; background:none; border:none; color:var(--accent-orange);
+    font-weight:700; font-size:0.85rem; cursor:pointer; font-family:inherit; padding:6px;
   }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <header class="topbar">
-    <button class="icon-btn" id="drawerTrigger" aria-label="Menu">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-    </button>
-    <a class="icon-btn" href="settings.html" aria-label="Settings">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-    </a>
-  </header>
+  <div class="history-sticky-head">
+    <header class="topbar">
+      <button class="icon-btn" id="drawerTrigger" aria-label="Menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <a class="icon-btn" href="settings.html" aria-label="Settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </a>
+    </header>
 
-  <h1 class="chats-title">Chats</h1>
+    <h1 class="chats-title">Chats</h1>
 
-  <div class="search-bar">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-    <input type="text" id="searchInput" placeholder="Search Chats">
+    <div class="search-bar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" id="searchInput" placeholder="Search Chats">
+      <button class="search-clear" id="searchClear" aria-label="Clear search" style="display:none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
   </div>
 
   <!-- Centered spinner shown while the session list is fetching.
@@ -63,6 +79,7 @@ import { requireAuthOrRedirect, apiFetch } from './shared/auth.js';
 import { mountDrawer } from './shared/drawer.js';
 import { initBackNav } from './shared/back-nav.js';
 import { escapeHtml } from './shared/sanitize.js';
+import { groupSessionsByDate } from './shared/history-grouping.js';
 
 requireAuthOrRedirect();
 mountDrawer(document.getElementById('drawerTrigger'), 'chats');
@@ -73,7 +90,20 @@ document.getElementById('newChatFab').addEventListener('click', () => window.loc
 const listMsg = document.getElementById('listMsg');
 const sessionList = document.getElementById('sessionList');
 const searchInput = document.getElementById('searchInput');
+const searchClear = document.getElementById('searchClear');
 let allSessions = [];
+
+// ---- Small inline icons reused across cards (kept local — same
+// convention as pricing.html's page-local plan icons; these are
+// specific to this page's card anatomy, not generic enough to
+// warrant a shared icon module yet). ----
+const ICON_MIC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>';
+const ICON_USERS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
+const ICON_CLOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
+const ICON_TURNS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
+const ICON_CHEVRON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
+const ICON_CHART = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>';
+const ICON_RESUME = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>';
 
 function formatDuration(startedAt, endedAt){
   const totalSec = Math.max(0, Math.round((new Date(endedAt) - new Date(startedAt)) / 1000));
@@ -96,6 +126,16 @@ async function loadTranscript(sessionId, container, sessionType){
     const data = await apiFetch('/chat/sessions/' + sessionId);
     const msgs = data.messages || [];
     container.innerHTML = '';
+    if (!msgs.length){
+      // Edge case: a session can exist with zero persisted messages
+      // (e.g. connection dropped before the first turn synced).
+      // Leaving the panel blank above the resume button looked like
+      // a rendering glitch — make the empty state explicit instead.
+      const note = document.createElement('div');
+      note.className = 't-line-empty';
+      note.textContent = 'No messages recorded for this chat.';
+      container.appendChild(note);
+    }
     msgs.forEach(m => {
       const line = document.createElement('div');
       line.className = 't-line ' + (m.role === 'user' ? 'user' : 'model');
@@ -113,9 +153,15 @@ async function loadTranscript(sessionId, container, sessionType){
     if (sessionType !== 'scenario') {
       const resumeBtn = document.createElement('button');
       resumeBtn.className = 'resume-btn';
-      resumeBtn.textContent = 'Resume this chat';
+      resumeBtn.innerHTML = ICON_RESUME + '<span>Resume this chat</span>';
       resumeBtn.addEventListener('click', (e) => { e.stopPropagation(); window.location.href = 'chat.html?resume=' + sessionId; });
-      container.appendChild(resumeBtn);
+      // Always append into the card's .chat-card-actions row (built
+      // upfront in buildCard, present on every card regardless of
+      // whether a report button was added) — never falls back to
+      // appending inside the transcript container itself. This is
+      // the structural fix for the icon-sizing bug: every resume-btn
+      // now always shares the exact same sized flex parent.
+      container.closest('.chat-card').querySelector('.chat-card-actions').appendChild(resumeBtn);
     }
   } catch (err) {
     container.innerHTML = `<div class="status-msg err">Failed to load transcript. Please try again: ${escapeHtml(err.message)}</div>`;
@@ -124,65 +170,144 @@ async function loadTranscript(sessionId, container, sessionType){
 
 const MIN_TURNS_FOR_ANALYSIS = 10;
 
-function renderList(sessions){
+function buildCard(s, animDelayMs){
+  const card = document.createElement('div');
+  card.className = 'chat-card card-enter';
+  card.style.animationDelay = animDelayMs + 'ms';
+  // Card is a custom expand/collapse control, not a native interactive
+  // element — give it proper keyboard semantics (Tab to reach it,
+  // Enter/Space to toggle) instead of only responding to mouse/touch.
+  card.setAttribute('role', 'button');
+  card.setAttribute('tabindex', '0');
+  card.setAttribute('aria-expanded', 'false');
+
+  const isScenario = s.session_type === 'scenario';
+  card.innerHTML = `
+    <div class="chat-card-head">
+      <div class="chat-card-icon" aria-label="${isScenario ? 'Scenario roleplay' : 'Freeform chat'}">${isScenario ? ICON_USERS : ICON_MIC}</div>
+      <div class="chat-card-title-col">
+        <div class="chat-card-date">${formatDateTime(s.started_at)}</div>
+        <div class="chat-card-meta">${ICON_CLOCK}<span>${formatDuration(s.started_at, s.ended_at)}</span><span class="dot-sep">·</span>${ICON_TURNS}<span>${s.turn_count} turns</span></div>
+      </div>
+      <div class="chat-card-chevron">${ICON_CHEVRON}</div>
+    </div>
+    <div class="expanded-transcript"></div>
+    <div class="chat-card-actions"></div>`;
+
+  // Report button (primary — the valuable analysis/upsell path) only
+  // shown once the chat is long enough to meaningfully analyze.
+  // "Generate" vs "See report" depends on whether one already exists
+  // (has_report, from GET /chat/sessions). Always appended into the
+  // pre-built .chat-card-actions row (see buildCard's innerHTML above)
+  // so Resume — added later, once the transcript loads — lands in the
+  // same consistently-sized flex row every time.
+  if (s.turn_count >= MIN_TURNS_FOR_ANALYSIS){
+    const reportBtn = document.createElement('button');
+    reportBtn.className = 'report-btn';
+    reportBtn.setAttribute('aria-live', 'polite');
+    reportBtn.innerHTML = ICON_CHART + `<span>${s.has_report ? 'See report' : 'Generate report'}</span>`;
+    reportBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      // Disable immediately so a fast double-tap can't fire this twice —
+      // the actual duplicate-request protection is server-side (see the
+      // atomic claim in routes/chatRoutes.js), this is just so the UI
+      // itself never looks/feels double-clickable while we navigate away.
+      reportBtn.disabled = true;
+      if (!s.has_report) reportBtn.innerHTML = ICON_CHART + '<span>Generating…</span>';
+      window.location.href = 'report.html?session=' + s.id + (s.has_report ? '' : '&generate=1');
+    });
+    card.querySelector('.chat-card-actions').appendChild(reportBtn);
+  }
+
+  let loaded = false;
+  function toggle(){
+    const willOpen = !card.classList.contains('open');
+    card.classList.toggle('open');
+    card.setAttribute('aria-expanded', String(willOpen));
+    if (willOpen && !loaded){ loaded = true; loadTranscript(s.id, card.querySelector('.expanded-transcript'), s.session_type); }
+  }
+  card.addEventListener('click', toggle);
+  card.addEventListener('keydown', (e) => {
+    // Enter/Space activate, matching native button behavior. Space
+    // must be prevented from also scrolling the page.
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar'){
+      e.preventDefault();
+      toggle();
+    }
+  });
+  return card;
+}
+
+function renderEmptyState(){
+  sessionList.innerHTML = `
+    <div class="empty-state">
+      <img class="empty-state-illustration" src="assets/icons/history-empty-state.webp" alt="" width="180" height="178">
+      <div class="empty-state-title">No chats yet</div>
+      <div class="empty-state-sub">Start a conversation and it'll show up here, ready to revisit or turn into a report.</div>
+      <button class="primary" id="emptyStateCta">Start a chat</button>
+    </div>`;
+  const cta = document.getElementById('emptyStateCta');
+  if (cta) cta.addEventListener('click', () => window.location.href = 'chat.html');
+}
+
+function renderSearchEmptyState(query){
+  sessionList.innerHTML = `
+    <div class="search-empty-state">
+      <div>No chats match "${escapeHtml(query)}".</div>
+      <button id="searchEmptyClear" type="button">Clear search</button>
+    </div>`;
+  const btn = document.getElementById('searchEmptyClear');
+  if (btn) btn.addEventListener('click', clearSearch);
+}
+
+function renderList(sessions, activeQuery){
   sessionList.innerHTML = '';
   if (!sessions.length){
-    sessionList.innerHTML = '<div class="empty-state">No chats found</div>';
+    // Distinguish "account genuinely has zero chats" (full illustrated
+    // empty state) from "search matched nothing" (lighter inline
+    // message) — showing the big "No chats yet" illustration while
+    // the person is mid-search would wrongly suggest their history was
+    // wiped, when really their query just didn't match anything.
+    if (activeQuery) renderSearchEmptyState(activeQuery);
+    else renderEmptyState();
     return;
   }
-  sessions.forEach(s => {
-    const card = document.createElement('div');
-    card.className = 'chat-card';
-    card.innerHTML = `
-      <div class="chat-card-date">${formatDateTime(s.started_at)}${s.session_type === 'scenario' ? '<span class="scenario-badge">Scenario</span>' : ''}</div>
-      <div class="chat-card-meta">${formatDuration(s.started_at, s.ended_at)} · ${s.turn_count} turns</div>
-      <div class="expanded-transcript"></div>`;
 
-    // Report button: only shown once the chat is long enough to
-    // meaningfully analyze. "Generate" vs "See report" depends on
-    // whether one already exists (has_report, from GET /chat/sessions).
-    if (s.turn_count >= MIN_TURNS_FOR_ANALYSIS){
-      const reportBtn = document.createElement('button');
-      reportBtn.className = 'resume-btn';
-      reportBtn.style.marginTop = '8px';
-      reportBtn.style.borderColor = 'var(--accent-orange)';
-      reportBtn.style.color = 'var(--accent-orange)';
-      reportBtn.textContent = s.has_report ? '📊 See report' : '📊 Generate report';
-      reportBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        // Disable immediately so a fast double-tap can't fire this twice —
-        // the actual duplicate-request protection is server-side (see the
-        // atomic claim in routes/chatRoutes.js), this is just so the UI
-        // itself never looks/feels double-clickable while we navigate away.
-        reportBtn.disabled = true;
-        if (!s.has_report) reportBtn.textContent = '📊 Generating…';
-        window.location.href = 'report.html?session=' + s.id + (s.has_report ? '' : '&generate=1');
-      });
-      card.appendChild(reportBtn);
-    }
-
-    let loaded = false;
-    card.addEventListener('click', () => {
-      const willOpen = !card.classList.contains('open');
-      card.classList.toggle('open');
-      if (willOpen && !loaded){ loaded = true; loadTranscript(s.id, card.querySelector('.expanded-transcript'), s.session_type); }
+  const groups = groupSessionsByDate(sessions);
+  let idx = 0;
+  groups.forEach(group => {
+    const label = document.createElement('div');
+    label.className = 'profile-section-label';
+    label.textContent = group.label;
+    sessionList.appendChild(label);
+    group.items.forEach(s => {
+      sessionList.appendChild(buildCard(s, Math.min(idx, 8) * 30));
+      idx++;
     });
-    sessionList.appendChild(card);
   });
+}
+
+function clearSearch(){
+  searchInput.value = '';
+  searchClear.style.display = 'none';
+  renderList(allSessions, '');
+  searchInput.focus();
 }
 
 searchInput.addEventListener('input', () => {
   const q = searchInput.value.trim().toLowerCase();
-  if (!q) { renderList(allSessions); return; }
-  renderList(allSessions.filter(s => formatDateTime(s.started_at).toLowerCase().includes(q)));
+  searchClear.style.display = q ? 'flex' : 'none';
+  if (!q) { renderList(allSessions, ''); return; }
+  renderList(allSessions.filter(s => formatDateTime(s.started_at).toLowerCase().includes(q)), q);
 });
+searchClear.addEventListener('click', clearSearch);
 
 (async () => {
   try {
     const data = await apiFetch('/chat/sessions');
     allSessions = data.sessions || [];
     listMsg.style.display = 'none';
-    renderList(allSessions);
+    renderList(allSessions, '');
   } catch (err) {
     listMsg.style.display = 'none';
     const errEl = document.getElementById('listErr');

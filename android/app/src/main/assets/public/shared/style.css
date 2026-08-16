@@ -76,7 +76,11 @@ button.secondary:disabled{
 button.secondary.btn-loading{
   position:relative;
 }
-button.secondary.btn-loading::after{
+button.primary.btn-loading{
+  position:relative;
+}
+button.secondary.btn-loading::after,
+button.primary.btn-loading::after{
   content:'';
   display:inline-block;
   width:14px;
@@ -239,53 +243,282 @@ footer{margin-top:16px;color:var(--ink-dim);font-size:0.72rem;line-height:1.6;te
   border:none; outline:none; background:none; font-size:0.9rem; color:var(--ink); width:100%; font-family:inherit;
 }
 .search-bar input::placeholder{ color:var(--ink-dim); }
+.search-bar .search-clear{
+  background:none; border:none; padding:2px; color:var(--ink-dim); cursor:pointer;
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;
+}
+.search-bar .search-clear svg{ width:16px; height:16px; }
 .chat-card{
   background:var(--card); border-radius:16px; padding:16px 18px; margin-bottom:12px;
   box-shadow:0 6px 18px -12px rgba(60,60,120,0.25); cursor:pointer;
+  transition:transform 0.15s ease, box-shadow 0.15s ease;
 }
+.chat-card:active{ transform:scale(0.98); }
 .chat-card-date{ font-weight:700; font-size:0.94rem; }
-.chat-card-meta{ font-size:0.8rem; color:var(--ink-dim); margin-top:3px; }
+.chat-card-meta{ font-size:0.8rem; color:var(--ink-dim); margin-top:3px; display:flex; align-items:center; flex-wrap:wrap; gap:2px; }
+.chat-card-meta svg{ width:13px; height:13px; flex-shrink:0; vertical-align:-2px; margin-right:3px; }
+.chat-card-meta .dot-sep{ margin:0 6px; }
+
+/* Leading type icon-chip (mic = freeform, users = scenario roleplay) +
+   header row layout + expand chevron — extends the existing icon-chip
+   visual language (accent-soft-orange bg / accent-orange icon) already
+   used by drawer-recent-avatar / profile-stat elsewhere in the app. */
+.chat-card-head{ display:flex; align-items:flex-start; gap:12px; }
+.chat-card-icon{
+  width:36px; height:36px; border-radius:10px; background:var(--accent-soft-orange);
+  color:var(--accent-orange); display:flex; align-items:center; justify-content:center;
+  flex-shrink:0; margin-top:1px;
+}
+.chat-card-icon svg{ width:18px; height:18px; }
+.chat-card-title-col{ flex:1; min-width:0; }
+.chat-card-chevron{ color:var(--ink-dim); flex-shrink:0; margin-top:6px; transition:transform 0.2s ease; }
+.chat-card-chevron svg{ width:16px; height:16px; }
+.chat-card.open .chat-card-chevron{ transform:rotate(180deg); }
+
+/* Report (primary — the valuable upsell action) vs Resume (secondary)
+   action row, side-by-side instead of the old full-width stacked
+   buttons, so both fit on one row when a session qualifies for both.
+   `.chat-card-actions` is now ALWAYS present in card markup (built
+   upfront, empty until a button is appended) so resume-btn always has
+   a consistent flex parent to size against — fixes a bug where
+   sessions with <10 turns (no report button, so previously no
+   wrapper at all) appended resume-btn straight into the transcript
+   container, outside any sizing rule, leaving its SVG icon completely
+   unstyled/oversized (browsers default an un-sized inline SVG to
+   ~300x150). `:not(:empty)` keeps the empty wrapper from adding a
+   phantom gap on cards that end up with zero action buttons. */
+.chat-card-actions{ display:flex; gap:8px; }
+.chat-card-actions:not(:empty){ margin-top:12px; }
+/* Base resume-btn look (was previously only ever defined page-locally
+   and got dropped during the structural rebuild — restored here as a
+   shared class since it's now built from history.html's script for
+   two different contexts). Sizing/icon rules apply unconditionally,
+   not only when nested under .chat-card-actions, as defense-in-depth
+   even though the fix above means there's no longer a fallback path
+   that skips the wrapper. */
+.resume-btn{
+  font-family:inherit; font-size:0.85rem; font-weight:700; cursor:pointer;
+  padding:10px; border-radius:10px; border:1.5px solid var(--accent);
+  background:transparent; color:var(--accent);
+  display:flex; align-items:center; justify-content:center; gap:6px;
+  transition:transform 0.15s ease, opacity 0.15s ease;
+  min-width:0; text-align:center; line-height:1.25;
+}
+.resume-btn:active{ transform:scale(0.97); }
+.resume-btn svg{ width:14px; height:14px; flex-shrink:0; }
+.chat-card-actions .resume-btn{ flex:1; }
+.report-btn{
+  flex:1; display:flex; align-items:center; justify-content:center; gap:6px;
+  padding:10px; border-radius:10px; border:none; cursor:pointer; font-family:inherit;
+  font-size:0.85rem; font-weight:700; color:#fff; background:var(--accent-orange);
+  min-width:0; text-align:center; line-height:1.25;
+  box-shadow:0 8px 18px -10px rgba(217,105,75,0.6); transition:transform 0.15s ease, opacity 0.15s ease;
+}
+.report-btn:active{ transform:scale(0.97); }
+.report-btn:disabled{ opacity:0.65; cursor:not-allowed; }
+.report-btn svg{ width:14px; height:14px; flex-shrink:0; }
+
+/* Keyboard-accessible card affordance — .chat-card acts as an
+   expand/collapse control (role="button" + tabindex, set in JS), so
+   it needs its own visible focus ring since it's a <div>, not a
+   native interactive element. */
+.chat-card:focus-visible{ outline:2px solid var(--accent-orange); outline-offset:2px; }
+
+/* Staggered entrance for the initial list render — subtle, disabled
+   under reduced-motion per STYLE_GUIDE's motion rules. */
+@keyframes chatCardIn{ from{ opacity:0; transform:translateY(8px); } to{ opacity:1; transform:translateY(0); } }
+.chat-card.card-enter{ animation:chatCardIn 0.3s ease both; }
+@media (prefers-reduced-motion: reduce){
+  .chat-card, .chat-card-chevron, .report-btn{ transition:none; }
+  .chat-card.card-enter{ animation:none; }
+}
+
+/* Richer empty state — illustration + heading + subtext + recovery
+   CTA, instead of a single dead-end line (STYLE_GUIDE: empty states
+   must give a way forward). Illustration is a raster WebP asset
+   (product-owner-provided, same "glossy 3D can't be vectorized"
+   reasoning as scenario.html's trophy) — not the flat-SVG icon-chip
+   treatment used elsewhere on this page. */
+.empty-state{ text-align:center; padding:40px 24px 20px; }
+.empty-state-illustration{ width:180px; height:auto; margin:0 auto 12px; display:block; }
+.empty-state-title{ font-family:var(--font-serif); font-size:1.15rem; font-weight:700; margin-bottom:6px; }
+.empty-state-sub{ font-size:0.85rem; color:var(--ink-dim); line-height:1.5; margin-bottom:20px; max-width:280px; margin-left:auto; margin-right:auto; }
+.empty-state button.primary{ background:var(--accent-orange); max-width:220px; margin:0 auto; }
+
 .fab{
-  position:fixed; bottom:24px; right:24px; display:flex; align-items:center; gap:8px;
+  position:fixed; right:24px; display:flex; align-items:center; gap:8px;
+  bottom:calc(24px + env(safe-area-inset-bottom, 0px));
   background:var(--accent-orange); color:#fff; border:none; border-radius:999px;
   padding:14px 22px; font-size:0.92rem; font-weight:700; font-family:inherit;
   box-shadow:0 10px 24px -8px rgba(217,105,75,0.6); cursor:pointer; z-index:5;
+  transition:transform 0.15s ease;
 }
+.fab:active{ transform:scale(0.96); }
 .fab svg{ width:18px; height:18px; }
 
-/* ---- Profile view (view-mode card with icon rows) ---- */
-.profile-head-card{
-  background:var(--card); border-radius:18px; padding:18px; margin-bottom:16px;
-  display:flex; align-items:center; gap:14px; box-shadow:0 6px 18px -12px rgba(60,60,120,0.2);
+/* ---- Profile — structural rebuild (hero identity + grouped sections + sticky bottom bar) ----
+   Orange/serif era. Replaces the old flat head-card+row-list layout.
+   .profile-fields-card / .profile-row / .profile-row-icon / .profile-toggle*
+   / .edit-profile-btn are kept (still referenced by profile.html and,
+   for the icon-chip tint, settings.html) — only extended, not removed.
+   .profile-head-* (old small avatar header) is fully replaced by
+   .profile-hero-* below; confirmed unused anywhere else, safe removal. */
+
+.profile-scroll-area{ flex:1 1 auto; overflow-y:auto; -webkit-overflow-scrolling:touch; min-height:0; padding-top:12px; padding-bottom:18px; }
+.profile-shell{ position:relative; }
+
+/* Hero identity block */
+.profile-hero{ text-align:center; padding:6px 0 18px; }
+.profile-hero-avatar{
+  width:74px; height:74px; border-radius:50%; margin:0 auto 12px;
+  background:linear-gradient(135deg, var(--accent-orange), #c85a3d);
+  display:flex; align-items:center; justify-content:center; color:#fff;
+  box-shadow:0 14px 30px -14px rgba(217,105,75,0.55);
 }
-.profile-head-avatar{
-  width:52px; height:52px; border-radius:50%; background:var(--accent-soft);
-  display:flex; align-items:center; justify-content:center; color:var(--accent); flex-shrink:0;
+.profile-hero-avatar span{ font-family:var(--font-serif); font-size:2rem; font-weight:700; line-height:1; }
+.profile-hero-name-row{ display:flex; align-items:center; justify-content:center; gap:8px; flex-wrap:wrap; }
+.profile-hero-name{ font-family:var(--font-serif); font-weight:700; font-size:1.4rem; }
+.profile-hero-badge{
+  font-size:0.72rem; font-weight:700; color:var(--accent-orange); background:var(--accent-soft-orange);
+  padding:3px 10px; border-radius:999px;
 }
-.profile-head-name{ font-weight:700; font-size:1.05rem; }
-.profile-head-email{ font-size:0.8rem; color:var(--ink-dim); }
-.profile-fields-card{ background:var(--card); border-radius:18px; padding:6px 18px; box-shadow:0 6px 18px -12px rgba(60,60,120,0.2); }
-.profile-row{ display:flex; align-items:center; gap:14px; padding:16px 0; border-bottom:1px solid var(--line); }
+.profile-hero-email{ font-size:0.8rem; color:var(--ink-dim); margin-top:3px; }
+
+/* Quick-stat strip — display-only, sourced from the same profile fields
+   shown lower in the detail card; only rendered when the underlying
+   field has real data (see profile.html's renderView — no placeholder
+   stats fabricated for missing fields). */
+.profile-stat-strip{
+  display:none; background:var(--card); border-radius:16px; padding:12px 6px;
+  box-shadow:0 6px 18px -12px rgba(60,60,120,0.2); margin-bottom:14px;
+}
+.profile-stat{
+  flex:1; display:flex; align-items:center; gap:8px; padding:0 10px;
+  border-right:1px solid var(--line);
+}
+.profile-stat:last-child{ border-right:none; }
+.profile-stat svg{ width:17px; height:17px; color:var(--accent-orange); flex-shrink:0; }
+.profile-stat-label{ font-size:0.68rem; color:var(--ink-dim); }
+.profile-stat-value{ font-size:0.78rem; font-weight:700; color:var(--ink); line-height:1.25; }
+
+/* Section grouping inside the detail card (view mode) */
+.profile-section-label{
+  font-size:0.7rem; font-weight:700; letter-spacing:0.06em; text-transform:uppercase;
+  color:var(--ink-dim); padding:14px 0 6px;
+}
+.profile-fields-card .profile-section-label:first-child{ padding-top:10px; }
+
+.profile-fields-card{ background:var(--card); border-radius:18px; padding:4px 16px; box-shadow:0 6px 18px -12px rgba(60,60,120,0.2); }
+.profile-row{ display:flex; align-items:center; gap:12px; padding:14px 0; border-bottom:1px solid var(--line); transition:background 0.12s ease; }
 .profile-row:last-child{ border-bottom:none; }
+.profile-row:active{ background:var(--panel-2); margin:0 -16px; padding-left:16px; padding-right:16px; border-radius:10px; }
 .profile-row-icon{
-  width:34px; height:34px; border-radius:9px; background:var(--accent-soft); color:var(--accent);
+  width:32px; height:32px; border-radius:9px; background:var(--accent-soft-orange); color:var(--accent-orange);
   display:flex; align-items:center; justify-content:center; flex-shrink:0;
 }
-.profile-row-icon svg{ width:17px; height:17px; }
-.profile-row-label{ font-size:0.8rem; color:var(--ink-dim); }
-.profile-row-value{ font-weight:600; font-size:0.94rem; }
+.profile-row-icon svg{ width:16px; height:16px; }
+.profile-row-label{ font-size:0.76rem; color:var(--ink-dim); }
+.profile-row-value{ font-weight:600; font-size:0.9rem; }
 .profile-row-value.err{ color:var(--bad); }
 .profile-row-right{ flex:1; text-align:right; }
-.profile-toggle-row{ display:flex; gap:10px; margin-top:8px; }
+.profile-toggle-row{ display:flex; gap:8px; margin-top:8px; }
 .profile-toggle{
-  flex:1; text-align:center; padding:10px; border-radius:10px; border:1.5px solid var(--line);
-  font-size:0.86rem; font-weight:600; cursor:pointer; color:var(--ink);
+  flex:1; text-align:center; padding:9px; border-radius:10px; border:1.5px solid var(--line);
+  font-size:0.82rem; font-weight:600; cursor:pointer; color:var(--ink);
+  transition:border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
 }
-.profile-toggle.selected{ border-color:var(--accent); background:var(--accent-soft); color:var(--accent); }
+.profile-toggle.selected{ border-color:var(--accent-orange); background:var(--accent-orange); color:#fff; }
+
+/* Edit-form: section headers + icon-inputs + goal/level chip variants */
+.profile-section-header{
+  display:flex; align-items:center; gap:10px; padding:18px 18px 10px;
+  font-size:0.7rem; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--ink-dim);
+}
+.card.edit-form .profile-section-header:first-child{ padding-top:20px; }
+.profile-section-icon{
+  width:30px; height:30px; border-radius:8px; background:var(--accent-soft-orange); color:var(--accent-orange);
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;
+}
+.profile-section-icon svg{ width:15px; height:15px; }
+.profile-section-divider{ height:1px; background:var(--line); margin:4px 18px; }
+.field-group{ padding:0 18px 6px; }
+.field-group label{ margin-top:2px; }
+.sr-visible-label{ font-size:0.76rem; }
+
+.field-icon-input{ position:relative; margin-bottom:14px; }
+.field-icon-input svg{
+  position:absolute; left:13px; top:50%; transform:translateY(-50%);
+  width:16px; height:16px; color:var(--ink-dim); pointer-events:none;
+}
+.field-icon-input input{ padding-left:38px; margin-bottom:0; transition:border-color 0.15s ease, box-shadow 0.15s ease; }
+
+.goal-chip{
+  display:flex; align-items:center; gap:10px; width:100%; text-align:left;
+  padding:12px 14px; border-radius:12px; border:1.5px solid var(--line); background:var(--card);
+  font-family:inherit; font-size:0.85rem; font-weight:600; color:var(--ink); cursor:pointer;
+  transition:border-color 0.15s ease, background 0.15s ease, transform 0.08s ease;
+}
+.goal-chip:active{ transform:scale(0.98); }
+.goal-chip .chip-icon{ width:20px; height:20px; flex-shrink:0; color:var(--ink-dim); display:flex; }
+.goal-chip .chip-icon svg{ width:18px; height:18px; }
+.goal-chip.selected .chip-icon{ color:var(--accent-orange); }
+.goal-chip .chip-label{ flex:1; }
+.goal-chip .chip-check{ width:18px; height:18px; color:var(--accent-orange); flex-shrink:0; }
+.goal-chip .chip-check svg{ width:18px; height:18px; }
+
+.level-chip{
+  padding:9px 16px; border-radius:999px; border:1.5px solid var(--line); background:var(--card);
+  font-family:inherit; font-size:0.82rem; font-weight:600; color:var(--ink); cursor:pointer;
+  transition:border-color 0.15s ease, background 0.15s ease, transform 0.08s ease;
+}
+.level-chip:active{ transform:scale(0.96); }
+.level-chip:hover{ border-color:var(--accent-orange); }
+
+/* Sticky-in-flex bottom action bar — flex child of .wrap (not
+   viewport-fixed), so it sits naturally above the keyboard/home
+   indicator in the Capacitor WebView. First page to need safe-area
+   handling; pattern is reusable for any future page with a persistent
+   bottom CTA. */
+.profile-bottom-bar{
+  flex:0 0 auto; visibility:hidden;
+  background:var(--bg); border-top:1px solid var(--line);
+  margin:0 -20px; padding:12px 20px calc(12px + env(safe-area-inset-bottom, 0px));
+  display:flex;
+}
+.profile-bottom-bar .edit-profile-btn{ margin-top:0; }
 .edit-profile-btn{
-  width:100%; margin-top:16px; padding:13px; border-radius:12px; border:1.5px solid var(--accent);
-  background:none; color:var(--accent); font-weight:700; font-size:0.92rem; font-family:inherit;
+  width:100%; padding:13px; border-radius:12px; border:none;
+  background:var(--accent-orange); color:#fff; font-weight:700; font-size:0.9rem; font-family:inherit;
   cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;
+  box-shadow:0 14px 30px -14px rgba(217,105,75,0.55);
+  transition:transform 0.15s ease;
+}
+.edit-profile-btn:active{ transform:scale(0.98); }
+.profile-bottom-bar-edit{ display:none; gap:10px; width:100%; }
+.profile-bottom-bar-edit.open{ display:flex; }
+.profile-bottom-bar-edit button.primary{
+  flex:1.6; margin:0; display:flex; align-items:center; justify-content:center; gap:6px;
+}
+.secondary-outline{
+  flex:1; font-family:inherit; font-size:0.88rem; font-weight:700;
+  padding:13px 16px; border-radius:12px; border:1.5px solid var(--accent-orange);
+  background:none; color:var(--accent-orange); cursor:pointer; transition:transform 0.15s ease;
+}
+.secondary-outline:active{ transform:scale(0.98); }
+
+.char-hint.near-limit{ color:var(--accent-orange); }
+
+/* View/edit crossfade + staggered section entrance */
+.profile-shell .view-mode,
+.profile-shell .edit-form{ transition:opacity 0.2s ease, transform 0.2s ease; }
+.profile-shell .view-mode.hidden{ opacity:0; transform:translateY(4px); pointer-events:none; position:absolute; inset:0; }
+.profile-shell .edit-form{ opacity:0; transform:translateY(4px); pointer-events:none; display:block; position:absolute; inset:0; }
+.profile-shell .edit-form.open{ opacity:1; transform:translateY(0); pointer-events:auto; position:relative; }
+.profile-shell .view-mode:not(.hidden){ opacity:1; transform:translateY(0); position:relative; }
+
+@media (prefers-reduced-motion: reduce){
+  .profile-shell .view-mode, .profile-shell .edit-form,
+  .profile-row, .goal-chip, .level-chip, .edit-profile-btn, .secondary-outline{ transition:none !important; }
 }
 
 /* ── Commit Mode: daily progress banner (chat.html) ─────────────────── */

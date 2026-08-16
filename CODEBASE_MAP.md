@@ -18,7 +18,7 @@ structural change (new page, new shared module, new pattern).
 | `index.html` | 50 | Splash — checks session, routes to login/app | Entry point (Capacitor always loads this) |
 | `login.html` | 159 | Email/password + Google sign-in | Pre-auth |
 | `onboarding.html` | 263 | Multi-step wizard (name, age, goal, level, writing sample) | Post-signup, pre-app |
-| `history.html` | 194 | "Chats" list — past sessions | Main app (uses newer serif "Chats" design system) |
+| `history.html` | ~250 | "Chats" list — past sessions, date-grouped (structural rebuild) | Main app (uses newer serif "Chats" design system) |
 | `chat.html` | 1129 | **Core feature** — live voice chat (BYOK, direct-to-Gemini) | Main app |
 | `scenario.html` | 567 | Timed roleplay mode | Main app |
 | `report.html` | 173 | Post-session AI report | Post-chat |
@@ -47,6 +47,7 @@ structural change (new page, new shared module, new pattern).
 | `trial-time.js` | Pure `formatTrialTimeLeft(daysLeft)` — used by `plan.js`'s `trialBannerText()`, so it affects every page that shows the trial banner (chat.html, pricing.html, scenario.html). Has a test file. |
 | `scenario-phase.js` | Pure `formatCountdown(seconds)`, used by scenario.html's countdown ring. Has a test file. |
 | `promo-cards.js` | Config array for home.html's promo scroll row — single source of truth, see home.html section below |
+| `history-grouping.js` | Pure `groupSessionsByDate(sessions, now)` — buckets history.html's session list into Today/Yesterday/This week/Earlier. Has a test file. |
 | `upsell.js` | Upsell prompts logic |
 | `voice-live-session.js` | Core Gemini live-session wiring (used by chat.html, quiz.html, scenario.html) |
 | `style.css` | **Single shared stylesheet for the whole app** — see DESIGN_SYSTEM.md for audit |
@@ -56,8 +57,9 @@ As of the `scenario.html` rebuild, the project has its first test suite:
 `vitest` (dev dependency only, zero runtime/bundle impact). Run with
 `npm test`. Current coverage is narrow and intentional — only pure,
 DOM-free logic modules are tested (`trial-time.js`, `scenario-phase.js`,
-19 tests total, all passing). DOM-heavy / voice-session-coupled code
-(most of chat.html, scenario.html, quiz.html) is still untested.
+`history-grouping.js`, 29 tests total, all passing). DOM-heavy / voice-session-coupled code
+(most of chat.html, scenario.html, quiz.html, and history.html's card
+rendering/expand/search itself) is still untested.
 Strategy going forward: keep extracting pure logic (formatting,
 state→label mapping, validation) into small DOM-free modules as pages
 get touched, rather than attempting full-page/voice-session mocking.
