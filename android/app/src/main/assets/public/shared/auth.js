@@ -237,14 +237,14 @@ export function logout() {
 
 // Call right after a successful login/signup/google-auth to send the user
 // to the right place: onboarding.html if they haven't finished it yet,
-// chat.html otherwise. Loop-safe: an invalid token clears itself instead
-// of bouncing forever, and an unreachable server shows a retry screen
-// instead of guessing where to send the user.
+// home.html (the app's hub) otherwise. Loop-safe: an invalid token clears
+// itself instead of bouncing forever, and an unreachable server shows a
+// retry screen instead of guessing where to send the user.
 export async function goToPostAuthDestination(onStatus) {
   const result = await fetchProfileWithRetry(onStatus);
   if (result.ok) {
     window.location.href = (result.profile && result.profile.onboarding_completed)
-      ? 'chat.html'
+      ? 'home.html'
       : 'onboarding.html';
   } else if (result.reason === 'unauthenticated') {
     window.location.href = 'login.html';

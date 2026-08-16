@@ -20,15 +20,47 @@
   }
   .telegram-text-title{ font-weight:700; font-size:0.92rem; }
   .telegram-text-sub{ font-size:0.78rem; color:var(--ink-dim); margin-top:2px; }
+
+  /* ── Orange icon-chip modifier — scoped to this page only.
+     .profile-row-icon's default (purple) is untouched here — profile.html
+     still uses that shared class as-is until it's redesigned. ── */
+  .profile-row-icon.tint-orange{ background:var(--accent-soft-orange); color:var(--accent-orange); }
+
+  /* ── Plan status card — commercially the most important section, so it
+     gets distinct visual weight instead of looking like every other row. ── */
+  .plan-status-card{
+    background:var(--card); border-radius:20px; padding:20px 20px 18px;
+    border-left:4px solid var(--accent-orange);
+    box-shadow:0 6px 18px -12px rgba(60,60,120,0.2);
+    transition:background 0.2s;
+  }
+  .plan-status-card.inactive{
+    background:linear-gradient(135deg, var(--accent-orange), #c85a3d);
+    border-left:none; box-shadow:0 14px 30px -14px rgba(217,105,75,0.5);
+  }
+  .plan-status-name{ font-family:var(--font-serif); font-size:1.15rem; font-weight:700; color:var(--ink); }
+  .plan-status-card.inactive .plan-status-name{ color:#fff; }
+  .plan-status-expiry{ font-size:0.8rem; color:var(--ink-dim); margin-top:4px; }
+  .plan-status-expiry.err{ color:var(--bad); font-weight:700; }
+  .plan-status-card.inactive .plan-status-expiry{ color:rgba(255,255,255,0.85); }
+  .plan-status-card.inactive .plan-status-expiry.err{ color:#fff; }
+  .plan-status-sub{ font-size:0.82rem; color:var(--ink-dim); margin:8px 0 14px; }
+  .plan-status-card.inactive .plan-status-sub{ color:rgba(255,255,255,0.92); }
+  .plan-cta-btn{
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    width:100%; padding:12px; border-radius:12px; font-weight:700; font-size:0.9rem;
+    text-decoration:none; background:var(--accent-orange); color:#fff; font-family:inherit;
+  }
+  .plan-status-card.inactive .plan-cta-btn{ background:#fff; color:var(--accent-orange); }
 </style>
 </head>
 <body>
 <div class="wrap" style="overflow-y:auto;">
   <header class="topbar">
-    <a class="icon-btn" href="chat.html" aria-label="Back">
+    <a class="icon-btn" href="home.html" aria-label="Back">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
     </a>
-    <h1 class="app-title" style="font-size:1.2rem;">Settings</h1>
+    <h1 class="app-title" style="font-size:1.2rem;font-family:var(--font-serif);">Settings</h1>
     <span style="width:38px;"></span>
   </header>
 
@@ -37,7 +69,7 @@
     <div class="settings-section-label">Account</div>
     <div class="profile-fields-card">
       <div class="profile-row">
-        <div class="profile-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></div>
+        <div class="profile-row-icon tint-orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></div>
         <div><div class="profile-row-label">Email</div></div>
         <div class="profile-row-right"><span class="profile-row-value" id="vEmail" style="font-size:0.85rem;">—</span></div>
       </div>
@@ -47,27 +79,17 @@
   <!-- ── Plan ─────────────────────────────────────────────────── -->
   <div class="settings-section">
     <div class="settings-section-label">Plan</div>
-    <div class="profile-fields-card" id="planCard">
-      <div class="profile-row">
-        <div class="profile-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg></div>
-        <div><div class="profile-row-label">Current plan</div></div>
-        <div class="profile-row-right"><span class="profile-row-value" id="vPlan">—</span></div>
+    <div class="plan-status-card" id="planCard">
+      <div class="plan-status-name" id="vPlan">—</div>
+      <div class="plan-status-expiry" id="planExpiryRow" style="display:none;">
+        <span id="planExpiryLabel">Valid until</span> <span id="vPlanExpiry">—</span>
       </div>
-      <div class="profile-row" id="planExpiryRow" style="display:none;">
-        <div class="profile-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
-        <div><div class="profile-row-label" id="planExpiryLabel">Valid until</div></div>
-        <div class="profile-row-right"><span class="profile-row-value" id="vPlanExpiry">—</span></div>
-      </div>
+      <p class="plan-status-sub" id="planCtaSub">View, renew or upgrade your plan</p>
+      <a href="pricing.html" class="plan-cta-btn" id="planCtaBtn">
+        <span id="planCtaTitle">Manage plan</span>
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </a>
     </div>
-    <a href="pricing.html" class="telegram-btn" style="margin-top:10px;">
-      <div class="telegram-icon" style="background:var(--accent);">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
-      </div>
-      <div>
-        <div class="telegram-text-title" id="planCtaTitle">Manage plan</div>
-        <div class="telegram-text-sub" id="planCtaSub">View, renew or upgrade your plan</div>
-      </div>
-    </a>
     <div class="status-msg err" id="commitModeTerminatedMsg" style="display:none;margin-top:10px;"></div>
   </div>
 
@@ -120,7 +142,7 @@
     <div class="settings-section-label">About</div>
     <div class="profile-fields-card">
       <div class="profile-row">
-        <div class="profile-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></div>
+        <div class="profile-row-icon tint-orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></div>
         <div><div class="profile-row-label">App version</div></div>
         <div class="profile-row-right"><span class="profile-row-value">1.0.0</span></div>
       </div>
@@ -138,7 +160,7 @@ import { initBackNav } from './shared/back-nav.js';
 import { checkGeminiApiKey } from './shared/gemini-key-check.js';
 
 requireAuthOrRedirect();
-initBackNav('chat.html');
+initBackNav('home.html');
 
 // ── Telegram link from config (single place to change) ────────────────────
 // Set UKTIO_CONFIG.TELEGRAM_URL in shared/config.js — no other file needs editing.
@@ -154,21 +176,24 @@ const PLAN_LABELS = {
 };
 
 getPlanStatus().then(status => {
+  const planCard = document.getElementById('planCard');
   if (!status) { document.getElementById('vPlan').textContent = 'Could not load'; return; }
 
   document.getElementById('vPlan').textContent = PLAN_LABELS[status.plan] || status.plan;
+  planCard.classList.toggle('inactive', !status.active);
 
   const expiryRow = document.getElementById('planExpiryRow');
   const ctaTitle = document.getElementById('planCtaTitle');
   const ctaSub = document.getElementById('planCtaSub');
+  const vPlanExpiry = document.getElementById('vPlanExpiry');
 
   if (status.plan_expires_at) {
     expiryRow.style.display = '';
     const d = new Date(status.plan_expires_at);
     const dateStr = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
     document.getElementById('planExpiryLabel').textContent = status.active ? 'Valid until' : 'Expired on';
-    document.getElementById('vPlanExpiry').textContent = dateStr;
-    document.getElementById('vPlanExpiry').className = 'profile-row-value ' + (status.active ? '' : 'err');
+    vPlanExpiry.textContent = dateStr;
+    expiryRow.className = 'plan-status-expiry ' + (status.active ? '' : 'err');
   }
 
   if (!status.active) {

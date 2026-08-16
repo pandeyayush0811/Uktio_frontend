@@ -140,7 +140,7 @@
   // backend round-trip. mountDrawer already fetches its own content
   // (user info, recent chats) lazily/async internally without blocking this.
   mountDrawer(document.getElementById('drawerTrigger'), null);
-  initBackNav(null); // chat.html is the main hub — back minimizes the app, never exits
+  initBackNav('home.html'); // chat.html is a sub-screen off the home hub now
 
   // Guard: bounce to login if no/invalid session, or to onboarding.html if
   // the user hasn't finished it yet, or show a retry screen if the backend
