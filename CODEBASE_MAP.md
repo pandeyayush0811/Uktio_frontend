@@ -27,6 +27,8 @@ structural change (new page, new shared module, new pattern).
 | `profile.html` | 271 | View/edit profile (uses newer "Chats" design system) | Main app |
 | `settings.html` | 275 | Account settings, Gemini key management | Main app |
 | `pricing.html` | 466 | Plans (Free/Starter/Commit Mode/Unlimited), Commit Mode disclosure modal | Main app / upsell |
+| `terms.html` | ~50 | Terms and conditions (placeholder legal copy, structure only) | Linked from settings.html |
+| `privacy.html` | ~50 | Privacy policy (placeholder legal copy, structure only) | Linked from settings.html |
 
 ## Shared modules (`www/shared/*.js`)
 
@@ -42,9 +44,23 @@ structural change (new page, new shared module, new pattern).
 | `back-nav.js` | Android hardware back-button handling |
 | `commit-mode-widget.js` | Daily progress banner (chat.html) |
 | `plan.js` | Plan/entitlement helpers |
+| `trial-time.js` | Pure `formatTrialTimeLeft(daysLeft)` — used by `plan.js`'s `trialBannerText()`, so it affects every page that shows the trial banner (chat.html, pricing.html, scenario.html). Has a test file. |
+| `scenario-phase.js` | Pure `formatCountdown(seconds)`, used by scenario.html's countdown ring. Has a test file. |
+| `promo-cards.js` | Config array for home.html's promo scroll row — single source of truth, see home.html section below |
 | `upsell.js` | Upsell prompts logic |
-| `voice-live-session.js` | Core Gemini live-session wiring (used by chat.html, quiz.html) |
+| `voice-live-session.js` | Core Gemini live-session wiring (used by chat.html, quiz.html, scenario.html) |
 | `style.css` | **Single shared stylesheet for the whole app** — see DESIGN_SYSTEM.md for audit |
+
+## Test coverage
+As of the `scenario.html` rebuild, the project has its first test suite:
+`vitest` (dev dependency only, zero runtime/bundle impact). Run with
+`npm test`. Current coverage is narrow and intentional — only pure,
+DOM-free logic modules are tested (`trial-time.js`, `scenario-phase.js`,
+19 tests total, all passing). DOM-heavy / voice-session-coupled code
+(most of chat.html, scenario.html, quiz.html) is still untested.
+Strategy going forward: keep extracting pure logic (formatting,
+state→label mapping, validation) into small DOM-free modules as pages
+get touched, rather than attempting full-page/voice-session mocking.
 
 ## Known cross-cutting rule (from README)
 `report.html`, `mistakes.html`, `quiz.html` render AI-generated text into

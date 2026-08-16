@@ -52,6 +52,22 @@
     text-decoration:none; background:var(--accent-orange); color:#fff; font-family:inherit;
   }
   .plan-status-card.inactive .plan-cta-btn{ background:#fff; color:var(--accent-orange); }
+
+  /* ── Legal section — scoped to this page only, same .profile-fields-card
+     shell as Account/About but rows are tappable links (arrow, not a
+     value), and the section label itself is orange with a "new" pill. ── */
+  .settings-section-label.legal-label{ color:var(--accent-orange); display:flex; align-items:center; gap:8px; }
+  .legal-new-pill{
+    font-size:0.62rem; font-weight:700; letter-spacing:0.3px; text-transform:none;
+    background:var(--accent-soft-orange); color:var(--accent-orange);
+    padding:2px 8px; border-radius:999px;
+  }
+  .legal-link-row{
+    display:flex; align-items:center; gap:14px; padding:14px 16px;
+    text-decoration:none; color:var(--ink); font-family:inherit;
+  }
+  .legal-link-row + .legal-link-row{ border-top:1px solid var(--line); }
+  .legal-link-label{ flex:1; font-size:0.92rem; font-weight:500; }
 </style>
 </head>
 <body>
@@ -135,6 +151,23 @@
         <div class="telegram-text-sub">Have a question or facing an issue? Reach out directly for help.</div>
       </div>
     </a>
+  </div>
+
+  <!-- ── Legal ─────────────────────────────────────────────────── -->
+  <div class="settings-section">
+    <div class="settings-section-label legal-label">Legal <span class="legal-new-pill">New</span></div>
+    <div class="profile-fields-card" style="padding:0;">
+      <a class="legal-link-row" href="terms.html">
+        <div class="profile-row-icon tint-orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+        <div class="legal-link-label">Terms and conditions</div>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--ink-dim)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </a>
+      <a class="legal-link-row" href="privacy.html">
+        <div class="profile-row-icon tint-orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+        <div class="legal-link-label">Privacy policy</div>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--ink-dim)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </a>
+    </div>
   </div>
 
   <!-- ── About ─────────────────────────────────────────────────── -->

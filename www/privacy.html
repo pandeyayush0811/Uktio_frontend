@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Utkio — Privacy Policy</title>
+<link rel="stylesheet" href="shared/style.css">
+<style>
+  .legal-body{ padding:4px 4px 24px; font-size:0.88rem; line-height:1.65; color:var(--ink); }
+  .legal-body h2{ font-family:var(--font-serif); font-size:1.02rem; font-weight:700; margin:22px 0 8px; }
+  .legal-body h2:first-child{ margin-top:6px; }
+  .legal-body p{ margin:0 0 10px; color:var(--ink-dim); }
+  .legal-updated{ font-size:0.76rem; color:var(--ink-dim); margin-bottom:20px; }
+</style>
+</head>
+<body>
+<div class="wrap" style="overflow-y:auto;">
+  <header class="topbar">
+    <a class="icon-btn" href="settings.html" aria-label="Back">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+    </a>
+    <h1 class="app-title" style="font-size:1.2rem;font-family:var(--font-serif);">Privacy policy</h1>
+    <span style="width:38px;"></span>
+  </header>
+
+  <div class="legal-body">
+    <div class="legal-updated">Last updated — placeholder, update when final legal copy is provided</div>
+
+    <h2>1. Placeholder — Data we collect</h2>
+    <p>This is placeholder copy. Replace with an accurate description of what's collected: account/auth data (via Supabase), chat session metadata, and the Gemini API key note below.</p>
+
+    <h2>2. Placeholder — Gemini API key handling</h2>
+    <p>Should restate what settings.html already tells the user in its own words: the key is stored only on-device, never sent to Utkio's servers, sent directly to Google only when a voice session starts, and deleted automatically on logout.</p>
+
+    <h2>3. Placeholder — Voice data</h2>
+    <p>This is placeholder copy describing that voice chat is BYOK/direct-to-Gemini and does not pass through Utkio's backend.</p>
+
+    <h2>4. Placeholder — Contact</h2>
+    <p>This is placeholder copy pointing users to the Telegram support contact already available on the Settings page.</p>
+  </div>
+</div>
+
+<script type="module">
+import './shared/config.js';
+import { initBackNav } from './shared/back-nav.js';
+initBackNav('settings.html');
+</script>
+</body>
+</html>

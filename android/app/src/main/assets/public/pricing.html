@@ -8,30 +8,74 @@
 <style>
   .wrap{ overflow-y:auto; }
 
+  .plans-title{ font-family:var(--font-serif); font-size:2rem; font-weight:700; margin:0; }
+
   .plan-card{
-    background:var(--card); border-radius:22px; padding:22px 20px; margin-top:16px;
+    background:var(--card); border-radius:22px; padding:24px 22px; margin-top:16px;
     box-shadow:0 20px 40px -20px rgba(60,60,120,0.18); position:relative;
-    border:2px solid transparent;
+    border:1.5px solid transparent;
   }
-  .plan-card.current{ border-color:var(--accent); }
+  .plan-card.trial{ opacity:0.82; }
+  .plan-card.current{ border-color:var(--accent-orange); box-shadow:0 20px 40px -20px rgba(217,105,75,0.3); }
+  .plan-card.featured{
+    border-color:var(--accent-orange);
+    box-shadow:0 22px 44px -18px rgba(217,105,75,0.35);
+  }
   .plan-card.dimmed{ opacity:0.6; }
+  .plan-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
   .plan-badge{
-    position:absolute; top:-10px; right:18px; background:var(--accent); color:#fff;
-    font-size:0.68rem; font-weight:700; padding:4px 10px; border-radius:999px; letter-spacing:0.3px;
+    background:var(--panel-2); color:var(--ink-dim);
+    font-size:0.7rem; font-weight:700; padding:5px 12px; border-radius:999px; letter-spacing:0.2px;
+    white-space:nowrap;
   }
-  .plan-badge.badge-done{
-    background:var(--ink-dim);
-  }
-  .plan-name{ font-family:var(--font-display); font-size:1.15rem; font-weight:700; margin:0; }
-  .plan-tagline{ font-size:0.82rem; color:var(--ink-dim); margin-top:4px; }
-  .plan-price{ margin-top:14px; display:flex; align-items:baseline; gap:6px; }
-  .plan-price .amount{ font-size:1.7rem; font-weight:800; font-family:var(--font-display); }
+  .plan-badge.badge-featured{ background:var(--accent-orange); color:#fff; }
+  .plan-badge.badge-done{ background:var(--panel-2); color:var(--ink-dim); }
+  .plan-icon{ width:52px; height:52px; flex-shrink:0; margin-top:2px; }
+  .plan-name{ font-family:var(--font-serif); font-size:1.35rem; font-weight:700; margin:14px 0 0; }
+  .plan-tagline{ font-size:0.82rem; color:var(--ink-dim); margin-top:5px; }
+  .plan-price{ margin-top:12px; display:flex; align-items:baseline; gap:6px; padding-bottom:14px; border-bottom:1px solid var(--line); }
+  .plan-price .rupee{ font-family:var(--font-serif); font-size:1.2rem; font-weight:700; color:var(--ink); }
+  .plan-price .amount{ font-size:2.1rem; font-weight:700; font-family:var(--font-serif); line-height:1; }
   .plan-price .period{ font-size:0.85rem; color:var(--ink-dim); }
-  .plan-features{ list-style:none; padding:0; margin:16px 0 0; display:flex; flex-direction:column; gap:9px; }
-  .plan-features li{ font-size:0.87rem; display:flex; gap:9px; align-items:flex-start; line-height:1.4; }
-  .plan-features svg{ flex-shrink:0; margin-top:2px; color:var(--accent); width:16px; height:16px; }
+  .plan-features{ list-style:none; padding:0; margin:16px 0 0; display:flex; flex-direction:column; gap:11px; }
+  .plan-features li{ font-size:0.88rem; display:flex; gap:10px; align-items:center; line-height:1.4; }
+  .plan-features svg{ flex-shrink:0; color:var(--accent-orange); width:19px; height:19px; }
   .plan-features li.dim{ color:var(--ink-dim); }
   .plan-features li.dim svg{ color:var(--ink-dim); }
+  .plan-features li.streak svg{ color:var(--accent-orange); }
+
+  button.plan-cta{
+    width:100%; margin-top:18px; padding:14px 20px; border-radius:12px; font-weight:700;
+    font-size:0.92rem; cursor:pointer; font-family:inherit; text-align:center;
+  }
+  button.plan-cta.outline{
+    background:transparent; border:1.5px solid var(--accent-orange); color:var(--accent-orange);
+  }
+  button.plan-cta.solid{
+    background:linear-gradient(135deg, var(--accent-orange), #c85a3d); border:none; color:#fff;
+    box-shadow:0 14px 30px -14px rgba(217,105,75,0.55);
+  }
+  button.plan-cta.muted{
+    background:transparent; border:1.5px solid var(--line); color:var(--ink-dim);
+  }
+  button.plan-cta:disabled{ opacity:0.6; cursor:not-allowed; }
+
+  /* Scoped override — shared .status-msg.ok is purple by default (still
+     used that way on other pages); on this page every accent is orange,
+     so override locally rather than touching the shared rule. */
+  .status-msg.ok{ color:var(--accent-orange); }
+
+  /* Scoped overrides — .commit-mode-* base rules live in shared/style.css
+     (only ever used on this page, but keeping the override local rather
+     than editing the shared file). */
+  .commit-mode-disclosure-card h2{ font-family:var(--font-serif); font-size:1.3rem; }
+  .commit-mode-rule .num{ background:var(--accent-soft-orange); color:var(--accent-orange); }
+  .commit-mode-consent-row{ background:var(--panel-2); border:1px solid var(--line); }
+  #commitModeConfirmBtn{
+    background:linear-gradient(135deg, var(--accent-orange), #c85a3d); border:none; color:#fff;
+    box-shadow:0 14px 30px -14px rgba(217,105,75,0.55);
+  }
+  #commitModeCancelBtn{ border-color:var(--line); color:var(--ink-dim); background:transparent; }
 </style>
 </head>
 <body>
@@ -40,7 +84,7 @@
     <a class="icon-btn" id="backBtn" href="settings.html" aria-label="Back">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
     </a>
-    <h1 class="app-title" style="font-size:1.2rem;">Plans</h1>
+    <h1 class="app-title plans-title" style="font-size:1.6rem;">Plans</h1>
     <span style="width:38px;"></span>
   </header>
 
@@ -63,22 +107,37 @@
          Always shown. When the user has no paid plan → shows trial status.
          When the user has a paid plan → shown dimmed as "Completed", so they
          can see where they started without the card simply vanishing. -->
-    <div class="plan-card" id="trialCard">
-      <span class="plan-badge" id="trialBadge" style="display:none;">You are here</span>
-      <h2 class="plan-name">Free Trial</h2>
+    <!-- ═══ FREE TRIAL ═══
+         Always shown. When the user has no paid plan → shows trial status.
+         When the user has a paid plan → shown dimmed as "Completed", so they
+         can see where they started without the card simply vanishing. -->
+    <div class="plan-card trial" id="trialCard">
+      <div class="plan-head">
+        <div>
+          <h2 class="plan-name">Free Trial</h2>
+        </div>
+        <span class="plan-badge" id="trialBadge" style="display:none;">You are here</span>
+      </div>
+      <svg class="plan-icon" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+        <path d="M32 46V28" stroke="var(--accent-orange)" stroke-width="2" stroke-linecap="round"/>
+        <path d="M32 30c0-7-6-11-13-10 0 8 6 12 13 10z" stroke="var(--accent-orange)" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M32 36c0-6 5-9 11-8 0 7-5 10-11 8z" stroke="var(--accent-orange)" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M20 46h24" stroke="var(--ink-dim)" stroke-width="2" stroke-linecap="round"/>
+        <path d="M46 20l2 2M49 24l2 0M45 26l1.5 1.5" stroke="var(--accent-orange)" stroke-width="1.6" stroke-linecap="round"/>
+      </svg>
       <div class="plan-tagline" id="trialTagline">3 days free — 5 chats + 5 reports included</div>
-      <div class="plan-price"><span class="amount">₹0</span><span class="period">/ 3 days</span></div>
+      <div class="plan-price"><span class="rupee">₹</span><span class="amount">0</span><span class="period">/ 3 days</span></div>
       <ul class="plan-features">
         <li>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="8.5 12 11 14.5 15.5 9.5"/></svg>
           <span id="trialChatsLine">5 voice practice sessions</span>
         </li>
         <li>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="8.5 12 11 14.5 15.5 9.5"/></svg>
           <span id="trialReportsLine">5 detailed analysis reports + quizzes</span>
         </li>
         <li>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="8.5 12 11 14.5 15.5 9.5"/></svg>
           Quiz review of your mistakes — always free, even after the trial
         </li>
       </ul>
@@ -87,75 +146,106 @@
 
     <!-- ═══ STARTER — ₹99 ═══ -->
     <div class="plan-card" id="starterCard">
-      <span class="plan-badge" id="starterBadge" style="display:none;">Current plan</span>
-      <h2 class="plan-name">Uktio Starter</h2>
+      <div class="plan-head">
+        <div>
+          <h2 class="plan-name">Uktio Starter</h2>
+        </div>
+        <span class="plan-badge" id="starterBadge" style="display:none;">Current plan</span>
+      </div>
+      <svg class="plan-icon" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+        <path d="M32 14c9 0 15 6 15 6s2 10-3 18c-3 5-8 7-12 7s-9-2-12-7c-5-8-3-18-3-18s6-6 15-6z" stroke="var(--accent-orange)" stroke-width="2" stroke-linejoin="round"/>
+        <circle cx="32" cy="26" r="4" stroke="var(--accent-orange)" stroke-width="2"/>
+        <path d="M14 42c4-2 8-2 8-2M50 42c-4-2-8-2-8-2" stroke="var(--ink-dim)" stroke-width="2" stroke-linecap="round"/>
+        <path d="M14 46h6M44 46h6" stroke="var(--ink-dim)" stroke-width="2" stroke-linecap="round"/>
+      </svg>
       <div class="plan-tagline">Use your own Gemini key — full app access</div>
-      <div class="plan-price"><span class="amount">₹99</span><span class="period">/ 30 days</span></div>
+      <div class="plan-price"><span class="rupee">₹</span><span class="amount">99</span><span class="period">/ 30 days</span></div>
       <ul class="plan-features">
         <li>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="8.5 12 11 14.5 15.5 9.5"/></svg>
           Unlimited voice practice sessions (using your API key)
         </li>
         <li>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="8.5 12 11 14.5 15.5 9.5"/></svg>
           Detailed analysis report after every session
         </li>
         <li>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="8.5 12 11 14.5 15.5 9.5"/></svg>
           Per-session quiz and mistake tracking
         </li>
       </ul>
-      <button class="primary" id="starterBtn" style="margin-top:18px;">Buy now — ₹99</button>
+      <button class="plan-cta outline" id="starterBtn">Buy now — ₹99</button>
       <div class="status-msg" id="starterMsg"></div>
     </div>
 
     <!-- ═══ COMMIT MODE — ₹121 ═══ -->
-    <div class="plan-card" id="commitModeCard">
-      <span class="plan-badge" id="commitModeBadge" style="display:none;">Current plan</span>
-      <h2 class="plan-name">Commit Mode</h2>
+    <div class="plan-card featured" id="commitModeCard">
+      <div class="plan-head">
+        <div>
+          <h2 class="plan-name">Commit Mode</h2>
+        </div>
+        <span class="plan-badge badge-featured" id="commitModeBadge">Most committed</span>
+      </div>
+      <svg class="plan-icon" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+        <path d="M10 48L24 24l7 10 5-7 18 21H10z" stroke="var(--accent-orange)" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M24 24l4 6M36 27l3 5" stroke="var(--accent-orange)" stroke-width="1.6" stroke-linecap="round" opacity="0.55"/>
+        <path d="M36 20v-8M36 12l6 3-6 3z" stroke="var(--accent-orange)" stroke-width="2" stroke-linejoin="round"/>
+        <circle cx="48" cy="20" r="4" stroke="var(--accent-orange)" stroke-width="1.6" opacity="0.5"/>
+      </svg>
       <div class="plan-tagline">Starter + a daily habit contract — for people who keep skipping practice</div>
-      <div class="plan-price"><span class="amount">₹121</span><span class="period">/ 30 days</span></div>
+      <div class="plan-price"><span class="rupee">₹</span><span class="amount">121</span><span class="period">/ 30 days</span></div>
       <ul class="plan-features">
         <li>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="8.5 12 11 14.5 15.5 9.5"/></svg>
           Everything in Starter — unlimited sessions, reports, quizzes
         </li>
-        <li>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        <li class="streak">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2c2 4-2 5-2 9a4 4 0 0 0 8 0c0-2-1-3-1-3s2 1 2 5a7 7 0 0 1-14 0c0-6 5-7 7-11z"/></svg>
           Daily target: 5 min chat + 1 scenario, before 12 AM IST
         </li>
         <li>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="8.5 12 11 14.5 15.5 9.5"/></svg>
           Miss a day → membership ends, no refund (this is the whole point)
         </li>
       </ul>
-      <button class="primary" id="commitModeBtn" style="margin-top:18px;">View rules &amp; buy — ₹121</button>
+      <button class="plan-cta solid" id="commitModeBtn">View rules &amp; buy — ₹121</button>
       <div class="status-msg" id="commitModeMsg"></div>
     </div>
 
     <!-- ═══ UNLIMITED — ₹1199, waitlist only ═══ -->
-    <div class="plan-card" id="unlimitedCard">
-      <span class="plan-badge" id="unlimitedBadge" style="display:none;">Current plan</span>
-      <h2 class="plan-name">Uktio Unlimited</h2>
+    <div class="plan-card dimmed" id="unlimitedCard">
+      <div class="plan-head">
+        <div>
+          <h2 class="plan-name">Uktio Unlimited</h2>
+        </div>
+        <span class="plan-badge" id="unlimitedBadge" style="display:none;">Current plan</span>
+      </div>
+      <svg class="plan-icon" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+        <circle cx="26" cy="24" r="10" stroke="var(--ink-dim)" stroke-width="2"/>
+        <path d="M42 16l1.5 3.5L47 21l-3.5 1.5L42 26l-1.5-3.5L37 21l3.5-1.5z" stroke="var(--ink-dim)" stroke-width="1.6" stroke-linejoin="round"/>
+        <path d="M10 46c4-8 10-12 16-12s12 4 16 12" stroke="var(--ink-dim)" stroke-width="2" stroke-linecap="round"/>
+        <path d="M28 46c3-6 7-9 11-9s8 3 11 9" stroke="var(--ink-dim)" stroke-width="1.6" stroke-linecap="round" opacity="0.6"/>
+      </svg>
       <div class="plan-tagline">No API key needed — we handle everything</div>
-      <div class="plan-price"><span class="amount">₹1199</span><span class="period">/ 30 days</span></div>
+      <div class="plan-price"><span class="rupee">₹</span><span class="amount">1199</span><span class="period">/ 30 days</span></div>
       <ul class="plan-features">
         <li class="dim">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="8.5 12 11 14.5 15.5 9.5"/></svg>
           No API key setup — start practicing right away
         </li>
         <li class="dim">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="8.5 12 11 14.5 15.5 9.5"/></svg>
           All Starter features included
         </li>
       </ul>
-      <button class="secondary" id="unlimitedBtn" style="margin-top:18px;">Join waitlist</button>
+      <button class="plan-cta outline" id="unlimitedBtn">Join waitlist</button>
       <div class="status-msg" id="unlimitedMsg"></div>
     </div>
 
   </div><!-- /plansContent -->
 
-  <p style="font-size:0.76rem;color:var(--ink-dim);text-align:center;margin:20px 4px;">
+  <p style="font-size:0.76rem;color:var(--ink-dim);text-align:center;margin:20px 4px;display:flex;align-items:center;justify-content:center;gap:5px;flex-wrap:wrap;">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;flex-shrink:0;"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
     Payments are processed securely via Razorpay. For any issues, go to Settings → Contact the Co-Founder.
   </p>
 </div>
@@ -257,7 +347,12 @@ async function refreshPlanState() {
     if (status.plan === 'commit_mode') {
       const commitModeCard = document.getElementById('commitModeCard');
       commitModeCard.classList.add('current');
-      document.getElementById('commitModeBadge').style.display = '';
+      // Badge now defaults to "Most committed" (marketing label for
+      // non-owners) — swap to "Current plan" once the user actually owns
+      // this plan, same badge element, just different copy.
+      const commitModeBadgeEl = document.getElementById('commitModeBadge');
+      commitModeBadgeEl.textContent = 'Current plan';
+      commitModeBadgeEl.style.display = '';
 
       if (status.active) {
         const d = new Date(status.plan_expires_at);

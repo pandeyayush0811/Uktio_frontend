@@ -1,4 +1,5 @@
 import { apiFetch } from './auth.js';
+import { formatTrialTimeLeft } from './trial-time.js';
 
 // Returns { plan, plan_expires_at, active, trial } or null on network/auth
 // error. `trial` is null once the user has a paid plan; otherwise it's
@@ -45,5 +46,5 @@ export async function requireActivePlan() {
 export function trialBannerText(status) {
   if (!status || !status.trial || !status.trial.active) return null;
   const { chats_remaining, reports_remaining, days_left } = status.trial;
-  return `Free trial: ${chats_remaining} chat${chats_remaining !== 1 ? 's' : ''} and ${reports_remaining} report${reports_remaining !== 1 ? 's' : ''} remaining (${days_left} day${days_left !== 1 ? 's' : ''} left).`;
+  return `Free trial: ${chats_remaining} chat${chats_remaining !== 1 ? 's' : ''} and ${reports_remaining} report${reports_remaining !== 1 ? 's' : ''} remaining (${formatTrialTimeLeft(days_left)}).`;
 }

@@ -8,19 +8,21 @@
 <style>
   .status-row{
     display:flex; align-items:center; justify-content:center; gap:8px;
-    margin:18px 0 20px; visibility:hidden;
+    margin:14px 0 18px; visibility:hidden;
   }
-  .dot{width:9px;height:9px;border-radius:50%;background:var(--ink-dim);flex-shrink:0;}
-  #statusText{font-size:0.95rem;font-weight:500;}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--ink-dim);flex-shrink:0;transition:background 0.2s;}
+  .dot.live{ background:var(--good); }
+  .dot.err{ background:var(--bad); }
+  #statusText{font-size:0.88rem;font-weight:500;color:var(--ink-dim);}
 
   .chat-card{
-    flex:1; min-height:0; background:var(--card); border-radius:26px; padding:20px 16px;
+    flex:1; min-height:0; background:var(--card); border-radius:26px; padding:18px 14px;
     box-shadow:0 20px 40px -20px rgba(60,60,120,0.18);
     display:flex; flex-direction:column; overflow:hidden;
   }
   .transcript{
     flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column;
-    gap:14px; padding-right:2px; padding-bottom:4px; scroll-behavior:smooth;
+    gap:16px; padding-right:2px; padding-bottom:4px; scroll-behavior:smooth;
     scrollbar-width:none; -ms-overflow-style:none;
   }
   .transcript::-webkit-scrollbar{ display:none; }
@@ -28,19 +30,34 @@
     content:"The chat will appear here once the conversation starts";
     color:var(--ink-dim); font-size:0.85rem; font-style:italic; margin:auto;
   }
-  .line{ padding:12px 16px; border-radius:16px; font-size:0.95rem; line-height:1.5; max-width:82%; }
-  .line.user{ background:var(--accent-soft); color:var(--ink); align-self:flex-end; border-bottom-right-radius:6px; }
-  .line.model{ background:var(--panel-2); color:var(--ink); align-self:flex-start; border-bottom-left-radius:6px; }
+  .line-row{ display:flex; align-items:flex-end; gap:8px; max-width:88%; }
+  .line-row.user{ align-self:flex-end; flex-direction:row-reverse; }
+  .line-row.model{ align-self:flex-start; }
+  .avatar-chip{
+    width:26px; height:26px; border-radius:50%; flex-shrink:0; margin-bottom:2px;
+    background:var(--accent-soft-orange); color:var(--accent-orange);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .avatar-chip svg{ width:14px; height:14px; }
+  .line-col{ display:flex; flex-direction:column; gap:3px; min-width:0; }
+  .line-row.user .line-col{ align-items:flex-end; }
+  .line{ padding:11px 14px; border-radius:14px; font-size:0.95rem; line-height:1.5; }
+  .line.user{ background:var(--accent-soft-orange); color:var(--ink); border-bottom-right-radius:4px; }
+  .line.model{ background:var(--panel-2); color:var(--ink); border-bottom-left-radius:4px; }
   .line .tag{display:none;}
-  .line.historical{ opacity:0.55; }
+  .line-meta{ font-size:0.68rem; color:var(--ink-dim); padding:0 2px; display:flex; align-items:center; gap:3px; }
+  .line-meta svg{ width:11px; height:11px; color:var(--accent-orange); }
+  .line-row.historical{ opacity:0.55; }
   .history-divider{ text-align:center; color:var(--ink-dim); font-size:0.72rem; margin:16px 0; align-self:center; }
 
-  .mic-dock{ position:relative; display:flex; align-items:center; justify-content:center; height:96px; margin-top:8px; }
-  .wave{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; gap:4px; opacity:0.35; pointer-events:none; }
-  .wave span{ width:3px; border-radius:2px; background:var(--accent); opacity:0.55; }
+  .mic-dock{ display:flex; align-items:center; justify-content:center; gap:10px; height:78px; margin-top:8px; }
+  .wave{ flex:1; display:flex; align-items:center; gap:3px; opacity:0.4; pointer-events:none; max-width:110px; }
+  .wave.wave-left{ justify-content:flex-end; }
+  .wave.wave-right{ justify-content:flex-start; }
+  .wave span{ width:3px; border-radius:2px; background:var(--accent-orange); opacity:0.55; }
   .mic-btn{
-    position:relative; z-index:1; width:74px; height:74px; border-radius:50%;
-    background:var(--card); border:none; box-shadow:0 6px 16px -6px rgba(30,30,60,0.18);
+    position:relative; z-index:1; width:70px; height:70px; border-radius:50%; flex-shrink:0;
+    background:var(--accent-orange); border:none; box-shadow:0 6px 16px -6px rgba(217,105,75,0.5);
     display:flex; align-items:center; justify-content:center; cursor:pointer;
     transition:transform 0.15s, box-shadow 0.2s, background 0.2s;
     -webkit-tap-highlight-color: transparent; -webkit-user-select:none; user-select:none;
@@ -49,36 +66,35 @@
   .mic-btn:focus, .mic-btn:focus-visible{ outline:none; }
   .mic-btn:hover:not(:disabled){transform:scale(1.04);}
   .mic-btn:disabled{opacity:0.5;cursor:not-allowed;}
-  .mic-btn svg{width:28px;height:28px;color:var(--accent);}
+  .mic-btn svg{width:26px;height:26px;color:#fff;}
   .mic-btn.active{
-    background:var(--accent);
-    box-shadow: 0 0 0 14px rgba(106,99,241,0.16), 0 0 26px 6px rgba(106,99,241,0.55);
+    box-shadow: 0 0 0 12px rgba(217,105,75,0.16), 0 0 24px 6px rgba(217,105,75,0.45);
   }
-  .mic-btn.active svg{color:#fff;}
 
-  footer{margin-top:16px;color:var(--ink-dim);font-size:0.72rem;line-height:1.6;text-align:center;visibility:hidden;}
+  footer{margin-top:14px;color:var(--ink-dim);font-size:0.72rem;line-height:1.6;text-align:center;visibility:hidden;display:flex;align-items:center;justify-content:center;gap:5px;}
+  footer svg{width:13px;height:13px;flex-shrink:0;}
 
   /* Report affordance directly on the chat page — see, generate, or (once
      generated) the locked notice, all without a trip through History. */
   .report-pill{
     display:none; align-items:center; gap:6px; margin:0 auto 14px; padding:8px 14px;
-    border-radius:999px; border:1.5px solid var(--accent-orange); color:var(--accent-orange);
-    background:transparent; font-weight:700; font-size:0.82rem; cursor:pointer; font-family:inherit;
-    width:fit-content;
+    border-radius:999px; border:none; color:#fff;
+    background:var(--accent-orange); font-weight:700; font-size:0.82rem; cursor:pointer; font-family:inherit;
+    width:fit-content; box-shadow:0 8px 18px -10px rgba(217,105,75,0.6);
   }
   .report-pill.show{ display:flex; }
   .locked-banner{
     display:none; flex-direction:column; align-items:center; gap:10px; text-align:center;
-    padding:16px 18px; margin-bottom:14px; border-radius:16px;
-    background:var(--panel-2); color:var(--ink-dim); font-size:0.85rem; line-height:1.5;
+    padding:18px; margin-bottom:14px; border-radius:18px;
+    background:linear-gradient(135deg, var(--accent-orange), #c85a3d); color:#fff; font-size:0.85rem; line-height:1.5;
   }
   .locked-banner.show{ display:flex; }
   .locked-banner .locked-actions{ display:flex; gap:10px; }
   .locked-banner button{
-    padding:9px 16px; border-radius:10px; border:1.5px solid var(--accent); background:transparent;
-    color:var(--accent); font-weight:700; font-size:0.82rem; cursor:pointer; font-family:inherit;
+    padding:9px 16px; border-radius:10px; border:1.5px solid rgba(255,255,255,0.6); background:transparent;
+    color:#fff; font-weight:700; font-size:0.82rem; cursor:pointer; font-family:inherit;
   }
-  .locked-banner button.primary{ background:var(--accent); color:#fff; border-color:var(--accent); }
+  .locked-banner button.primary{ background:#fff; color:var(--accent-orange); border-color:#fff; }
 </style>
 </head>
 <body>
@@ -87,7 +103,7 @@
     <button class="icon-btn" id="drawerTrigger" aria-label="Menu">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
-    <h1 class="app-title">Utkio</h1>
+    <h1 class="app-title" style="font-family:var(--font-serif);">Utkio</h1>
     <a class="icon-btn" href="settings.html" aria-label="Settings">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
     </a>
@@ -116,14 +132,16 @@
   </div>
 
   <div class="mic-dock">
-    <div class="wave" id="wave" aria-hidden="true"></div>
+    <div class="wave wave-left" id="waveLeft" aria-hidden="true"></div>
     <button id="micBtn" class="mic-btn" aria-label="Start/stop talking">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
     </button>
+    <div class="wave wave-right" id="waveRight" aria-hidden="true"></div>
   </div>
 
   <footer>
-    Mic access chahiye hoga (browser permission maangega). Best Chrome/Edge mein chalega.
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    <span>Mic access chahiye hoga (browser permission maangega). Best Chrome/Edge mein chalega.</span>
   </footer>
 </div>
 
@@ -569,7 +587,8 @@ const micBtn = document.getElementById('micBtn');
 const statusDot = document.getElementById('statusDot');
 const statusText = document.getElementById('statusText');
 const transcriptEl = document.getElementById('transcript');
-const waveEl = document.getElementById('wave');
+const waveLeftEl = document.getElementById('waveLeft');
+const waveRightEl = document.getElementById('waveRight');
 const reportPill = document.getElementById('reportPill');
 const lockedBanner = document.getElementById('lockedBanner');
 
@@ -610,27 +629,56 @@ function lockChatForReport(sessionId){
    se import hoti hai taaki chat.html/quiz.html mein ye logic do baar na likha ho. */
 
 (function buildWave(){
-  const BARS = 28;
-  for (let i = 0; i < BARS; i++){
-    const bar = document.createElement('span');
-    const h = 6 + Math.round(Math.abs(Math.sin(i * 0.7)) * 26);
-    bar.style.height = h + 'px';
-    waveEl.appendChild(bar);
-  }
+  const BARS = 9;
+  [waveLeftEl, waveRightEl].forEach((el) => {
+    for (let i = 0; i < BARS; i++){
+      const bar = document.createElement('span');
+      const h = 6 + Math.round(Math.abs(Math.sin(i * 0.7)) * 20);
+      bar.style.height = h + 'px';
+      el.appendChild(bar);
+    }
+  });
 })();
 
 function setStatus(text, mode){
   statusText.textContent = text;
   statusDot.className = 'dot' + (mode ? ' ' + mode : '');
   micBtn.classList.toggle('active', mode === 'live');
-  waveEl.classList.toggle('live', mode === 'live');
+  waveLeftEl.classList.toggle('live', mode === 'live');
+  waveRightEl.classList.toggle('live', mode === 'live');
 }
 
 function scrollTranscriptToBottom(){
   transcriptEl.scrollTop = transcriptEl.scrollHeight;
 }
 
+// Small sparkle icon for the AI-coach avatar chip — purely decorative,
+// aria-hidden, matches the sparkle used on scenario.html's feedback card.
+const SPARKLE_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.1 2.1M15.6 15.6l2.1 2.1M17.7 6.3l-2.1 2.1M8.4 15.6l-2.1 2.1"/></svg>';
+// Read-checkmark icon under user lines — cosmetic only, matches
+// scenario.html's transcript pattern (timestamp is UI-only metadata,
+// never sent to the backend).
+const CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>';
+
+function formatLineTime(){
+  const d = new Date();
+  return d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false });
+}
+
 function addLine(role){
+  const row = document.createElement('div');
+  row.className = 'line-row ' + role;
+
+  if (role !== 'user'){
+    const avatar = document.createElement('div');
+    avatar.className = 'avatar-chip';
+    avatar.innerHTML = SPARKLE_SVG;
+    row.appendChild(avatar);
+  }
+
+  const col = document.createElement('div');
+  col.className = 'line-col';
+
   const div = document.createElement('div');
   div.className = 'line ' + role;
   const tag = document.createElement('span');
@@ -640,7 +688,17 @@ function addLine(role){
   text.className = 'text';
   div.appendChild(tag);
   div.appendChild(text);
-  transcriptEl.appendChild(div);
+  col.appendChild(div);
+
+  if (role === 'user'){
+    const meta = document.createElement('span');
+    meta.className = 'line-meta';
+    meta.innerHTML = formatLineTime() + ' ' + CHECK_SVG;
+    col.appendChild(meta);
+  }
+
+  row.appendChild(col);
+  transcriptEl.appendChild(row);
   scrollTranscriptToBottom();
 
   // A new line always means the previous turn (if any) just finished —
@@ -657,17 +715,34 @@ function addLine(role){
 // since these turns are already in the database; re-saving them would
 // duplicate them.
 function addHistoricalLine(role, content){
+  const isUser = role === 'user';
+  const row = document.createElement('div');
+  row.className = 'line-row historical ' + (isUser ? 'user' : 'model');
+
+  if (!isUser){
+    const avatar = document.createElement('div');
+    avatar.className = 'avatar-chip';
+    avatar.innerHTML = SPARKLE_SVG;
+    row.appendChild(avatar);
+  }
+
+  const col = document.createElement('div');
+  col.className = 'line-col';
+
   const div = document.createElement('div');
-  div.className = 'line historical ' + (role === 'user' ? 'user' : 'model');
+  div.className = 'line ' + (isUser ? 'user' : 'model');
   const tag = document.createElement('span');
   tag.className = 'tag';
-  tag.textContent = role === 'user' ? 'Tum' : 'Bolo';
+  tag.textContent = isUser ? 'Tum' : 'Bolo';
   const text = document.createElement('span');
   text.className = 'text';
   text.textContent = content;
   div.appendChild(tag);
   div.appendChild(text);
-  transcriptEl.appendChild(div);
+  col.appendChild(div);
+
+  row.appendChild(col);
+  transcriptEl.appendChild(row);
 }
 
 // If ?resume=<id> is in the URL, fetch that session's past turns, show

@@ -1,5 +1,15 @@
 import { apiFetch, getCachedProfileBasic, setCachedProfileBasic } from './auth.js';
 
+// Same formatting as history.html's formatDuration() — kept as a small
+// local copy rather than a shared import so drawer.js (loaded on every
+// page) doesn't pick up a dependency on history.html's module for one
+// pure formatting function.
+function formatDuration(startedAt, endedAt){
+  const totalSec = Math.max(0, Math.round((new Date(endedAt) - new Date(startedAt)) / 1000));
+  const min = Math.floor(totalSec / 60), sec = totalSec % 60;
+  return min > 0 ? `${min} min ${sec} sec` : `${sec} sec`;
+}
+
 // Mounts the hamburger drawer into the page and wires it to `triggerEl`.
 // activePage: 'home' | 'profile' | 'chats' | 'scenario' | null — highlights the matching nav item.
 export async function mountDrawer(triggerEl, activePage){
@@ -43,7 +53,7 @@ export async function mountDrawer(triggerEl, activePage){
       <div class="drawer-section-label">Recent chats</div>
       <div id="drawerRecent">
         <div style="display:flex;align-items:center;gap:10px;padding:12px 10px;">
-          <div style="width:18px;height:18px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--accent);animation:spin 0.75s linear infinite;flex-shrink:0;"></div>
+          <div style="width:18px;height:18px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--accent-orange);animation:spin 0.75s linear infinite;flex-shrink:0;"></div>
           <span style="font-size:0.8rem;color:var(--ink-dim);">Loading chats…</span>
         </div>
       </div>
@@ -93,13 +103,14 @@ export async function mountDrawer(triggerEl, activePage){
         const d = new Date(s.started_at);
         const timeStr = d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
         const dateStr = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+        const duration = formatDuration(s.started_at, s.ended_at);
         const item = document.createElement('div');
         item.className = 'drawer-recent-item';
         item.innerHTML = `
           <div class="drawer-recent-avatar">${s.turn_count}</div>
           <div class="drawer-recent-text">
             <div class="drawer-recent-title">${dateStr}</div>
-            <div class="drawer-recent-preview">${s.turn_count} turns</div>
+            <div class="drawer-recent-preview">${duration} · ${s.turn_count} turns</div>
           </div>
           <div class="drawer-recent-time">${timeStr}</div>`;
         item.addEventListener('click', () => window.location.href = 'chat.html?resume=' + s.id);
