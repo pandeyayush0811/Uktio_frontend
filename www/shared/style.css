@@ -129,8 +129,8 @@ textarea:focus{border-color:var(--accent);}
 .splash-wrap{ align-items:center; justify-content:center; gap:18px; position:relative; }
 .spinner{
   width:44px; height:44px; border-radius:50%;
-  border:4px solid var(--line); border-top-color:var(--accent); border-right-color:var(--accent);
-  animation: spin 0.9s cubic-bezier(0.65,0.05,0.36,1) infinite;
+  border:4px solid var(--line); border-top-color:var(--accent-orange); border-right-color:var(--accent-orange);
+  animation: spin 0.75s linear infinite;
 }
 @keyframes spin{ to{ transform:rotate(360deg); } }
 
@@ -143,7 +143,7 @@ textarea:focus{border-color:var(--accent);}
 .splash-glow{
   position:absolute; top:50%; left:50%; width:420px; height:420px;
   transform:translate(-50%,-50%);
-  background:radial-gradient(circle, rgba(106,99,241,0.14) 0%, rgba(106,99,241,0) 70%);
+  background:radial-gradient(circle, rgba(217,105,75,0.14) 0%, rgba(217,105,75,0) 70%);
   pointer-events:none; z-index:0;
 }
 
@@ -180,7 +180,7 @@ textarea:focus{border-color:var(--accent);}
    This combined-selector rule (two classes = higher specificity) runs
    both animations together and is the actual one that applies. */
 .spinner.splash-loader{
-  animation: spin 0.9s cubic-bezier(0.65,0.05,0.36,1) infinite,
+  animation: spin 0.75s linear infinite,
              splash-fade 0.4s ease-out 0.35s forwards;
 }
 .splash-hint-anim{
