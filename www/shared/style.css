@@ -149,51 +149,29 @@ textarea:focus{border-color:var(--accent);}
 
 .splash-logo{
   width:104px; height:104px; position:relative; z-index:1;
-  opacity:0; transform:scale(0.85);
-  animation: splash-pop 0.5s cubic-bezier(0.22,1,0.36,1) forwards;
 }
 .splash-logo .logo-arc{
   transform-origin:32px 36px;
-  animation: splash-arc-breathe 1.6s ease-in-out 0.55s infinite;
-}
-@keyframes splash-pop{
-  to{ opacity:1; transform:scale(1); }
+  animation: splash-arc-breathe 1.6s ease-in-out 0.6s infinite;
 }
 @keyframes splash-arc-breathe{
   0%, 100%{ transform:scale(1) rotate(0deg); }
   50%{ transform:scale(1.14) rotate(-8deg); }
 }
 
-.splash-title-anim{
-  opacity:0; transform:translateY(8px);
-  animation: splash-rise 0.45s cubic-bezier(0.22,1,0.36,1) 0.15s forwards;
-}
-.splash-loader{
-  opacity:0;
-  animation: splash-fade 0.4s ease-out 0.35s forwards;
-}
+/* .splash-title-anim, .splash-loader, .splash-hint-anim classes stay on
+   the index.html elements (harmless no-ops here) so the HTML doesn't
+   need touching — entrance animation was intentionally removed below. */
 /* .spinner also sets its own `animation` (the spin). Since .splash-loader
-   sets `animation` too, and both classes sit on the same element with
-   equal specificity, whichever rule is declared last would silently win
-   and overwrite the other's animation entirely (shorthand properties
-   don't merge) — the spinner would fade in but never actually rotate.
-   This combined-selector rule (two classes = higher specificity) runs
-   both animations together and is the actual one that applies. */
+   used to set `animation` too, and both classes sit on the same element
+   with equal specificity, whichever rule is declared last would silently
+   win and overwrite the other's animation entirely (shorthand properties
+   don't merge). This combined-selector rule is kept so it stays the one
+   authoritative place defining the spin, regardless of future edits to
+   either class individually. */
 .spinner.splash-loader{
-  animation: spin 0.75s linear infinite,
-             splash-fade 0.4s ease-out 0.35s forwards;
+  animation: spin 0.75s linear infinite;
 }
-.splash-hint-anim{
-  opacity:0;
-  animation: splash-fade 0.4s ease-out 0.5s forwards;
-}
-@keyframes splash-rise{
-  to{ opacity:1; transform:translateY(0); }
-}
-@keyframes splash-fade{
-  to{ opacity:1; }
-}
-
 @media (prefers-reduced-motion: reduce){
   .splash-logo, .splash-logo .logo-dot, .splash-title-anim, .splash-loader, .splash-hint-anim{
     animation:none !important; opacity:1 !important; transform:none !important;
