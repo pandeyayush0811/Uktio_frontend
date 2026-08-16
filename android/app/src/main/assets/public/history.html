@@ -6,14 +6,14 @@
 <title>Utkio — Chats</title>
 <link rel="stylesheet" href="shared/style.css">
 <style>
-  .wrap{ overflow-y:auto; padding-bottom:96px; padding-top: 0 !important; }
+  .wrap{ overflow-y:auto; padding-bottom:96px; }
   /* Sticky header block (icon bar + title + search) — bleeds edge-to-edge
      behind the status bar (negative margin cancels .wrap's own 20px
      inset) then re-adds safe-area-aware padding, so it reads as one
      solid pinned bar instead of floating with a gap above it while stuck. */
   .history-sticky-head{
     position:sticky; top:0; z-index:20; background:var(--bg);
-    margin:0 -20px 0; padding:calc(20px + env(safe-area-inset-top, 0px)) 20px 10px;
+    margin:-20px -20px 0; padding:calc(10px + env(safe-area-inset-top, 0px)) 20px 10px;
   }
   .expanded-transcript{
     display:none; margin-top:12px; padding-top:12px; border-top:1px solid var(--line);

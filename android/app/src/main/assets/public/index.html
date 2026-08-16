@@ -8,9 +8,16 @@
 </head>
 <body>
 <div class="wrap splash-wrap">
-  <h1 class="app-title">Utkio</h1>
-  <div class="spinner" aria-hidden="true"></div>
-  <p class="hint" id="splashStatus" style="min-height:1.2em;"></p>
+  <div class="splash-glow" aria-hidden="true"></div>
+
+  <svg class="splash-logo" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <path class="logo-arc" d="M42 28 A15 15 0 0 0 28 43" stroke="var(--accent)" stroke-width="11" stroke-linecap="round"/>
+    <path d="M30 40 V63 A20 20 0 0 0 70 63 V40" stroke="var(--accent)" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+
+  <h1 class="app-title splash-title-anim">Utkio</h1>
+  <div class="spinner splash-loader" aria-hidden="true"></div>
+  <p class="hint splash-hint-anim" id="splashStatus" style="min-height:1.2em;"></p>
 </div>
 
 <!--
