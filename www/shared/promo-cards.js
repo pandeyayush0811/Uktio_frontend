@@ -16,6 +16,10 @@
 //            of the app's icon set (see shared/drawer.js for examples).
 //   link   — where tapping the card navigates to
 //   badge  — optional short uppercase text (e.g. "NEW"); null to omit
+//   image  — optional illustration path (assets/illustrations/...). If
+//            set, home.html renders the full-bleed image tile design;
+//            if omitted, it falls back to the plain icon tile, so a
+//            card added without an illustration still renders fine.
 
 export const PROMO_CARDS = [
   {
@@ -25,6 +29,7 @@ export const PROMO_CARDS = [
     icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>`,
     link: 'pricing.html#commit-mode',
     badge: null,
+    image: 'assets/illustrations/commit-mode.jpg',
   },
   {
     id: 'scenario',
@@ -33,5 +38,6 @@ export const PROMO_CARDS = [
     icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
     link: 'scenario.html',
     badge: null,
+    image: 'assets/illustrations/scenario-mode.jpg',
   },
 ];

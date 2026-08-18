@@ -603,47 +603,62 @@ footer{margin-top:16px;color:var(--ink-dim);font-size:0.72rem;line-height:1.6;te
 .commit-mode-consent-row input{ margin-top:3px; flex-shrink:0; width:18px; height:18px; }
 
 /* ── Home (hub) page ─────────────────────────────────────────────────
-   Uses the "Chats" design system (serif display font + orange accent)
-   already established by history.html/profile.html — this page is
-   where that direction is adopted as the app's home/entry point. */
-.home-wrap{ overflow-y:auto; }
-.home-greeting-block{ margin:4px 0 18px; display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
-.home-eyebrow{ font-size:0.8rem; color:var(--ink-dim); margin:0 0 2px; }
-.home-greeting-name{ font-family:var(--font-serif); font-size:1.9rem; font-weight:700; margin:0; line-height:1.15; }
+   Premium redesign (structure + visuals), scoped entirely to home.html
+   classes — no other page's styles are touched. Warm cream background
+   + serif display type + burnt-orange accent, matching the approved
+   reference look. All classes below are only ever used in home.html. */
+.home-wrap{
+  overflow-y:auto; overflow-x:hidden;
+  background:#FBF1E6; /* scoped to this page only, not the global --bg */
+}
+.home-greeting-block{ margin:6px 0 20px; display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+.home-eyebrow{ font-size:0.85rem; color:var(--ink-dim); margin:0 0 2px; }
+.home-greeting-name{
+  font-family:var(--font-serif); font-size:2.5rem; font-weight:700; margin:0;
+  line-height:1.08; letter-spacing:-0.01em;
+}
+.home-greeting-name::after{ content:'.'; color:var(--accent-orange); }
 
 /* Streak badge — sits beside the greeting name. Currently rendered with
    placeholder/fake data (see home.html script) until real streak
    tracking exists in the backend; UI slot only, not wired to Supabase. */
 .home-streak-badge{
   flex-shrink:0; display:flex; flex-direction:column; align-items:center; gap:2px;
-  background:var(--panel-2); border:1px solid var(--line); border-radius:16px;
-  padding:8px 14px; margin-top:2px;
+  background:var(--accent-soft-orange, #f6e2da); border:none; border-radius:18px;
+  padding:10px 18px; margin-top:2px;
 }
-.home-streak-badge-value{ display:flex; align-items:center; gap:4px; font-weight:800; font-size:1rem; color:var(--ink); }
-.home-streak-badge-value svg{ width:16px; height:16px; color:var(--accent-orange); }
-.home-streak-badge-label{ font-size:0.62rem; color:var(--ink-dim); white-space:nowrap; }
+.home-streak-badge-value{ display:flex; align-items:center; gap:5px; font-weight:800; font-size:1.15rem; color:var(--ink); }
+.home-streak-badge-value svg{ width:19px; height:19px; color:var(--accent-orange); }
+.home-streak-badge-label{ font-size:0.64rem; color:var(--ink-dim); white-space:nowrap; margin-top:1px; }
 
 /* Announcement banner — dismissible, isolated to home.html (does not
    reuse commit-mode-banner: different purpose/lifecycle, see design
    discussion). Dismiss state persisted per-announcement id in
    localStorage so it won't reappear once closed. */
 .announcement-banner{
-  display:flex; align-items:flex-start; gap:12px; margin:0 0 18px;
-  background:var(--accent-soft-orange, #f6e2da); border-radius:16px; padding:14px 14px 14px 16px;
+  position:relative; display:flex; align-items:flex-start; gap:12px; margin:0 0 18px;
+  background:#F6E4D4; border:1px solid rgba(217,105,75,0.14); border-radius:18px;
+  padding:16px 40px 16px 18px;
   animation:announcementIn 0.35s ease both;
 }
 .announcement-banner-body{ flex:1; min-width:0; }
 .announcement-banner-badge{
   display:inline-block; font-size:0.6rem; font-weight:800; letter-spacing:0.04em; text-transform:uppercase;
-  color:#fff; background:var(--accent-orange); padding:2px 8px; border-radius:999px; margin-bottom:6px;
+  color:#fff; background:var(--accent-orange); padding:3px 9px; border-radius:999px; margin-bottom:7px;
 }
-.announcement-banner-title{ font-family:var(--font-serif); font-size:0.98rem; font-weight:700; margin:0 0 3px; color:var(--ink); }
-.announcement-banner-desc{ font-size:0.78rem; color:var(--ink-dim); line-height:1.4; margin:0; }
+.announcement-banner-title{ font-family:var(--font-serif); font-size:1.05rem; font-weight:700; margin:0 0 3px; color:var(--ink); }
+.announcement-banner-desc{ font-size:0.8rem; color:var(--ink-dim); line-height:1.4; margin:0; }
 .announcement-banner-close{
   flex-shrink:0; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center;
-  color:var(--ink-dim); background:rgba(255,255,255,0.5); border:none; padding:0; cursor:pointer;
+  color:var(--ink-dim); background:rgba(255,255,255,0.6); border:none; padding:0; cursor:pointer;
 }
 .announcement-banner-close svg{ width:14px; height:14px; }
+/* Decorative chevron only — purely CSS, no JS/markup change needed */
+.announcement-banner::after{
+  content:''; position:absolute; right:16px; top:50%; width:8px; height:8px;
+  border-right:2px solid var(--accent-orange); border-bottom:2px solid var(--accent-orange);
+  transform:translateY(-50%) rotate(-45deg); opacity:0.55; pointer-events:none;
+}
 @keyframes announcementIn{
   from{ opacity:0; transform:translateY(-10px); }
   to{ opacity:1; transform:translateY(0); }
@@ -654,50 +669,86 @@ footer{margin-top:16px;color:var(--ink-dim);font-size:0.72rem;line-height:1.6;te
 
 /* Hero "start a conversation" card — the single most prominent action */
 .hero-start-card{
-  display:flex; align-items:center; justify-content:space-between; gap:14px;
+  position:relative; overflow:hidden; display:flex; flex-direction:column; justify-content:flex-end;
+  min-height:230px;
   background:linear-gradient(135deg, var(--accent-orange), #c85a3d);
-  border-radius:22px; padding:22px 22px; margin-bottom:20px;
-  text-decoration:none; color:#fff; box-shadow:0 14px 30px -14px rgba(217,105,75,0.55);
+  border-radius:26px; padding:22px 22px 20px; margin-bottom:22px;
+  text-decoration:none; color:#fff; box-shadow:0 16px 34px -16px rgba(217,105,75,0.6);
   transition:transform 0.15s ease;
 }
 .hero-start-card:active{ transform:scale(0.98); }
-.hero-start-text{ display:flex; flex-direction:column; gap:4px; }
-.hero-start-label{ font-family:var(--font-serif); font-size:1.2rem; font-weight:700; }
-.hero-start-sub{ font-size:0.82rem; opacity:0.9; }
+.hero-start-eyebrow{
+  position:relative; z-index:2; font-size:0.7rem; font-weight:800; letter-spacing:0.08em;
+  text-transform:uppercase; opacity:0.85; margin-bottom:auto;
+}
+/* Full-bleed illustration spanning the whole card (not cornered) —
+   a gradient wash (::before below) sits above it so the text and
+   arrow stay readable, same trick used on the Explore image tiles. */
+.hero-start-image{
+  position:absolute; z-index:0; inset:0; width:100%; height:100%;
+  object-fit:cover; object-position:center 30%;
+  pointer-events:none; user-select:none;
+}
+.hero-start-card::before{
+  content:''; position:absolute; z-index:1; inset:0; pointer-events:none;
+  background:
+    linear-gradient(180deg, rgba(191,79,44,0.25) 0%, rgba(170,63,35,0.55) 45%, rgba(140,48,28,0.88) 100%);
+}
+.hero-start-text{ position:relative; z-index:2; display:flex; flex-direction:column; gap:6px; max-width:75%; margin-top:14px; }
+.hero-start-label{ font-family:var(--font-serif); font-size:2rem; font-weight:700; line-height:1.05; }
+.hero-start-sub{ font-size:0.85rem; opacity:0.92; line-height:1.35; }
 .hero-start-arrow{
-  flex-shrink:0; width:38px; height:38px; border-radius:50%;
-  background:rgba(255,255,255,0.22); display:flex; align-items:center; justify-content:center;
-  font-size:1.2rem;
+  position:relative; z-index:2; flex-shrink:0; width:48px; height:48px; border-radius:50%; margin-top:16px;
+  background:#fff; color:var(--accent-orange); display:flex; align-items:center; justify-content:center;
+  box-shadow:0 6px 14px -6px rgba(0,0,0,0.3);
 }
 
-/* Horizontal scroll promo row — config-driven from shared/promo-cards.js.
-   Adding a new card to that file automatically extends this row; the
-   row scrolls sideways rather than growing the page's vertical height,
-   so it scales to any number of cards without ever looking broken. */
-.promo-scroll-label{ font-size:0.78rem; font-weight:700; color:var(--ink-dim); text-transform:uppercase; letter-spacing:0.04em; margin:0 0 10px; }
+/* Explore — promo cards row, config-driven from shared/promo-cards.js.
+   Adding a new card to that file automatically extends this row. Cards
+   with an `image` render as full-bleed illustration tiles (current
+   style); cards without one fall back to the plain icon tile so future
+   cards never break even if nobody adds an illustration for them. */
+.promo-scroll-label{ font-size:0.78rem; font-weight:700; color:var(--ink-dim); text-transform:uppercase; letter-spacing:0.05em; margin:0 0 10px; }
 .promo-scroll{
-  display:flex; gap:12px; overflow-x:auto; scroll-snap-type:x proximity;
+  display:flex; gap:14px; overflow-x:auto; scroll-snap-type:x proximity;
   margin:0 -20px 22px; padding:0 20px 4px; -webkit-overflow-scrolling:touch;
+  /* Right-edge fade — a soft visual cue that more cards continue off-screen.
+     Purely decorative (mask-image), degrades gracefully to a hard edge on
+     any WebView that doesn't support it — never breaks scrolling itself. */
+  -webkit-mask-image: linear-gradient(to right, #000 88%, transparent 100%);
+  mask-image: linear-gradient(to right, #000 88%, transparent 100%);
 }
 .promo-scroll::-webkit-scrollbar{ display:none; }
 .promo-card{
-  flex:0 0 auto; width:168px; scroll-snap-align:start;
-  background:var(--card); border-radius:18px; padding:16px;
-  box-shadow:0 6px 18px -12px rgba(60,60,120,0.25);
-  text-decoration:none; color:var(--ink); display:flex; flex-direction:column; gap:10px;
+  flex:0 0 auto; width:150px; height:180px; scroll-snap-align:start; position:relative;
+  border-radius:20px; overflow:hidden; text-decoration:none; color:#fff;
+  box-shadow:0 8px 20px -12px rgba(60,40,20,0.35);
+}
+.promo-card--image{ background:#c85a3d; }
+.promo-card-image{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+.promo-card-overlay{
+  position:absolute; left:0; right:0; bottom:0; padding:14px;
+  background:linear-gradient(180deg, rgba(0,0,0,0) 30%, rgba(0,0,0,0.55) 100%);
+  display:flex; flex-direction:column; gap:4px;
+}
+.promo-card-title{ font-family:var(--font-serif); font-size:1.02rem; font-weight:700; line-height:1.15; color:#fff; }
+.promo-card-badge{
+  align-self:flex-start; font-size:0.6rem; font-weight:800; letter-spacing:0.03em;
+  color:var(--accent-orange); background:#fff;
+  padding:2px 8px; border-radius:999px; text-transform:uppercase; margin-bottom:2px;
+}
+/* Fallback: plain icon/desc tile for any future card added without an image */
+.promo-card--plain{
+  background:var(--card); color:var(--ink); padding:16px; display:flex; flex-direction:column; gap:10px;
 }
 .promo-card-icon{
   width:36px; height:36px; border-radius:10px; background:var(--accent-soft-orange, #f6e2da);
   color:var(--accent-orange); display:flex; align-items:center; justify-content:center; flex-shrink:0;
 }
 .promo-card-icon svg{ width:19px; height:19px; }
-.promo-card-title{ font-family:var(--font-serif); font-size:0.98rem; font-weight:700; line-height:1.2; }
-.promo-card-desc{ font-size:0.76rem; color:var(--ink-dim); line-height:1.4; }
-.promo-card-badge{
-  align-self:flex-start; font-size:0.62rem; font-weight:800; letter-spacing:0.03em;
-  color:var(--accent-orange); background:var(--accent-soft-orange, #f6e2da);
-  padding:2px 8px; border-radius:999px; text-transform:uppercase;
-}
+.promo-card--plain .promo-card-title{ color:var(--ink); }
+.promo-card--plain .promo-card-desc{ font-size:0.76rem; color:var(--ink-dim); line-height:1.4; }
+.promo-card--plain .promo-card-badge{ background:var(--accent-soft-orange, #f6e2da); }
 /* Trailing spacer so the last real card doesn't sit flush against the
    screen edge — gives the same "there's more, scroll me" peek cue on
    both ends of the row. */
@@ -706,14 +757,13 @@ footer{margin-top:16px;color:var(--ink-dim);font-size:0.72rem;line-height:1.6;te
 /* Quick nav tiles — History / Profile */
 .quick-nav-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
 .quick-nav-tile{
-  display:flex; align-items:center; gap:10px; background:var(--card);
-  border-radius:16px; padding:14px 16px; text-decoration:none; color:var(--ink);
-  box-shadow:0 6px 18px -12px rgba(60,60,120,0.2);
+  display:flex; align-items:center; gap:10px; background:transparent;
+  border:1.5px solid rgba(217,105,75,0.35); border-radius:999px; padding:13px 16px;
+  text-decoration:none; color:var(--ink);
 }
 .quick-nav-tile-icon{
-  width:34px; height:34px; border-radius:9px; background:var(--accent-soft); color:var(--accent);
-  display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  color:var(--accent-orange); display:flex; align-items:center; justify-content:center; flex-shrink:0;
 }
-.quick-nav-tile-icon svg{ width:17px; height:17px; }
+.quick-nav-tile-icon svg{ width:19px; height:19px; }
 .quick-nav-tile-label{ font-weight:600; font-size:0.88rem; }
 
