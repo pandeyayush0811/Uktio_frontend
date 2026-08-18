@@ -251,7 +251,7 @@ export function createVoiceSession({ getSystemInstruction, voiceName = 'Puck', c
   async function start(imports) {
     if (session || isBusy) return { ok: false, reason: 'already_active' };
 
-    const apiKey = getApiKey();
+    const apiKey = await getApiKey();
     if (!apiKey) return { ok: false, reason: 'no_api_key' };
 
     isBusy = true;

@@ -147,7 +147,7 @@ import { requireAuthOrRedirect, apiFetch } from './shared/auth.js';
 import { escapeHtml } from './shared/sanitize.js';
 import { buildScoreRingSvg } from './shared/score-ring.js';
 
-requireAuthOrRedirect();
+await requireAuthOrRedirect();
 
 const params = new URLSearchParams(window.location.search);
 const sessionId = params.get('session');

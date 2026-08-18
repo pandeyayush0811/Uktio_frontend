@@ -81,7 +81,7 @@ import { initBackNav } from './shared/back-nav.js';
 import { escapeHtml } from './shared/sanitize.js';
 import { groupSessionsByDate } from './shared/history-grouping.js';
 
-requireAuthOrRedirect();
+await requireAuthOrRedirect();
 mountDrawer(document.getElementById('drawerTrigger'), 'chats');
 initBackNav('home.html');
 

@@ -103,7 +103,7 @@ import { checkGeminiApiKey } from './shared/gemini-key-check.js';
 import { getApiKey, getMicCapturePluginOrNull } from './shared/mic-helpers.js';
 import { escapeHtml } from './shared/sanitize.js';
 
-requireAuthOrRedirect();
+await requireAuthOrRedirect();
 await requireActivePlan(); // see shared/plan.js — UX nicety, backend is the real gate
 
 const params = new URLSearchParams(window.location.search);
@@ -126,7 +126,7 @@ let attemptedCount = 0;
 // has at least one of those (see init() below).
 let keyStatusPromise = null;
 function ensureKeyChecked(){
-  if (!keyStatusPromise) keyStatusPromise = checkGeminiApiKey(getApiKey());
+  if (!keyStatusPromise) keyStatusPromise = getApiKey().then(k => checkGeminiApiKey(k));
   return keyStatusPromise;
 }
 
@@ -265,7 +265,7 @@ function pcmToWavBase64(pcmBytes, sampleRate, numChannels, bitsPerSample){
 }
 
 async function evaluateSpeech(pcmBytes, expected){
-  const apiKey = getApiKey();
+  const apiKey = await getApiKey();
   if (!apiKey) throw new Error('no_key');
   const wavBase64 = pcmToWavBase64(pcmBytes, 16000, 1, 16);
   const ai = new GoogleGenAI({ apiKey });
@@ -377,7 +377,7 @@ function renderSpeak(q, colorClass){
         finish(!!result.correct, result.heard);
       }catch(e){
         console.error('speech eval failed', e);
-        const keyStatus = await checkGeminiApiKey(getApiKey());
+        const keyStatus = await checkGeminiApiKey(await getApiKey());
         if (keyStatus.status !== 'valid') {
           micStatus.textContent = (keyStatus.message || 'Invalid API key') + ' — Go to Settings to fix this.';
           micBtn.disabled = true;

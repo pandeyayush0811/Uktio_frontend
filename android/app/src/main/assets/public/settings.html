@@ -187,12 +187,13 @@
 
 <script type="module">
 import './shared/config.js';
-import { requireAuthOrRedirect, apiFetch, logout, API_KEY_STORAGE_KEY } from './shared/auth.js';
+import { requireAuthOrRedirect, apiFetch, logout } from './shared/auth.js';
 import { getPlanStatus } from './shared/plan.js';
 import { initBackNav } from './shared/back-nav.js';
 import { checkGeminiApiKey } from './shared/gemini-key-check.js';
+import { getApiKey, setApiKey, removeApiKey } from './shared/mic-helpers.js';
 
-requireAuthOrRedirect();
+await requireAuthOrRedirect();
 initBackNav('home.html');
 
 // ── Telegram link from config (single place to change) ────────────────────
@@ -288,9 +289,9 @@ function flashMsg(text) {
 
 // Load saved key on start
 try {
-  const savedKey = localStorage.getItem(API_KEY_STORAGE_KEY);
+  const savedKey = await getApiKey();
   if (savedKey) { apiKeyInput.value = savedKey; validateKeyDebounced(); }
-} catch (e) { console.warn('localStorage read failed', e); }
+} catch (e) { console.warn('secure storage read failed', e); }
 
 // Debounced validation
 let validateTimer = null;
@@ -309,18 +310,45 @@ function validateKeyDebounced() {
   }, 700);
 }
 
+// Secure storage is a real (async, encrypted) write, unlike localStorage —
+// writing on every single keystroke would hammer the Android Keystore.
+// So the actual write is debounced (same 400ms window regardless of how
+// fast someone types), while "Saved" still flashes immediately so the UI
+// feels exactly as responsive as before. flushSaveNow() forces an
+// immediate write (no wait) so a fast tab-away/back-nav right after
+// typing never loses the last few keystrokes.
+let saveTimer = null;
+let lastSavedValue = null; // avoids a redundant secure-storage write if nothing changed
+async function writeKeyNow(v) {
+  if (v === lastSavedValue) return;
+  lastSavedValue = v;
+  if (v) await setApiKey(v);
+  else await removeApiKey();
+}
+function flushSaveNow() {
+  clearTimeout(saveTimer);
+  saveTimer = null;
+  writeKeyNow(apiKeyInput.value.trim());
+}
+
 apiKeyInput.addEventListener('input', () => {
-  try {
-    const v = apiKeyInput.value.trim();
-    if (v) { localStorage.setItem(API_KEY_STORAGE_KEY, v); flashMsg('Saved'); }
-    else localStorage.removeItem(API_KEY_STORAGE_KEY);
-  } catch (e) { console.warn('localStorage write failed', e); }
+  const v = apiKeyInput.value.trim();
+  flashMsg(v ? 'Saved' : '');
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => writeKeyNow(v), 400);
   validateKeyDebounced();
 });
 
-deleteKeyBtn.addEventListener('click', () => {
+// Catches the case where someone types then immediately navigates away
+// (back button, tab switch) before the 400ms debounce fires.
+apiKeyInput.addEventListener('blur', flushSaveNow);
+window.addEventListener('pagehide', flushSaveNow);
+
+deleteKeyBtn.addEventListener('click', async () => {
   apiKeyInput.value = '';
-  try { localStorage.removeItem(API_KEY_STORAGE_KEY); } catch (e) {}
+  clearTimeout(saveTimer);
+  lastSavedValue = '';
+  try { await removeApiKey(); } catch (e) {}
   flashMsg('Key deleted successfully');
   keyCheckMsg.textContent = '';
   keyCheckMsg.className = 'status-msg';

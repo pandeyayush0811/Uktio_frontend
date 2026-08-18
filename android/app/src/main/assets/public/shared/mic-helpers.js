@@ -1,11 +1,36 @@
 import { API_KEY_STORAGE_KEY } from './auth.js';
+import { secureGetItem, secureSetItem, secureRemoveItem, migrateLegacyKey } from './secure-store.js';
 
-// The Gemini API key lives only in localStorage (settings.html writes it,
-// chat.html/quiz.html only read it) — this was previously the exact same
-// three-line function copy-pasted into both pages separately.
-export function getApiKey() {
-  try { return (localStorage.getItem(API_KEY_STORAGE_KEY) || '').trim(); }
-  catch (e) { return ''; }
+// The user's own Gemini API key — this is real money on their Google
+// billing account, so it lives in encrypted on-device storage (Android
+// Keystore / iOS Keychain via secure-store.js), not plain localStorage.
+// settings.html writes it, chat.html/quiz.html/voice-live-session.js only
+// read it — this was previously the exact same three-line function
+// copy-pasted into both pages separately.
+let migratedOnce = false;
+async function ensureMigrated() {
+  if (migratedOnce) return;
+  migratedOnce = true;
+  await migrateLegacyKey(API_KEY_STORAGE_KEY, API_KEY_STORAGE_KEY);
+}
+
+export async function getApiKey() {
+  await ensureMigrated();
+  try {
+    const v = await secureGetItem(API_KEY_STORAGE_KEY);
+    return (v || '').trim();
+  } catch (e) { return ''; }
+}
+
+export async function setApiKey(value) {
+  await ensureMigrated();
+  const v = (value || '').trim();
+  if (!v) { await removeApiKey(); return; }
+  await secureSetItem(API_KEY_STORAGE_KEY, v);
+}
+
+export async function removeApiKey() {
+  await secureRemoveItem(API_KEY_STORAGE_KEY);
 }
 
 // Strict variant — throws a clear, actionable error if the native

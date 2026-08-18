@@ -1,5 +1,15 @@
 # vendor/google-genai.bundle.mjs
 
+**Current vendored version: `@google/genai@2.17.1`** (updated from 1.30.0 —
+verified the exact surface this app uses — `GoogleGenAI`, `Modality`,
+`ai.live.connect`, `session.sendClientContent`, `session.sendRealtimeInput`
+— is unchanged between the two versions, so `voice-live-session.js`,
+`chat.html`, and `quiz.html` needed no code changes. That said, this is a
+1.x → 2.x major bump on the SDK's own versioning, so **do a real-device
+smoke test of chat.html's live voice session, scenario.html, and quiz.html's
+"speak" question before shipping this** — a static diff can't catch a
+runtime/audio-format behavior change.
+
 A self-contained, browser-ready bundle of `@google/genai@1.30.0`'s
 browser entry point (`dist/web/index.mjs`), built with esbuild.
 

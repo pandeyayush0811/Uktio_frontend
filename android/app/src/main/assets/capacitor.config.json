@@ -3,6 +3,6 @@
 	"appName": "Utkio",
 	"webDir": "www",
 	"server": {
-		"androidScheme": "http"
+		"androidScheme": "https"
 	}
 }

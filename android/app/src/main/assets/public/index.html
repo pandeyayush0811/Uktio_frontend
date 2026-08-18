@@ -17,7 +17,7 @@
 
   <h1 class="app-title splash-title-anim">Utkio</h1>
   <div class="spinner splash-loader" aria-hidden="true"></div>
-  <p class="hint splash-hint-anim" id="splashStatus" style="min-height:1.2em;"></p>
+  <p class="hint splash-hint-anim" id="splashStatus" role="status" aria-live="polite" style="min-height:1.2em;"></p>
 </div>
 
 <!--
@@ -35,7 +35,7 @@ initBackNav(null);
 const splashStatus = document.getElementById('splashStatus');
 
 setTimeout(async () => {
-  const session = getSession();
+  const session = await getSession();
   if (session && session.access_token) {
     // Wait for any pending offline session to finish syncing BEFORE
     // navigating away. Previously this was fire-and-forget, racing

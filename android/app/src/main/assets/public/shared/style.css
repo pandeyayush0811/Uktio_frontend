@@ -7,11 +7,18 @@
   --line: #ECDFCB;
   --accent: #6a63f1;
   --accent-soft: #e7e5fd;
-  --bad: #e0575c;
+  --bad: #bf3a40;
   --font-display: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans Devanagari', sans-serif;
   --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans Devanagari', sans-serif;
 }
 *{box-sizing:border-box;}
+/* Visually hides content while keeping it available to screen readers —
+   used for step/progress announcements that are otherwise conveyed only
+   through a purely visual dot indicator. */
+.sr-only{
+  position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+  overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
+}
 html, body{ height:100%; overflow:hidden; overscroll-behavior:none; }
 body{
   margin:0; background:var(--bg); color:var(--ink);

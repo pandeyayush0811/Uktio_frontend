@@ -8,12 +8,13 @@
 </head>
 <body>
 <div class="wrap" style="justify-content:center;">
-  <div class="progress-dots" id="progressDots"></div>
+  <div class="progress-dots" id="progressDots" aria-hidden="true"></div>
+  <div class="sr-only" id="stepAnnounce" aria-live="polite"></div>
 
   <div class="card">
     <div id="stepBody"></div>
 
-    <div class="status-msg err" id="statusMsg"></div>
+    <div class="status-msg err" id="statusMsg" role="alert" aria-live="assertive"></div>
 
     <div class="step-nav">
       <button class="secondary" id="backBtn" style="display:none;">Back</button>
@@ -29,7 +30,7 @@ import { initBackNav } from './shared/back-nav.js';
 
 // Just needs a logged-in session — this page itself doesn't require
 // onboarding to already be complete (that would be circular).
-requireAuthOrRedirect();
+await requireAuthOrRedirect();
 initBackNav(null, true); // mandatory — back button is disabled here
 
 const answers = {
@@ -183,10 +184,12 @@ function renderChips(container, options, key){
     btn.type = 'button';
     btn.className = 'chip' + (answers[key] === opt.value ? ' selected' : '');
     btn.textContent = opt.label;
+    btn.setAttribute('aria-pressed', String(answers[key] === opt.value));
     btn.addEventListener('click', () => {
       answers[key] = opt.value;
-      container.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
+      container.querySelectorAll('.chip').forEach(c => { c.classList.remove('selected'); c.setAttribute('aria-pressed', 'false'); });
       btn.classList.add('selected');
+      btn.setAttribute('aria-pressed', 'true');
     });
     container.appendChild(btn);
   });
@@ -198,6 +201,7 @@ const statusMsg = document.getElementById('statusMsg');
 const backBtn = document.getElementById('backBtn');
 const nextBtn = document.getElementById('nextBtn');
 const progressDots = document.getElementById('progressDots');
+const stepAnnounce = document.getElementById('stepAnnounce');
 
 function renderDots(){
   progressDots.innerHTML = '';
@@ -214,11 +218,20 @@ function renderStep(){
   const step = steps[current];
   const title = typeof step.title === 'function' ? step.title() : step.title;
   const sub = typeof step.sub === 'function' ? step.sub() : step.sub;
-  stepBody.innerHTML = `<div class="step-title">${title}</div><div class="step-sub">${sub}</div>`;
+  stepBody.innerHTML = `<div class="step-title" id="stepTitleText">${title}</div><div class="step-sub">${sub}</div>`;
   step.render(stepBody);
+  // Associate the step's primary input with its (dynamically rendered)
+  // visual title, since these steps don't use static <label for> markup —
+  // one generic hook here covers every step instead of touching each
+  // render() function individually.
+  const control = stepBody.querySelector('input, textarea');
+  if (control && !control.hasAttribute('aria-label')) {
+    control.setAttribute('aria-labelledby', 'stepTitleText');
+  }
   backBtn.style.display = current === 0 ? 'none' : '';
   nextBtn.textContent = current === steps.length - 1 ? 'Get Started' : 'Next';
   renderDots();
+  stepAnnounce.textContent = `Step ${current + 1} of ${steps.length}`;
 }
 
 backBtn.addEventListener('click', () => {

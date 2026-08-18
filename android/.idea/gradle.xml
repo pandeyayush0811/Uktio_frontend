@@ -12,6 +12,7 @@
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/app" />
             <option value="$PROJECT_DIR$/capacitor-cordova-android-plugins" />
+            <option value="$PROJECT_DIR$/../node_modules/@aparajita/capacitor-secure-storage/android" />
             <option value="$PROJECT_DIR$/../node_modules/@capacitor/android/capacitor" />
             <option value="$PROJECT_DIR$/../node_modules/@capacitor/app/android" />
             <option value="$PROJECT_DIR$/../node_modules/@capacitor/browser/android" />

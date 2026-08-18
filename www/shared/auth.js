@@ -1,28 +1,47 @@
 // Shared across all pages: talks to the backend for signup/login/google,
 // stores the Supabase session on-device, and guards pages that need auth.
 
+import { secureGetItem, secureSetItem, secureRemoveItem, migrateLegacyKey } from './secure-store.js';
+
 const cfg = window.UKTIO_CONFIG;
 const SESSION_KEY = 'utkio_session';
 
-export function saveSession(session) {
-  try { localStorage.setItem(SESSION_KEY, JSON.stringify(session)); }
+// The session (access + refresh token) now lives in encrypted storage
+// (Android Keystore / iOS Keychain via shared/secure-store.js) instead of
+// plain localStorage — a stolen/rooted-device or backup dump no longer
+// hands over a live login. See shared/secure-store.js for the fallback
+// behavior in browser preview.
+//
+// migratedOnce guards the legacy-localStorage migration so it only runs
+// once per page load, not on every saveSession()/getSession() call.
+let migratedOnce = false;
+async function ensureMigrated() {
+  if (migratedOnce) return;
+  migratedOnce = true;
+  await migrateLegacyKey(SESSION_KEY, SESSION_KEY);
+}
+
+export async function saveSession(session) {
+  await ensureMigrated();
+  try { await secureSetItem(SESSION_KEY, JSON.stringify(session)); }
   catch (e) { console.warn('saveSession failed', e); }
 }
 
-export function getSession() {
+export async function getSession() {
+  await ensureMigrated();
   try {
-    const raw = localStorage.getItem(SESSION_KEY);
+    const raw = await secureGetItem(SESSION_KEY);
     return raw ? JSON.parse(raw) : null;
   } catch (e) { return null; }
 }
 
-export function clearSession() {
-  try { localStorage.removeItem(SESSION_KEY); }
+export async function clearSession() {
+  try { await secureRemoveItem(SESSION_KEY); }
   catch (e) { /* ignore */ }
 }
 
-export function getAccessToken() {
-  const s = getSession();
+export async function getAccessToken() {
+  const s = await getSession();
   return s ? s.access_token : null;
 }
 
@@ -43,7 +62,7 @@ let inFlightRefresh = null;
 // caller should grab a fresh token with this the same way apiFetch does
 // internally, instead of reading getAccessToken()'s possibly-stale value.
 export async function getValidAccessToken() {
-  const s = getSession();
+  const s = await getSession();
   if (!s || !s.access_token) return null;
 
   const expiresAtMs = (s.expires_at || 0) * 1000; // Supabase gives seconds, Date.now() is ms
@@ -59,8 +78,8 @@ export async function getValidAccessToken() {
       body: JSON.stringify({ refresh_token: s.refresh_token })
     })
       .then(res => res.json().then(data => ({ ok: res.ok, data })))
-      .then(({ ok, data }) => {
-        if (ok && data.session) { saveSession(data.session); return data.session.access_token; }
+      .then(async ({ ok, data }) => {
+        if (ok && data.session) { await saveSession(data.session); return data.session.access_token; }
         return s.access_token; // refresh failed — fall back to the old (soon-expired) token, let the call fail naturally rather than throwing here
       })
       .catch(() => s.access_token)
@@ -71,8 +90,10 @@ export async function getValidAccessToken() {
 
 // Call at the top of any page that requires login. Redirects to login.html
 // if there's no valid-looking session. Returns the session if present.
-export function requireAuthOrRedirect() {
-  const s = getSession();
+// Async now (secure storage read) — every call site already awaits it,
+// either inside an async function or via ES module top-level await.
+export async function requireAuthOrRedirect() {
+  const s = await getSession();
   if (!s || !s.access_token) {
     window.location.href = 'login.html';
     return null;
@@ -120,7 +141,7 @@ export async function fetchProfileWithRetry(onStatus) {
       return { ok: true, profile: data.profile || null };
     } catch (err) {
       if (err.status === 401 || err.status === 403) {
-        clearSession(); // token is bad — never keep retrying or looping on it
+        await clearSession(); // token is bad — never keep retrying or looping on it
         return { ok: false, reason: 'unauthenticated' };
       }
       // Network error / server down / cold start — worth retrying.
@@ -227,10 +248,10 @@ export async function syncPendingChatSession() {
   }
 }
 
-export function logout() {
-  clearSession();
+export async function logout() {
+  await clearSession();
   clearCachedProfileBasic();
-  try { localStorage.removeItem(API_KEY_STORAGE_KEY); }
+  try { await secureRemoveItem(API_KEY_STORAGE_KEY); }
   catch (e) { console.warn('failed to clear API key on logout', e); }
   window.location.href = 'login.html';
 }
@@ -258,7 +279,7 @@ export async function goToPostAuthDestination(onStatus) {
 // to be invalid), or onboarding.html if logged in but onboarding isn't done
 // yet. Returns the profile on success, or null (already handled the page).
 export async function requireCompleteProfile(onStatus) {
-  const s = requireAuthOrRedirect();
+  const s = await requireAuthOrRedirect();
   if (!s) return null;
 
   const result = await fetchProfileWithRetry(onStatus);

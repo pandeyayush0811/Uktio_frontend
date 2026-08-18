@@ -47,7 +47,7 @@ import { requireAuthOrRedirect, apiFetch } from './shared/auth.js';
 import { initBackNav } from './shared/back-nav.js';
 import { escapeHtml } from './shared/sanitize.js';
 
-requireAuthOrRedirect();
+await requireAuthOrRedirect();
 initBackNav('history.html');
 
 const params = new URLSearchParams(window.location.search);

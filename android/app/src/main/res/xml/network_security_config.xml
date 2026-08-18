@@ -1,6 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Production/release network security config: no cleartext (plain HTTP)
+  exceptions here — every real request (Supabase, your backend, Google's
+  Gemini Live API) already goes over HTTPS/WSS, so this simply enforces
+  that a release build can never accidentally talk to anything over an
+  unencrypted connection.
+
+  Need to test against a locally-run backend over plain HTTP on your LAN?
+  See src/debug/res/xml/network_security_config.xml — that override only
+  applies to debug builds and never ships in a release APK/AAB.
+-->
 <network-security-config>
-    <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="true">10.215.18.30</domain>
-    </domain-config>
+    <base-config cleartextTrafficPermitted="false" />
 </network-security-config>

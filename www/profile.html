@@ -220,7 +220,7 @@ import './shared/config.js';
 import { requireAuthOrRedirect, apiFetch, getCachedProfileBasic, setCachedProfileBasic } from './shared/auth.js';
 import { initBackNav } from './shared/back-nav.js';
 
-requireAuthOrRedirect();
+await requireAuthOrRedirect();
 initBackNav('home.html');
 
 const GOAL_OPTIONS = [

@@ -1,3 +1,5 @@
+import { initCrashReporting } from './crash-log.js';
+
 // Fill these in from:
 // - Supabase Dashboard -> Project Settings -> API (URL + anon public key)
 // - The backend URL wherever you deploy uktio-backend (Render/Railway/etc.)
@@ -40,5 +42,19 @@ window.UKTIO_CONFIG = {
   // every page that shows the "Contact" button reads from here. No redeploy
   // of HTML files needed; just update this file and run `npx cap sync android`.
   TELEGRAM_URL: 'https://t.me/uktio',
-  
+
+  // ── Crash reporting (shared/crash-log.js) ───────────────────────────────
+  // Empty = crash reporting stays OFF (see crash-log.js). Get a DSN from
+  // your own Sentry project (sentry.io -> Settings -> Client Keys) and
+  // paste it here before shipping to real users — otherwise you'll have
+  // zero visibility into crashes once this is on 1000+ devices.
+  SENTRY_DSN: '',
+  APP_VERSION: 'utkio@1.0.0', // bump this (or wire to your build number) on every release you ship
 };
+
+// Crash reporting is wired up here (not in each individual page) because
+// config.js is the very first import on every single page in this app —
+// this guarantees it's initialized before anything else has a chance to
+// throw. See shared/crash-log.js for what this does when SENTRY_DSN
+// above is empty (nothing — safe no-op).
+initCrashReporting();
