@@ -1,4 +1,4 @@
-import { apiFetch, getCachedProfileBasic, setCachedProfileBasic } from './auth.js';
+import { apiFetch, getCachedProfileBasic, setCachedProfileBasic, getRecentChatSessions } from './auth.js';
 
 // Same formatting as history.html's formatDuration() — kept as a small
 // local copy rather than a shared import so drawer.js (loaded on every
@@ -92,7 +92,10 @@ export async function mountDrawer(triggerEl, activePage){
   } catch (e) { /* silent — cache (if any) already covered this, drawer still works without it */ }
 
   try {
-    const data = await apiFetch('/chat/sessions');
+    // Cached + deduped (see shared/auth.js) — if this page also fetches
+    // the full session list itself (history.html), that call reuses this
+    // exact request instead of firing a second one for the same data.
+    const data = await getRecentChatSessions();
     const recent = (data.sessions || []).slice(0, 5);
     const recentEl = overlay.querySelector('#drawerRecent');
     if (!recent.length) {

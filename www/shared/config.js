@@ -50,6 +50,19 @@ window.UKTIO_CONFIG = {
   // zero visibility into crashes once this is on 1000+ devices.
   SENTRY_DSN: '',
   APP_VERSION: 'utkio@1.0.0', // bump this (or wire to your build number) on every release you ship
+
+  // ── Backend cold-start behavior (shared/auth.js: fetchProfileWithRetry) ──
+  // true  = the backend can be a sleeping free-tier Render service, so a
+  //         failed first request retries up to 4x over ~14s before giving
+  //         up (that's what "Server se connect ho raha hai..." covers).
+  // false = the backend is always-on (paid Render/Railway/etc. — no sleep,
+  //         no cold start), so it retries just ONCE, quickly. Leaving this
+  //         `true` on an always-on backend costs nothing when the server is
+  //         healthy (first attempt always succeeds either way) — it only
+  //         matters when the server is genuinely down, where `true` means
+  //         3 extra wasted hits and ~14s of "connecting..." shown to the
+  //         user for no benefit. Flip this the day you move off the free tier.
+  BACKEND_COLD_START: true,
 };
 
 // Crash reporting is wired up here (not in each individual page) because

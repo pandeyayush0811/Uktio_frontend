@@ -2,6 +2,7 @@
 // stores the Supabase session on-device, and guards pages that need auth.
 
 import { secureGetItem, secureSetItem, secureRemoveItem, migrateLegacyKey } from './secure-store.js';
+import { cachedFetch, invalidateCache, invalidateAllCache } from './api-cache.js';
 
 const cfg = window.UKTIO_CONFIG;
 const SESSION_KEY = 'utkio_session';
@@ -129,8 +130,20 @@ export async function apiFetch(path, options = {}) {
 //   { ok: false, reason: 'unauthenticated' } — token is genuinely invalid/expired (401/403). Session is cleared.
 //   { ok: false, reason: 'unreachable' }     — server never responded after retries. Session is left untouched.
 // onStatus(text) is called before each retry so the UI can show progress.
+//
+// The long 4-attempt/~14s ladder below exists ONLY to ride out a free-tier
+// Render service spinning back up from sleep. A paid Render plan never
+// sleeps, so once you upgrade, every one of those extra retries on a
+// genuinely-down backend is just 3 wasted extra hits (and 14 extra
+// seconds of "connecting..." shown to the user) for no benefit — flip
+// UKTIO_CONFIG.BACKEND_COLD_START to false in shared/config.js and this
+// automatically drops to one quick retry, which is all a paid/always-on
+// backend ever needs (covers a normal network blip, not a 15-30s wake-up).
 export async function fetchProfileWithRetry(onStatus) {
-  const delaysMs = [0, 2000, 4000, 8000]; // ~14s of retrying total, covers a cold start
+  const hasColdStart = !cfg || cfg.BACKEND_COLD_START !== false; // default true = today's free-tier behavior, safe if config.js hasn't been updated yet
+  const delaysMs = hasColdStart
+    ? [0, 2000, 4000, 8000]   // ~14s total — covers a free-tier cold start
+    : [0, 1500];              // one quick retry — covers an ordinary network blip on an always-on backend
   for (let attempt = 0; attempt < delaysMs.length; attempt++) {
     if (delaysMs[attempt] > 0) {
       onStatus && onStatus(`Server se connect ho raha hai... (${attempt}/${delaysMs.length - 1})`);
@@ -196,6 +209,30 @@ function clearCachedProfileBasic() {
   try { localStorage.removeItem(PROFILE_CACHE_KEY); } catch (e) { /* ignore */ }
 }
 
+// Recent chat sessions (used by the drawer's "Recent chats" list AND by
+// history.html's own full list) — cached because both places used to
+// fire their own independent GET /chat/sessions, so opening history.html
+// alone fired it TWICE (once from mountDrawer(), once from history.html's
+// own list) within milliseconds of each other for the exact same data.
+export const CHAT_SESSIONS_CACHE_KEY = 'chat_sessions';
+// Short TTL — this list changes right after every chat session (which is
+// the core loop of the app), so it can't be cached long. This mainly
+// exists to collapse the drawer-vs-page double-fetch above, not to skip
+// fetches across a whole visit.
+const CHAT_SESSIONS_CACHE_TTL_MS = 30 * 1000;
+
+export async function getRecentChatSessions(opts) {
+  const { value } = await cachedFetch(CHAT_SESSIONS_CACHE_KEY, () => apiFetch('/chat/sessions'), CHAT_SESSIONS_CACHE_TTL_MS, opts);
+  return value;
+}
+
+/** Call right after a chat session is successfully saved so the drawer/
+ *  history list picks up the new session on its very next read instead
+ *  of hiding it for up to CHAT_SESSIONS_CACHE_TTL_MS. */
+export function invalidateChatSessionsCache() {
+  invalidateCache(CHAT_SESSIONS_CACHE_KEY);
+}
+
 // Local-write, batch-sync pattern for chat history: chat.html writes
 // turns here as the conversation happens (crash-safe), then pushes the
 // whole thing to the backend in one call when the session ends. If that
@@ -226,6 +263,7 @@ export async function syncPendingChatSession() {
   try {
     const result = await apiFetch('/chat/sessions', { method: 'POST', body: JSON.stringify(payload) });
     try { localStorage.removeItem(PENDING_CHAT_SESSION_KEY); } catch (_) { /* ignore */ }
+    invalidateChatSessionsCache(); // this session is now real — don't let a cached list hide it
     return result.session_id || null;
   } catch (err) {
     // 409 = session locked (its report was already generated — see the
@@ -251,6 +289,7 @@ export async function syncPendingChatSession() {
 export async function logout() {
   await clearSession();
   clearCachedProfileBasic();
+  invalidateAllCache(); // wipe plan/profile/sessions caches — next login must never show the previous account's cached data
   try { await secureRemoveItem(API_KEY_STORAGE_KEY); }
   catch (e) { console.warn('failed to clear API key on logout', e); }
   window.location.href = 'login.html';

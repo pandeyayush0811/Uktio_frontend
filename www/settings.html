@@ -211,7 +211,7 @@
 
 <script type="module">
 import './shared/config.js';
-import { requireAuthOrRedirect, apiFetch, logout } from './shared/auth.js';
+import { requireAuthOrRedirect, apiFetch, logout, getCachedProfileBasic, setCachedProfileBasic } from './shared/auth.js';
 import { getPlanStatus } from './shared/plan.js';
 import { initBackNav } from './shared/back-nav.js';
 import { checkGeminiApiKey } from './shared/gemini-key-check.js';
@@ -276,9 +276,20 @@ getPlanStatus().then(status => {
 });
 
 // ── Email ─────────────────────────────────────────────────────────────────
+// Cache-first (same pattern as the drawer/profile.html/home.html, see
+// shared/auth.js): show the last-known email INSTANTLY if we have it —
+// no "—" flash, no wait — then quietly revalidate in the background and
+// correct it if it ever changes, instead of hitting /users/me fresh on
+// every single Settings visit.
+const vEmailEl = document.getElementById('vEmail');
+const cachedBasic = getCachedProfileBasic();
+if (cachedBasic && cachedBasic.email) vEmailEl.textContent = cachedBasic.email;
 apiFetch('/users/me').then(data => {
-  document.getElementById('vEmail').textContent = data.email || '—';
-}).catch(() => {});
+  vEmailEl.textContent = data.email || '—';
+  setCachedProfileBasic({ name: (cachedBasic && cachedBasic.name) || '', email: data.email || '' });
+}).catch(() => {
+  if (!cachedBasic) vEmailEl.textContent = 'Could not load';
+});
 
 // ── Gemini API key ────────────────────────────────────────────────────────
 const apiKeyInput = document.getElementById('apiKey');

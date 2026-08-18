@@ -5,16 +5,21 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="a9290705-c354-4871-9e50-654ac448cc40" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/chat.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/chat.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/onboarding.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/onboarding.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/scenario.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/scenario.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/history.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/history.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/pricing.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/pricing.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/settings.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/settings.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/shared/auth.js" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/shared/auth.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/shared/config.js" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/shared/config.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/shared/drawer.js" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/shared/drawer.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/shared/plan.js" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/shared/plan.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/capacitor-cordova-android-plugins/build/intermediates/incremental/debug/packageDebugResources/compile-file-map.properties" beforeDir="false" afterPath="$PROJECT_DIR$/capacitor-cordova-android-plugins/build/intermediates/incremental/debug/packageDebugResources/compile-file-map.properties" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../www/chat.html" beforeDir="false" afterPath="$PROJECT_DIR$/../www/chat.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../www/onboarding.html" beforeDir="false" afterPath="$PROJECT_DIR$/../www/onboarding.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../www/scenario.html" beforeDir="false" afterPath="$PROJECT_DIR$/../www/scenario.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../www/history.html" beforeDir="false" afterPath="$PROJECT_DIR$/../www/history.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../www/pricing.html" beforeDir="false" afterPath="$PROJECT_DIR$/../www/pricing.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../www/settings.html" beforeDir="false" afterPath="$PROJECT_DIR$/../www/settings.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../www/shared/auth.js" beforeDir="false" afterPath="$PROJECT_DIR$/../www/shared/auth.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../www/shared/config.js" beforeDir="false" afterPath="$PROJECT_DIR$/../www/shared/config.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../www/shared/drawer.js" beforeDir="false" afterPath="$PROJECT_DIR$/../www/shared/drawer.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../www/shared/plan.js" beforeDir="false" afterPath="$PROJECT_DIR$/../www/shared/plan.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

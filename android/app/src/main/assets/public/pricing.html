@@ -306,9 +306,12 @@ const plansLoader   = document.getElementById('plansLoader');
 const plansContent  = document.getElementById('plansContent');
 
 // ── Show plan state ────────────────────────────────────────────────────────
-async function refreshPlanState() {
+// forceFresh=true bypasses the cache entirely — used when we returned
+// from the checkout browser tab, where serving a stale cached "no plan"
+// for up to a minute would be actively misleading right after paying.
+async function refreshPlanState(forceFresh = false) {
   try {
-    const status = await getPlanStatus();
+    const status = await getPlanStatus(forceFresh ? { force: true } : undefined);
 
     // Reveal cards, hide loader
     plansLoader.style.display = 'none';
@@ -474,9 +477,10 @@ starterBtn.addEventListener('click', async () => {
   }
 });
 
-// Re-check plan when user returns from the system browser (after paying)
+// Re-check plan when user returns from the system browser (after paying).
+// force:true here — this is exactly the moment a stale cache would lie.
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') refreshPlanState();
+  if (document.visibilityState === 'visible') refreshPlanState(true);
 });
 
 // ── Commit Mode: disclosure card -> consent -> same browser-checkout flow ──

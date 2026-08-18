@@ -75,7 +75,7 @@
 
 <script type="module">
 import './shared/config.js';
-import { requireAuthOrRedirect, apiFetch } from './shared/auth.js';
+import { requireAuthOrRedirect, apiFetch, getRecentChatSessions } from './shared/auth.js';
 import { mountDrawer } from './shared/drawer.js';
 import { initBackNav } from './shared/back-nav.js';
 import { escapeHtml } from './shared/sanitize.js';
@@ -304,7 +304,11 @@ searchClear.addEventListener('click', clearSearch);
 
 (async () => {
   try {
-    const data = await apiFetch('/chat/sessions');
+    // Same cached/deduped call the drawer makes (shared/auth.js) — the
+    // drawer on this exact page was firing an identical GET
+    // /chat/sessions within milliseconds of this one; now they collapse
+    // into a single network request instead of two.
+    const data = await getRecentChatSessions();
     allSessions = data.sessions || [];
     listMsg.style.display = 'none';
     renderList(allSessions, '');
