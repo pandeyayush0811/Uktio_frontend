@@ -971,7 +971,7 @@ async function startSession(){
   const apiKey = await getApiKey();
   if (!apiKey){
     setStatus('Pehle Settings mein apni Gemini API key daalo.', 'err');
-    window.location.href = 'settings.html';
+    window.location.href = 'settings.html?needsKey=missing';
     return;
   }
 
@@ -983,7 +983,7 @@ async function startSession(){
     isBusy = false;
     micBtn.disabled = false;
     setStatus((keyCheck.message || 'Invalid API key') + ' — go to Settings to fix this.', 'err');
-    setTimeout(() => { window.location.href = 'settings.html'; }, 1600);
+    setTimeout(() => { window.location.href = 'settings.html?needsKey=invalid'; }, 1600);
     return;
   }
 

@@ -64,11 +64,18 @@ const TIME_OPTIONS = [
   { value: '30_plus', label: '30+ minutes daily' }
 ];
 
-// Each step: render(container) fills the step UI; validate() returns
-// true/error-string; optional flag skips the "required" check.
+// A short, natural, home-related Hindi sentence at an intermediate
+// difficulty — used by the translation step below instead of a blank
+// "write about yourself" box.
+const HINDI_TRANSLATE_PROMPT = 'हमारे घर में हर रविवार को सब लोग मिलकर खाना बनाते हैं और शाम को साथ बैठकर बातें करते हैं।';
+
+// Each step: render(container) fills the step's OWN content into `container`
+// (a dedicated inner div — never the title/sub area, see renderStep()).
+// validate() returns true/error-string. optional:true steps show a "Skip"
+// button instead of "Next" while empty, and never block progress.
 const steps = [
   {
-    title: "What's your name? 👋",
+    title: 'Enter your name',
     sub: 'So Utkio can talk to you personally, not like a stranger.',
     render(el){
       el.innerHTML = `<input type="text" id="f_name" placeholder="e.g. Ayush" autocomplete="name" maxlength="100">`;
@@ -78,7 +85,7 @@ const steps = [
     validate(){ return answers.name.trim() ? true : 'Please enter your name 🙂'; }
   },
   {
-    title: "What's your age?",
+    title: 'Enter your age',
     sub: 'This helps Utkio pick examples and topics that actually fit your life — numbers only.',
     render(el){
       el.innerHTML = `<input type="text" inputmode="numeric" id="f_age" placeholder="e.g. 22">`;
@@ -94,7 +101,7 @@ const steps = [
       return true;
     }
   },
-  
+
 
   {
     title: 'Are you a student or a working professional?',
@@ -108,14 +115,22 @@ const steps = [
   {
     // Content of this step depends on the previous answer — computed at render time.
     title(){ return answers.occupation_type === 'student' ? 'Which class/course are you in?' : 'What is your profession/role?'; },
-    sub(){ return answers.occupation_type === 'student' ? 'e.g. "Class 10", "B.Tech 2nd year"' : 'e.g. "Software Engineer", "Teacher"'; },
+    sub(){ return answers.occupation_type === 'student' ? 'e.g. "Class 10", "B.Tech 2nd year" — already graduated or not studying right now? Use the link below.' : 'e.g. "Software Engineer", "Teacher"'; },
     render(el){
       const isStudent = answers.occupation_type === 'student';
       const key = isStudent ? 'class_grade' : 'profession';
-      const placeholder = isStudent ? 'e.g. Class 10' : 'e.g. Software Engineer';
-      el.innerHTML = `<input type="text" id="f_occdetail" placeholder="${placeholder}" maxlength="150">`;
+      const placeholder = isStudent ? 'e.g. Class 10, B.Tech 2nd year, or "Passed out"' : 'e.g. Software Engineer';
+      el.innerHTML = `
+        <input type="text" id="f_occdetail" placeholder="${placeholder}" maxlength="150">
+        <button type="button" id="occSwitchLink" style="background:none;border:none;padding:8px 0 0;margin:0;color:var(--accent);font-size:0.85rem;font-weight:600;text-align:left;cursor:pointer;text-decoration:underline;">
+          ${isStudent ? "Already graduated / doing something else? Tap here" : "Actually, I'm currently a student — tap here"}
+        </button>`;
       el.querySelector('#f_occdetail').value = answers[key];
       el.querySelector('#f_occdetail').addEventListener('input', e => answers[key] = e.target.value);
+      el.querySelector('#occSwitchLink').addEventListener('click', () => {
+        answers.occupation_type = isStudent ? 'professional' : 'student';
+        renderStep(); // re-render this same step with the flipped type
+      });
     },
     validate(){
       const key = answers.occupation_type === 'student' ? 'class_grade' : 'profession';
@@ -123,12 +138,14 @@ const steps = [
     }
   },
   {
-    title: 'Which city are you from?',
-    sub: "(Optional) Helps Utkio relate examples to places and things you know.",
+    title: 'Which city do you live in?',
+    sub: 'Helps Utkio relate examples to places and things you know.',
+    optional: true,
+    optionalKey: 'city',
     render(el){
       el.innerHTML = `<input type="text" id="f_city" placeholder="e.g. Patna" maxlength="100">`;
       el.querySelector('#f_city').value = answers.city;
-      el.querySelector('#f_city').addEventListener('input', e => answers.city = e.target.value);
+      el.querySelector('#f_city').addEventListener('input', e => { answers.city = e.target.value; refreshNextLabel(); });
     },
     validate(){ return true; } // optional
   },
@@ -151,11 +168,13 @@ const steps = [
     validate(){ return answers.self_level ? true : 'Please choose an option.'; }
   },
   {
-    title: 'Write 2-3 lines about yourself',
-    sub: '(Optional) Try it in English — whatever you know. This is just for the record, no grading.',
+    title: 'Translate this into English',
+    sub: `(Optional) "${HINDI_TRANSLATE_PROMPT}" — try it in your own words, whatever you know. No grading, just for the record.`,
+    optional: true,
+    optionalKey: 'english_sample',
     render(el){
       el.innerHTML = `
-        <textarea id="f_sample" placeholder="e.g. My name is... I like... I work as..." maxlength="500"></textarea>
+        <textarea id="f_sample" placeholder="Type your English translation here..." maxlength="500"></textarea>
         <div class="char-hint" id="charHint">0 / 500</div>`;
       const ta = el.querySelector('#f_sample');
       ta.value = answers.english_sample;
@@ -163,6 +182,7 @@ const steps = [
       ta.addEventListener('input', e => {
         answers.english_sample = e.target.value;
         el.querySelector('#charHint').textContent = e.target.value.length + ' / 500';
+        refreshNextLabel();
       });
     },
     validate(){ return true; } // optional
@@ -177,6 +197,13 @@ const steps = [
     validate(){ return answers.daily_time ? true : 'Please choose an option.'; }
   }
 ];
+
+// For optional steps, is there anything actually entered yet? Used to
+// decide whether the primary button reads "Skip" or "Next".
+function stepHasValue(step){
+  if (!step.optional) return true;
+  return !!(answers[step.optionalKey] && answers[step.optionalKey].trim());
+}
 
 function renderChips(container, options, key){
   options.forEach(opt => {
@@ -218,20 +245,38 @@ function renderStep(){
   const step = steps[current];
   const title = typeof step.title === 'function' ? step.title() : step.title;
   const sub = typeof step.sub === 'function' ? step.sub() : step.sub;
-  stepBody.innerHTML = `<div class="step-title" id="stepTitleText">${title}</div><div class="step-sub">${sub}</div>`;
-  step.render(stepBody);
+  // BUG FIX: previously step.render(stepBody) was passed the SAME element
+  // that the title/sub were just written into, and every step's render()
+  // does `el.innerHTML = ...`, which wiped the title/sub out immediately
+  // (that's why the heading/instructions never appeared on screen — only
+  // the bare input/chips were left). Each step now gets its own inner
+  // #stepContent div to write into, so the title/sub stay intact.
+  stepBody.innerHTML = `<div class="step-title" id="stepTitleText">${title}</div><div class="step-sub">${sub}</div><div id="stepContent"></div>`;
+  const stepContent = stepBody.querySelector('#stepContent');
+  step.render(stepContent);
   // Associate the step's primary input with its (dynamically rendered)
   // visual title, since these steps don't use static <label for> markup —
   // one generic hook here covers every step instead of touching each
   // render() function individually.
-  const control = stepBody.querySelector('input, textarea');
+  const control = stepContent.querySelector('input, textarea');
   if (control && !control.hasAttribute('aria-label')) {
     control.setAttribute('aria-labelledby', 'stepTitleText');
   }
   backBtn.style.display = current === 0 ? 'none' : '';
-  nextBtn.textContent = current === steps.length - 1 ? 'Get Started' : 'Next';
+  refreshNextLabel();
   renderDots();
   stepAnnounce.textContent = `Step ${current + 1} of ${steps.length}`;
+}
+
+// Keeps the primary button's label in sync: "Get Started" on the final
+// step, "Skip" on an untouched optional step, "Next" otherwise. Called on
+// every render AND on every keystroke in an optional field, so the label
+// flips from "Skip" to "Next" the moment the user starts typing.
+function refreshNextLabel(){
+  const step = steps[current];
+  nextBtn.textContent = current === steps.length - 1
+    ? 'Get Started'
+    : (step.optional && !stepHasValue(step) ? 'Skip' : 'Next');
 }
 
 backBtn.addEventListener('click', () => {

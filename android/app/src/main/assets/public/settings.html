@@ -68,6 +68,26 @@
   }
   .legal-link-row + .legal-link-row{ border-top:1px solid var(--line); }
   .legal-link-label{ flex:1; font-size:0.92rem; font-weight:500; }
+
+  /* ── "You were sent here to add your key" — only shown when the user
+     was redirected from chat/scenario/quiz because no key was saved
+     yet, or the saved one failed validation. Makes the AI Setup card
+     impossible to miss instead of just scrolling into view silently. ── */
+  .needs-key-banner{
+    display:none; align-items:flex-start; gap:10px; margin:0 0 12px;
+    padding:12px 14px; border-radius:14px; background:var(--accent-soft-orange);
+    color:var(--accent-orange); font-size:0.85rem; line-height:1.45; font-weight:600;
+  }
+  .needs-key-banner.show{ display:flex; }
+  .needs-key-banner svg{ width:18px; height:18px; flex-shrink:0; margin-top:1px; }
+  #apiKeyCard.needs-attention{
+    animation: keyPulse 1.4s ease-in-out 2;
+    box-shadow: 0 0 0 3px var(--accent-orange), 0 6px 18px -12px rgba(60,60,120,0.2);
+  }
+  @keyframes keyPulse{
+    0%, 100% { box-shadow: 0 0 0 3px var(--accent-orange), 0 6px 18px -12px rgba(60,60,120,0.2); }
+    50% { box-shadow: 0 0 0 3px transparent, 0 6px 18px -12px rgba(60,60,120,0.2); }
+  }
 </style>
 </head>
 <body>
@@ -112,7 +132,11 @@
   <!-- ── AI Setup ──────────────────────────────────────────────── -->
   <div class="settings-section">
     <div class="settings-section-label">AI Setup</div>
-    <div class="card">
+    <div class="needs-key-banner" id="needsKeyBanner">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="13"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span id="needsKeyText">Chat shuru karne ke liye pehle yahan apni Gemini API key daalo 👇</span>
+    </div>
+    <div class="card" id="apiKeyCard">
       <label for="apiKey">Google Gemini API key</label>
       <input type="password" id="apiKey" placeholder="AIza..." autocomplete="off">
       <div class="status-msg" id="keyCheckMsg" style="min-height:1.2em;margin-top:2px;"></div>
@@ -261,6 +285,9 @@ const apiKeyInput = document.getElementById('apiKey');
 const savedMsg    = document.getElementById('savedMsg');
 const keyCheckMsg = document.getElementById('keyCheckMsg');
 const deleteKeyBtn = document.getElementById('deleteKeyBtn');
+const apiKeyCard = document.getElementById('apiKeyCard');
+const needsKeyBanner = document.getElementById('needsKeyBanner');
+const needsKeyText = document.getElementById('needsKeyText');
 
 // Collapsible panel
 const toggle     = document.getElementById('keyExpandToggle');
@@ -292,6 +319,28 @@ try {
   const savedKey = await getApiKey();
   if (savedKey) { apiKeyInput.value = savedKey; validateKeyDebounced(); }
 } catch (e) { console.warn('secure storage read failed', e); }
+
+// ── "Sent here to add/fix your key" flow ────────────────────────────────
+// chat.html/scenario.html/quiz.html redirect here with ?needsKey=missing
+// or ?needsKey=invalid when they can't start a session — without this,
+// the user lands on a long Settings page with no clue *why* they're here
+// or which field needs their attention. This makes that reason loud and
+// visually points straight at the input, instead of leaving them to
+// scroll around and guess.
+const redirectReason = new URLSearchParams(window.location.search).get('needsKey');
+if (redirectReason === 'missing' || redirectReason === 'invalid') {
+  needsKeyText.textContent = redirectReason === 'invalid'
+    ? 'Wo API key kaam nahi kar rahi — neeche naya/sahi key daalo 👇'
+    : 'Chat shuru karne ke liye pehle yahan apni Gemini API key daalo 👇';
+  needsKeyBanner.classList.add('show');
+  apiKeyCard.classList.add('needs-attention');
+  // Scroll the card into view first (page can be long — Plan card above
+  // this pushes AI Setup below the fold on smaller screens), then focus
+  // once it's actually on-screen so the keyboard doesn't pop up over a
+  // field the user can't see yet.
+  apiKeyCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  setTimeout(() => apiKeyInput.focus({ preventScroll: true }), 400);
+}
 
 // Debounced validation
 let validateTimer = null;
