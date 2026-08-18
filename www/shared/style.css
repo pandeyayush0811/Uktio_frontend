@@ -607,9 +607,50 @@ footer{margin-top:16px;color:var(--ink-dim);font-size:0.72rem;line-height:1.6;te
    already established by history.html/profile.html — this page is
    where that direction is adopted as the app's home/entry point. */
 .home-wrap{ overflow-y:auto; }
-.home-greeting-block{ margin:4px 0 18px; }
+.home-greeting-block{ margin:4px 0 18px; display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
 .home-eyebrow{ font-size:0.8rem; color:var(--ink-dim); margin:0 0 2px; }
 .home-greeting-name{ font-family:var(--font-serif); font-size:1.9rem; font-weight:700; margin:0; line-height:1.15; }
+
+/* Streak badge — sits beside the greeting name. Currently rendered with
+   placeholder/fake data (see home.html script) until real streak
+   tracking exists in the backend; UI slot only, not wired to Supabase. */
+.home-streak-badge{
+  flex-shrink:0; display:flex; flex-direction:column; align-items:center; gap:2px;
+  background:var(--panel-2); border:1px solid var(--line); border-radius:16px;
+  padding:8px 14px; margin-top:2px;
+}
+.home-streak-badge-value{ display:flex; align-items:center; gap:4px; font-weight:800; font-size:1rem; color:var(--ink); }
+.home-streak-badge-value svg{ width:16px; height:16px; color:var(--accent-orange); }
+.home-streak-badge-label{ font-size:0.62rem; color:var(--ink-dim); white-space:nowrap; }
+
+/* Announcement banner — dismissible, isolated to home.html (does not
+   reuse commit-mode-banner: different purpose/lifecycle, see design
+   discussion). Dismiss state persisted per-announcement id in
+   localStorage so it won't reappear once closed. */
+.announcement-banner{
+  display:flex; align-items:flex-start; gap:12px; margin:0 0 18px;
+  background:var(--accent-soft-orange, #f6e2da); border-radius:16px; padding:14px 14px 14px 16px;
+  animation:announcementIn 0.35s ease both;
+}
+.announcement-banner-body{ flex:1; min-width:0; }
+.announcement-banner-badge{
+  display:inline-block; font-size:0.6rem; font-weight:800; letter-spacing:0.04em; text-transform:uppercase;
+  color:#fff; background:var(--accent-orange); padding:2px 8px; border-radius:999px; margin-bottom:6px;
+}
+.announcement-banner-title{ font-family:var(--font-serif); font-size:0.98rem; font-weight:700; margin:0 0 3px; color:var(--ink); }
+.announcement-banner-desc{ font-size:0.78rem; color:var(--ink-dim); line-height:1.4; margin:0; }
+.announcement-banner-close{
+  flex-shrink:0; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  color:var(--ink-dim); background:rgba(255,255,255,0.5); border:none; padding:0; cursor:pointer;
+}
+.announcement-banner-close svg{ width:14px; height:14px; }
+@keyframes announcementIn{
+  from{ opacity:0; transform:translateY(-10px); }
+  to{ opacity:1; transform:translateY(0); }
+}
+@media (prefers-reduced-motion: reduce){
+  .announcement-banner{ animation:none; }
+}
 
 /* Hero "start a conversation" card — the single most prominent action */
 .hero-start-card{
