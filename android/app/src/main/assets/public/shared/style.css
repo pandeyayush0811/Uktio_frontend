@@ -1,10 +1,10 @@
 :root{
-  --bg: #eef0fb;
+  --bg: #FBF1E6;
   --card: #ffffff;
-  --panel-2: #f4f5fb;
+  --panel-2: #F5ECDF;
   --ink: #23263a;
-  --ink-dim: #8b8fa3;
-  --line: #e7e8f4;
+  --ink-dim: #6f6558;
+  --line: #ECDFCB;
   --accent: #6a63f1;
   --accent-soft: #e7e5fd;
   --bad: #e0575c;
@@ -19,7 +19,8 @@ body{
 }
 .wrap{
   width:100%; max-width:480px; height:100vh; height:100dvh;
-  display:flex; flex-direction:column; padding:20px 20px 16px; overflow:hidden;
+  display:flex; flex-direction:column; overflow:hidden;
+  padding:calc(20px + env(safe-area-inset-top, 0px)) 20px 16px;
 }
 
 /* ---- Top bar (used on chat/profile/settings) ---- */
@@ -609,7 +610,7 @@ footer{margin-top:16px;color:var(--ink-dim);font-size:0.72rem;line-height:1.6;te
    reference look. All classes below are only ever used in home.html. */
 .home-wrap{
   overflow-y:auto; overflow-x:hidden;
-  background:#FBF1E6; /* scoped to this page only, not the global --bg */
+  /* background now comes from the app-wide --bg (see :root) */
 }
 .home-greeting-block{ margin:6px 0 20px; display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
 .home-eyebrow{ font-size:0.85rem; color:var(--ink-dim); margin:0 0 2px; }
