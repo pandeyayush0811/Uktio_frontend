@@ -24,3 +24,6 @@ android/app/capacitor.build.gradle
 android/capacitor.settings.gradle
 android/capacitor-cordova-android-plugins/cordova.variables.gradle
 android/capacitor-cordova-android-plugins/src/main/AndroidManifest.xml
+
+**/build/
+.gradle/
