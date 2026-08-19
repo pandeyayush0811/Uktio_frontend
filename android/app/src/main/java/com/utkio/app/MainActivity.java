@@ -25,8 +25,10 @@ public class MainActivity extends BridgeActivity {
 
     super.onCreate(savedInstanceState);
 
-    // DEBUG: chrome://inspect se is WebView ko dekhne ke liye.
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+        // DEBUG: chrome://inspect se is WebView ko dekhne ke liye.
+    // Sirf debug builds mein — release build mein remote debugging
+    // off rehni chahiye (security hardening, koi feature isse touch nahi hota).
+    if (BuildConfig.DEBUG && Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
       WebView.setWebContentsDebuggingEnabled(true);
     }
 
