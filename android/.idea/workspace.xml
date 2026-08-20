@@ -5,8 +5,14 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="a9290705-c354-4871-9e50-654ac448cc40" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/caches/deviceStreaming.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/caches/deviceStreaming.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/capacitor-cordova-android-plugins/build/intermediates/incremental/debug/packageDebugResources/compile-file-map.properties" beforeDir="false" afterPath="$PROJECT_DIR$/capacitor-cordova-android-plugins/build/intermediates/incremental/debug/packageDebugResources/compile-file-map.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/app/build.gradle" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/login.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/login.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/scenario.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/scenario.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/shared/voice-live-session.js" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/shared/voice-live-session.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/reports/problems/problems-report.html" beforeDir="false" afterPath="$PROJECT_DIR$/build/reports/problems/problems-report.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../www/login.html" beforeDir="false" afterPath="$PROJECT_DIR$/../www/login.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

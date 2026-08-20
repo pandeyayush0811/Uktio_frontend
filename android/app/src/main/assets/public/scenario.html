@@ -428,6 +428,16 @@ let currentTurnIndex = -1;
 let currentUserLine = null;
 let currentModelLine = null;
 let finalizeInFlight = false;
+// Distinguishes "user actually finished / chose to stop" from "connection
+// just dropped" — these used to be treated identically by onClose, which
+// meant a mid-roleplay network blip silently burned the user's entire day
+// (locked, no feedback, no resume). Only these two cases count as a real
+// completion:
+//   1. user explicitly pressed the stop button (any phase)
+//   2. the feedback phase actually produced a model response
+// Anything else reaching onClose is treated as an unexpected drop.
+let explicitStop = false;
+let feedbackResponseReceived = false;
 // Set only when a session completes THIS page-load (we have a real
 // session id to deep-link to). If the scenario was already completed
 // earlier today (page freshly loaded, already-locked), we never learn
@@ -564,10 +574,17 @@ function updatePhaseRing(){
 }
 
 function startPhaseTimer(){
+  // Wall-clock based, not a decrementing counter. setInterval ticks get
+  // throttled/paused by the OS when the tab/app is backgrounded (screen
+  // off, app-switch), so a plain "-1 per tick" counter silently drifts —
+  // by the time it hits zero, real elapsed time can be well past 3:00.
+  // Anchoring to a fixed end-timestamp and recomputing the remainder each
+  // tick self-corrects regardless of how many ticks were missed.
+  const phaseEndAt = Date.now() + PHASE_1_DURATION_SECONDS * 1000;
   phaseSecondsLeft = PHASE_1_DURATION_SECONDS;
   updatePhaseRing();
   phaseTimerHandle = setInterval(() => {
-    phaseSecondsLeft -= 1;
+    phaseSecondsLeft = Math.max(0, Math.ceil((phaseEndAt - Date.now()) / 1000));
     updatePhaseRing();
     if (phaseSecondsLeft <= 0) switchToFeedbackPhase();
   }, 1000);
@@ -642,6 +659,7 @@ const voiceSession = createVoiceSession({
       if (!currentModelLine) currentModelLine = addLine('model');
       currentModelLine.textContent += text;
       if (currentTurnIndex >= 0) sessionTurns[currentTurnIndex].content += text;
+      if (phase === 'feedback') feedbackResponseReceived = true;
       scrollTranscriptToBottom();
     },
     onTurnComplete: () => { /* no-op today — onSpeakingChange below is the real signal for mic mute/unmute UI, this stays for future use */ },
@@ -659,6 +677,22 @@ const voiceSession = createVoiceSession({
       micBtn.disabled = false;
       updateMicUI(false);
       stopPhaseTimer();
+
+      const completedProperly = explicitStop || (phase === 'feedback' && feedbackResponseReceived);
+
+      if (!completedProperly) {
+        // Unexpected drop (network blip, server-side error close, etc.)
+        // mid-roleplay or before any feedback text arrived. Do NOT lock
+        // the day or mark the scenario complete — persist what we have
+        // locally so nothing is lost, but let the user reconnect into
+        // the same scenario instead of silently burning today's attempt.
+        persistLocalSession();
+        setStatus('Connection toot gaya. Dobara try karo — aaj ka scenario abhi bhi available hai.', 'err');
+        micBtn.disabled = false;
+        phase = 'idle';
+        return;
+      }
+
       finalizeAndSyncSession();
     }
   }
@@ -669,6 +703,8 @@ async function startSession(){
 
   sessionStartedAt = new Date().toISOString();
   phase = 'roleplay';
+  explicitStop = false;
+  feedbackResponseReceived = false;
   updatePhaseRing();
   micBtn.disabled = true;
 
@@ -690,6 +726,7 @@ async function startSession(){
 }
 
 function stopSession(){
+  explicitStop = true;
   voiceSession.stop(); // triggers onClose -> finalizeAndSyncSession
 }
 

@@ -4,6 +4,13 @@ apply plugin: 'kotlin-android'
 android {
     namespace = "com.utkio.app"
     compileSdk = rootProject.ext.compileSdkVersion
+    // AGP 8+ stopped auto-generating the BuildConfig class by default —
+    // MainActivity.java references BuildConfig.DEBUG (chrome://inspect
+    // gate), so it must be turned back on explicitly or that reference
+    // fails to compile with "cannot find symbol".
+    buildFeatures {
+        buildConfig true
+    }
     defaultConfig {
         applicationId "com.utkio.app"
         minSdkVersion rootProject.ext.minSdkVersion

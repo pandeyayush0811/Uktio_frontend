@@ -10,17 +10,18 @@
 <div class="wrap" style="justify-content:center;">
   <h1 class="app-title" style="text-align:center;margin-bottom:24px;">Utkio</h1>
 
-  <div class="card">
-    <form id="authForm">
-      <label for="email">Email</label>
-      <input type="email" id="email" required autocomplete="email">
+  <!-- ── LOGIN screen (email or phone + password) ─────────────────── -->
+  <div class="card" id="screenLogin">
+    <form id="loginForm">
+      <label for="loginIdentifier">Email or Mobile Number</label>
+      <input type="text" id="loginIdentifier" required autocomplete="username" placeholder="you@email.com or 9876543210">
 
-      <label for="password">Password</label>
-      <input type="password" id="password" required autocomplete="current-password" minlength="6">
+      <label for="loginPassword">Password</label>
+      <input type="password" id="loginPassword" required autocomplete="current-password" minlength="8">
 
-      <div class="status-msg" id="statusMsg" role="status" aria-live="polite"></div>
+      <div class="status-msg" id="loginStatus" role="status" aria-live="polite"></div>
 
-      <button type="submit" class="primary" id="submitBtn">Login</button>
+      <button type="submit" class="primary" id="loginSubmitBtn">Login</button>
     </form>
 
     <button class="secondary" id="googleBtn">
@@ -28,7 +29,79 @@
       <span id="googleBtnLabel">Continue with Google</span>
     </button>
 
-    <span class="text-link" id="toggleMode" role="button" tabindex="0">Create new account?</span>
+    <span class="text-link" id="goToForgot" role="button" tabindex="0">Forgot password?</span>
+    <span class="text-link" id="goToSignup" role="button" tabindex="0">Create new account?</span>
+  </div>
+
+  <!-- ── SIGNUP screen, step 1: email + phone ──────────────────────── -->
+  <div class="card" id="screenSignupStart" style="display:none;">
+    <div class="step-title">Naya account banao</div>
+    <div class="step-sub" style="margin-bottom:16px;">Email pe OTP bhejenge verify karne ke liye. Mobile number bhi de do — verify nahi hoga, bas profile ke liye save hoga.</div>
+    <form id="signupStartForm">
+      <label for="signupEmail">Email</label>
+      <input type="email" id="signupEmail" required autocomplete="email" placeholder="you@email.com">
+
+      <label for="signupPhone">Mobile Number</label>
+      <input type="tel" id="signupPhone" required inputmode="numeric" autocomplete="tel" placeholder="9876543210" maxlength="10">
+
+      <div class="status-msg" id="signupStartStatus" role="status" aria-live="polite"></div>
+
+      <button type="submit" class="primary" id="signupStartSubmitBtn">Send OTP</button>
+    </form>
+    <span class="text-link" id="signupBackToLogin1" role="button" tabindex="0">Already an account? Login</span>
+  </div>
+
+  <!-- ── SIGNUP screen, step 2: OTP + password ─────────────────────── -->
+  <div class="card" id="screenSignupVerify" style="display:none;">
+    <div class="step-title">OTP verify karo</div>
+    <div class="step-sub" style="margin-bottom:16px;" id="signupVerifySub"></div>
+    <form id="signupVerifyForm">
+      <label for="signupOtp">6-digit OTP</label>
+      <input type="text" id="signupOtp" required inputmode="numeric" pattern="\d{6}" maxlength="6" autocomplete="one-time-code" placeholder="123456">
+
+      <label for="signupPassword">Set a Password</label>
+      <input type="password" id="signupPassword" required autocomplete="new-password" minlength="8" placeholder="Min 8 characters">
+
+      <div class="status-msg" id="signupVerifyStatus" role="status" aria-live="polite"></div>
+
+      <button type="submit" class="primary" id="signupVerifySubmitBtn">Verify &amp; Create Account</button>
+    </form>
+    <span class="text-link" id="signupResendOtp" role="button" tabindex="0">Resend OTP</span>
+    <span class="text-link" id="signupBackToLogin2" role="button" tabindex="0">Cancel</span>
+  </div>
+
+  <!-- ── FORGOT PASSWORD screen, step 1: email or phone ─────────────── -->
+  <div class="card" id="screenForgotStart" style="display:none;">
+    <div class="step-title">Password reset karo</div>
+    <div class="step-sub" style="margin-bottom:16px;">Apna email ya registered mobile number daalo — OTP hamesha aapke registered email pe jaayega.</div>
+    <form id="forgotStartForm">
+      <label for="forgotIdentifier">Email or Mobile Number</label>
+      <input type="text" id="forgotIdentifier" required placeholder="you@email.com or 9876543210">
+
+      <div class="status-msg" id="forgotStartStatus" role="status" aria-live="polite"></div>
+
+      <button type="submit" class="primary" id="forgotStartSubmitBtn">Send OTP</button>
+    </form>
+    <span class="text-link" id="forgotBackToLogin1" role="button" tabindex="0">Back to Login</span>
+  </div>
+
+  <!-- ── FORGOT PASSWORD screen, step 2: OTP + new password ────────── -->
+  <div class="card" id="screenForgotVerify" style="display:none;">
+    <div class="step-title">Naya password set karo</div>
+    <div class="step-sub" style="margin-bottom:16px;" id="forgotVerifySub">Apne email ka inbox check karo OTP ke liye.</div>
+    <form id="forgotVerifyForm">
+      <label for="forgotOtp">6-digit OTP</label>
+      <input type="text" id="forgotOtp" required inputmode="numeric" pattern="\d{6}" maxlength="6" autocomplete="one-time-code" placeholder="123456">
+
+      <label for="forgotNewPassword">New Password</label>
+      <input type="password" id="forgotNewPassword" required autocomplete="new-password" minlength="8" placeholder="Min 8 characters">
+
+      <div class="status-msg" id="forgotVerifyStatus" role="status" aria-live="polite"></div>
+
+      <button type="submit" class="primary" id="forgotVerifySubmitBtn">Reset Password</button>
+    </form>
+    <span class="text-link" id="forgotResendOtp" role="button" tabindex="0">Resend OTP</span>
+    <span class="text-link" id="forgotBackToLogin2" role="button" tabindex="0">Cancel</span>
   </div>
 
   <!-- <footer></footer> -->
@@ -42,81 +115,274 @@ initBackNav(null);
 
 // Already logged in? skip straight to chat/onboarding (whichever applies).
 if ((await getSession())?.access_token) {
-  goToPostAuthDestination(text => setStatus(text));
+  goToPostAuthDestination(text => setStatus('loginStatus', text));
 }
 
-let mode = 'login'; // 'login' | 'signup'
-let isAuthBusy = false; // single source of truth — locks BOTH auth flows together
+let isAuthBusy = false; // single source of truth — locks every form + Google button together
+let resendCooldownTimer = null;
 
-const form = document.getElementById('authForm');
-const submitBtn = document.getElementById('submitBtn');
-const toggleMode = document.getElementById('toggleMode');
-const statusMsg = document.getElementById('statusMsg');
-const googleBtn = document.getElementById('googleBtn');
-const googleBtnLabel = document.getElementById('googleBtnLabel');
+// The identifier currently mid-flow (email for signup, whatever the
+// user typed for forgot-password) — kept so the OTP-verify submit and
+// "Resend OTP" both target the exact same account.
+let pendingSignupEmail = '';
+let pendingSignupPhone = '';
+let pendingForgotIdentifier = '';
 
-const GOOGLE_BTN_DEFAULT_LABEL = googleBtnLabel.textContent;
+const screens = {
+  login: document.getElementById('screenLogin'),
+  signupStart: document.getElementById('screenSignupStart'),
+  signupVerify: document.getElementById('screenSignupVerify'),
+  forgotStart: document.getElementById('screenForgotStart'),
+  forgotVerify: document.getElementById('screenForgotVerify')
+};
 
-function setStatus(text, cls){
-  statusMsg.textContent = text || '';
-  statusMsg.className = 'status-msg' + (cls ? ' ' + cls : '');
+function showScreen(name) {
+  for (const key in screens) screens[key].style.display = (key === name) ? '' : 'none';
 }
 
-// Centralized lock/unlock so email/password form and Google button
-// can never both be active at the same time, and neither can be
-// double-fired by rapid taps.
-function setAuthBusy(busy){
+function setStatus(elId, text, cls) {
+  const el = document.getElementById(elId);
+  el.textContent = text || '';
+  el.className = 'status-msg' + (cls ? ' ' + cls : '');
+}
+
+function allBusyToggles() {
+  return [
+    document.getElementById('loginSubmitBtn'),
+    document.getElementById('googleBtn'),
+    document.getElementById('signupStartSubmitBtn'),
+    document.getElementById('signupVerifySubmitBtn'),
+    document.getElementById('forgotStartSubmitBtn'),
+    document.getElementById('forgotVerifySubmitBtn')
+  ];
+}
+
+function setAuthBusy(busy) {
   isAuthBusy = busy;
-
-  submitBtn.disabled = busy;
-  googleBtn.disabled = busy;
-  googleBtn.classList.toggle('btn-loading', busy);
-
-  toggleMode.style.pointerEvents = busy ? 'none' : '';
-  toggleMode.style.opacity = busy ? '0.5' : '';
+  allBusyToggles().forEach(btn => { btn.disabled = busy; });
+  document.getElementById('googleBtn').classList.toggle('btn-loading', busy);
 }
 
-toggleMode.addEventListener('click', () => {
-  if (isAuthBusy) return;
-  mode = mode === 'login' ? 'signup' : 'login';
-  submitBtn.textContent = mode === 'login' ? 'Login' : 'Sign up';
-  toggleMode.textContent = mode === 'login' ? 'Naya account banao' : 'Already an account? Login';
-  setStatus('');
-});
-toggleMode.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleMode.click(); }
-});
+// Fast client-side sanity check mirroring the backend's normalizeIndianPhone
+// — just UX, the backend re-validates independently regardless.
+function looksLikeIndianMobile(raw) {
+  const digits = (raw || '').trim().replace(/[\s-]/g, '');
+  return /^[6-9]\d{9}$/.test(digits);
+}
 
-form.addEventListener('submit', async (e) => {
+// ── LOGIN ────────────────────────────────────────────────────────────
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
   e.preventDefault();
-  if (isAuthBusy) return; // race-condition guard against double submit
+  if (isAuthBusy) return;
 
-  const email = document.getElementById('email').value.trim();
-  const password = document.getElementById('password').value;
+  const identifier = document.getElementById('loginIdentifier').value.trim();
+  const password = document.getElementById('loginPassword').value;
 
   setAuthBusy(true);
-  setStatus(mode === 'login' ? 'Logging in...' : 'Account bana rahe hain...', null);
+  setStatus('loginStatus', 'Logging in...', null);
 
   try {
-    const data = await apiFetch('/auth/' + mode, {
+    const data = await apiFetch('/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ email, password })
+      body: JSON.stringify({ identifier, password })
     });
-
-    if (data.session) {
-      await saveSession(data.session);
-      await goToPostAuthDestination(text => setStatus(text));
-      return; // navigating away — no need to unlock, avoids flicker
-    } else {
-      // signup without immediate session = email confirmation required
-      setStatus(data.message || 'Check your email to confirm your account.', 'ok');
-      setAuthBusy(false);
-    }
+    await saveSession(data.session);
+    await goToPostAuthDestination(text => setStatus('loginStatus', text));
+    return; // navigating away
   } catch (err) {
-    setStatus(err.message, 'err');
+    setStatus('loginStatus', err.message, 'err');
     setAuthBusy(false);
   }
 });
+
+document.getElementById('goToSignup').addEventListener('click', () => {
+  if (isAuthBusy) return;
+  setStatus('loginStatus', '');
+  showScreen('signupStart');
+});
+document.getElementById('goToForgot').addEventListener('click', () => {
+  if (isAuthBusy) return;
+  setStatus('loginStatus', '');
+  showScreen('forgotStart');
+});
+[document.getElementById('goToSignup'), document.getElementById('goToForgot')].forEach(el => {
+  el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.click(); } });
+});
+
+// ── SIGNUP — step 1: send OTP to email ──────────────────────────────
+document.getElementById('signupStartForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (isAuthBusy) return;
+
+  const email = document.getElementById('signupEmail').value.trim();
+  const phone = document.getElementById('signupPhone').value.trim();
+  if (!looksLikeIndianMobile(phone)) {
+    setStatus('signupStartStatus', 'Enter a valid 10-digit mobile number', 'err');
+    return;
+  }
+
+  setAuthBusy(true);
+  setStatus('signupStartStatus', 'Sending OTP...', null);
+
+  try {
+    const data = await apiFetch('/auth/signup/otp', {
+      method: 'POST',
+      body: JSON.stringify({ email, phone })
+    });
+    pendingSignupEmail = data.email || email;
+    pendingSignupPhone = phone;
+    document.getElementById('signupOtp').value = '';
+    document.getElementById('signupPassword').value = '';
+    document.getElementById('signupVerifySub').textContent = `OTP bheja gaya ${pendingSignupEmail} pe.`;
+    setStatus('signupVerifyStatus', '');
+    showScreen('signupVerify');
+    startResendCooldown('signupResendOtp');
+  } catch (err) {
+    setStatus('signupStartStatus', err.message, 'err');
+  } finally {
+    setAuthBusy(false);
+  }
+});
+
+// ── SIGNUP — step 2: verify OTP + set password ──────────────────────
+document.getElementById('signupVerifyForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (isAuthBusy) return;
+
+  const token = document.getElementById('signupOtp').value.trim();
+  const password = document.getElementById('signupPassword').value;
+
+  setAuthBusy(true);
+  setStatus('signupVerifyStatus', 'Verifying...', null);
+
+  try {
+    const data = await apiFetch('/auth/signup/verify', {
+      method: 'POST',
+      body: JSON.stringify({ email: pendingSignupEmail, phone: pendingSignupPhone, token, password })
+    });
+    await saveSession(data.session);
+    await goToPostAuthDestination(text => setStatus('signupVerifyStatus', text));
+    return; // navigating away
+  } catch (err) {
+    setStatus('signupVerifyStatus', err.message, 'err');
+    setAuthBusy(false);
+  }
+});
+
+document.getElementById('signupResendOtp').addEventListener('click', async () => {
+  if (isAuthBusy || document.getElementById('signupResendOtp').style.pointerEvents === 'none') return;
+  setAuthBusy(true);
+  setStatus('signupVerifyStatus', 'Resending OTP...', null);
+  try {
+    await apiFetch('/auth/signup/otp', { method: 'POST', body: JSON.stringify({ email: pendingSignupEmail, phone: pendingSignupPhone }) });
+    setStatus('signupVerifyStatus', 'OTP resent.', 'ok');
+    startResendCooldown('signupResendOtp');
+  } catch (err) {
+    setStatus('signupVerifyStatus', err.message, 'err');
+  } finally {
+    setAuthBusy(false);
+  }
+});
+
+[document.getElementById('signupBackToLogin1'), document.getElementById('signupBackToLogin2')].forEach(el => {
+  el.addEventListener('click', () => { if (!isAuthBusy) { setStatus('signupStartStatus', ''); setStatus('signupVerifyStatus', ''); showScreen('login'); } });
+});
+
+// ── FORGOT PASSWORD — step 1: send OTP to registered email ─────────
+document.getElementById('forgotStartForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (isAuthBusy) return;
+
+  const identifier = document.getElementById('forgotIdentifier').value.trim();
+
+  setAuthBusy(true);
+  setStatus('forgotStartStatus', 'Sending OTP...', null);
+
+  try {
+    // Backend deliberately returns the same generic message whether or
+    // not this identifier has an account — don't try to branch on it.
+    await apiFetch('/auth/forgot-password/otp', { method: 'POST', body: JSON.stringify({ identifier }) });
+    pendingForgotIdentifier = identifier;
+    document.getElementById('forgotOtp').value = '';
+    document.getElementById('forgotNewPassword').value = '';
+    setStatus('forgotVerifyStatus', '');
+    showScreen('forgotVerify');
+    startResendCooldown('forgotResendOtp');
+  } catch (err) {
+    setStatus('forgotStartStatus', err.message, 'err');
+  } finally {
+    setAuthBusy(false);
+  }
+});
+
+// ── FORGOT PASSWORD — step 2: verify OTP + set new password ────────
+document.getElementById('forgotVerifyForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (isAuthBusy) return;
+
+  const token = document.getElementById('forgotOtp').value.trim();
+  const newPassword = document.getElementById('forgotNewPassword').value;
+
+  setAuthBusy(true);
+  setStatus('forgotVerifyStatus', 'Verifying...', null);
+
+  try {
+    const data = await apiFetch('/auth/forgot-password/verify', {
+      method: 'POST',
+      body: JSON.stringify({ identifier: pendingForgotIdentifier, token, newPassword })
+    });
+    await saveSession(data.session);
+    setStatus('forgotVerifyStatus', 'Password reset! Logging in...', 'ok');
+    await goToPostAuthDestination(text => setStatus('forgotVerifyStatus', text));
+    return; // navigating away
+  } catch (err) {
+    setStatus('forgotVerifyStatus', err.message, 'err');
+    setAuthBusy(false);
+  }
+});
+
+document.getElementById('forgotResendOtp').addEventListener('click', async () => {
+  if (isAuthBusy || document.getElementById('forgotResendOtp').style.pointerEvents === 'none') return;
+  setAuthBusy(true);
+  setStatus('forgotVerifyStatus', 'Resending OTP...', null);
+  try {
+    await apiFetch('/auth/forgot-password/otp', { method: 'POST', body: JSON.stringify({ identifier: pendingForgotIdentifier }) });
+    setStatus('forgotVerifyStatus', 'OTP resent (if account exists).', 'ok');
+    startResendCooldown('forgotResendOtp');
+  } catch (err) {
+    setStatus('forgotVerifyStatus', err.message, 'err');
+  } finally {
+    setAuthBusy(false);
+  }
+});
+
+[document.getElementById('forgotBackToLogin1'), document.getElementById('forgotBackToLogin2')].forEach(el => {
+  el.addEventListener('click', () => { if (!isAuthBusy) { setStatus('forgotStartStatus', ''); setStatus('forgotVerifyStatus', ''); showScreen('login'); } });
+});
+
+// Matches the backend's 60s per-identifier send cooldown (lib/otpThrottle.js)
+// — purely cosmetic on the client (backend still enforces the real
+// limit), just avoids the user tapping Resend into a guaranteed 429.
+function startResendCooldown(linkId) {
+  const el = document.getElementById(linkId);
+  const originalText = el.textContent;
+  let secondsLeft = 60;
+  el.style.pointerEvents = 'none';
+  el.style.opacity = '0.5';
+  el.textContent = `Resend OTP (${secondsLeft}s)`;
+  if (resendCooldownTimer) clearInterval(resendCooldownTimer);
+  resendCooldownTimer = setInterval(() => {
+    secondsLeft -= 1;
+    if (secondsLeft <= 0) {
+      clearInterval(resendCooldownTimer);
+      el.style.pointerEvents = '';
+      el.style.opacity = '';
+      el.textContent = originalText;
+    } else {
+      el.textContent = `Resend OTP (${secondsLeft}s)`;
+    }
+  }, 1000);
+}
 
 // PASTE your Google Cloud Console WEB Client ID here (same one used for
 // the Supabase redirect URI setup) — NOT the Android client ID.
@@ -129,12 +395,16 @@ async function ensureGoogleInitialized(){
   googleInitialized = true;
 }
 
+const googleBtn = document.getElementById('googleBtn');
+const googleBtnLabel = document.getElementById('googleBtnLabel');
+const GOOGLE_BTN_DEFAULT_LABEL = googleBtnLabel.textContent;
+
 googleBtn.addEventListener('click', async () => {
-  if (isAuthBusy) return; // <-- core fix: blocks double-tap / double-fire
+  if (isAuthBusy) return;
 
   setAuthBusy(true);
   googleBtnLabel.textContent = 'Signing in...';
-  setStatus('Opening Google Sign-In...', null);
+  setStatus('loginStatus', 'Opening Google Sign-In...', null);
 
   try {
     if (!window.Capacitor?.Plugins?.GoogleSignIn) {
@@ -144,18 +414,18 @@ googleBtn.addEventListener('click', async () => {
     const result = await window.Capacitor.Plugins.GoogleSignIn.signIn();
     if (!result?.idToken) throw new Error('Google did not return an idToken.');
 
-    setStatus('Verifying with server...', null);
+    setStatus('loginStatus', 'Verifying with server...', null);
     const data = await apiFetch('/auth/google', {
       method: 'POST',
       body: JSON.stringify({ idToken: result.idToken })
     });
     await saveSession(data.session);
-    await goToPostAuthDestination(text => setStatus(text));
+    await goToPostAuthDestination(text => setStatus('loginStatus', text));
     // navigating away — no need to unlock/reset label here
   } catch (err) {
-    setStatus(err.message, 'err');
+    setStatus('loginStatus', err.message, 'err');
     googleBtnLabel.textContent = GOOGLE_BTN_DEFAULT_LABEL;
-    setAuthBusy(false); // only unlock on failure — success path navigates away
+    setAuthBusy(false);
   }
 });
 </script>
