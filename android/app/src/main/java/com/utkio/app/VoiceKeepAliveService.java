@@ -11,6 +11,7 @@ import android.os.Build;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.util.Log;
+import androidx.core.app.NotificationCompat;
 
 // Keeps the app process (and therefore the WebView + JS running inside it —
 // mic capture, the live WebSocket, and TTS audio playback via AudioContext)
@@ -66,12 +67,18 @@ public class VoiceKeepAliveService extends Service {
                 | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0);
         PendingIntent contentIntent = PendingIntent.getActivity(this, 0, tapIntent, piFlags);
 
-        Notification notification = new Notification.Builder(this, CHANNEL_ID)
+        // NotificationCompat instead of raw Notification.Builder(Context, String) —
+        // the 2-arg raw constructor is API 26+ only and throws NoSuchMethodError on
+        // API 24/25 (our minSdkVersion is 24). NotificationCompat.Builder is
+        // channel-aware on O+ and silently ignores the channel on pre-O, so this
+        // one class works correctly across the whole supported range.
+        Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle("Utkio")
                 .setContentText("Voice session chal rahi hai...")
                 .setSmallIcon(android.R.drawable.ic_btn_speak_now)
                 .setContentIntent(contentIntent)
                 .setOngoing(true)
+                .setPriority(NotificationCompat.PRIORITY_LOW) // mirrors IMPORTANCE_LOW channel on O+
                 .build();
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) { // Android 14+

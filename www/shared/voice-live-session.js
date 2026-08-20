@@ -89,9 +89,18 @@ function createAudioPlayer(onSpeakingChange) {
   }
 
   return {
-    open() {
+    async open() {
       playCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
       nextPlayTime = 0;
+      // Mobile browsers frequently hand back a context in 'suspended' state,
+      // especially if creation happens even a couple of async ticks away
+      // from the original user gesture (mic tap). Without this, the whole
+      // pipeline "works" — messages arrive, playChunk() runs, no errors —
+      // but literally nothing plays. resume() is safe to call even if the
+      // context is already 'running'.
+      if (playCtx.state === 'suspended') {
+        try { await playCtx.resume(); } catch (e) { console.error('AudioContext resume failed', e); }
+      }
     },
     isModelSpeaking() { return isModelSpeaking; },
     playChunk(base64Data) {
@@ -251,14 +260,26 @@ export function createVoiceSession({ getSystemInstruction, voiceName = 'Puck', c
   async function start(imports) {
     if (session || isBusy) return { ok: false, reason: 'already_active' };
 
+    // Create + resume the AudioContext FIRST, still inside the same call
+    // stack as the user's mic-tap gesture — before any await touches the
+    // network. Browsers are far more willing to let a context leave
+    // 'suspended' when resume() is close to the original gesture; waiting
+    // until after 2-3 network round-trips (key check, connect) is what was
+    // causing silent "connected but no audio" sessions.
+    audioPlayer = createAudioPlayer((isSpeaking) => {
+      callbacks.onSpeakingChange && callbacks.onSpeakingChange(isSpeaking);
+    });
+    await audioPlayer.open();
+
     const apiKey = await getApiKey();
-    if (!apiKey) return { ok: false, reason: 'no_api_key' };
+    if (!apiKey) { audioPlayer.close(); audioPlayer = null; return { ok: false, reason: 'no_api_key' }; }
 
     isBusy = true;
     callbacks.onStatus && callbacks.onStatus('Key check ho rahi hai...', null);
     const keyCheck = await checkGeminiApiKey(apiKey);
     if (keyCheck.status !== 'valid') {
       isBusy = false;
+      if (audioPlayer) { audioPlayer.close(); audioPlayer = null; }
       return { ok: false, reason: 'invalid_api_key', message: keyCheck.message };
     }
 
@@ -305,11 +326,6 @@ export function createVoiceSession({ getSystemInstruction, voiceName = 'Puck', c
         }
       });
 
-      audioPlayer = createAudioPlayer((isSpeaking) => {
-        callbacks.onSpeakingChange && callbacks.onSpeakingChange(isSpeaking);
-      });
-      audioPlayer.open();
-
       callbacks.onStatus && callbacks.onStatus('Mic (native) shuru ho raha hai...', null);
       try {
         await startNativeMic();
@@ -327,6 +343,7 @@ export function createVoiceSession({ getSystemInstruction, voiceName = 'Puck', c
       console.error('connect error', err);
       isBusy = false;
       stopKeepAlive(); // connect itself failed — no session was ever created, so stop() below never runs to release this
+      if (audioPlayer) { audioPlayer.close(); audioPlayer = null; }
       return { ok: false, reason: 'connect_failed', message: describeConnectError(err) };
     }
   }
