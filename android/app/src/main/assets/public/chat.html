@@ -193,12 +193,29 @@
 
 <script type="module">
 import { GoogleGenAI, Modality } from "./vendor/google-genai.bundle.mjs";
-import { PENDING_CHAT_SESSION_KEY, syncPendingChatSession, apiFetch } from './shared/auth.js';
+import { PENDING_CHAT_SESSION_KEY, syncPendingChatSession, apiFetch, invalidateChatSessionsCache } from './shared/auth.js';
 import { checkGeminiApiKey } from './shared/gemini-key-check.js';
 import { getApiKey, getMicCapturePlugin } from './shared/mic-helpers.js';
 import { getPlanStatus } from './shared/plan.js';
 import { renderCommitModeBanner } from './shared/commit-mode-widget.js';
 import { maybeShowPostSessionUpsell } from './shared/upsell.js';
+import { initOfflineBanner } from './shared/offline-banner.js';
+
+// Visible offline indicator + auto-retry on reconnect. Deliberately does
+// NOT auto-restart the mic/voice session when connectivity returns —
+// that would fire ai.live.connect() with no user gesture behind it,
+// which risks the exact browser/WebView mic-permission gesture-linkage
+// issue documented above startSession() (and surprising the user by
+// silently turning the mic back on is bad UX/privacy behavior on its
+// own). Instead: resync anything data-only that could have failed or
+// gone stale while offline, and let the status text guide the user to
+// tap the mic themselves.
+initOfflineBanner(() => {
+  invalidateChatSessionsCache(); // drawer/history shouldn't show a stale list from before the outage
+  if (!session) {
+    setStatus('Internet wapas aa gaya — mic dabao jab ready ho.', null);
+  }
+});
 
 // Single source of truth — used both for the actual connect() call below
 // AND in the permission-denied error message, so the two can never drift

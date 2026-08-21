@@ -301,9 +301,10 @@
 </script>
 
 <script type="module">
-import { PENDING_CHAT_SESSION_KEY, syncPendingChatSession, apiFetch } from './shared/auth.js';
+import { PENDING_CHAT_SESSION_KEY, syncPendingChatSession, apiFetch, invalidateChatSessionsCache } from './shared/auth.js';
 import { createVoiceSession } from './shared/voice-live-session.js';
 import { formatCountdown } from './shared/scenario-phase.js';
+import { initOfflineBanner } from './shared/offline-banner.js';
 
 // Same 3-minute roleplay window the feature spec calls for. A constant
 // (not scenario-config-driven) since every scenario shares the same
@@ -786,10 +787,18 @@ micBtn.addEventListener('click', () => {
 // Boot: load today's scenario (server is the source of truth for both
 // WHICH scenario and whether it's already been completed).
 // ─────────────────────────────────────────────────────────────
-(async function loadTodaysScenario(){
+// Named (not an IIFE) so the offline-banner reconnect hook below can
+// call it again — the "check your internet and reload the page" message
+// this used to leave behind on failure is exactly the case where an
+// automatic retry once connectivity returns is worth doing instead of
+// making the user manually reload.
+let scenarioLoadFailed = false;
+
+async function loadTodaysScenario(){
   try {
     const data = await apiFetch('/chat/scenario/today');
     todaysScenario = data.scenario;
+    scenarioLoadFailed = false;
 
     scenarioCard.style.display = 'flex';
     scenarioCategoryEl.textContent = todaysScenario.category;
@@ -805,9 +814,31 @@ micBtn.addEventListener('click', () => {
     }
   } catch (err) {
     console.error('failed to load today\'s scenario', err);
+    scenarioLoadFailed = true;
     setStatus("Couldn't load the scenario — check your internet and reload the page.", 'err');
   }
-})();
+}
+
+loadTodaysScenario();
+
+// Visible offline indicator + auto-retry on reconnect. Does NOT
+// auto-start the mic/voice session on reconnect for the same reason
+// chat.html doesn't — no user gesture behind an automatic
+// ai.live.connect() call, and silently turning the mic on would be
+// surprising/bad UX. It DOES auto-retry the scenario load if that's
+// what failed (the one part of this page's boot sequence that's purely
+// data-fetch and safe to redo without any user action), and refreshes
+// the chat-sessions cache so drawer/history don't show stale data from
+// before the outage.
+initOfflineBanner(() => {
+  invalidateChatSessionsCache();
+  if (scenarioLoadFailed) {
+    loadTodaysScenario();
+  } else if (!voiceSession.isActive()) {
+    setStatus('Internet wapas aa gaya.', null);
+  }
+});
+
 </script>
 </body>
 </html>
