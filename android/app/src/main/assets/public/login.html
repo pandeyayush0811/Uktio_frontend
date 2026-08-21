@@ -29,7 +29,7 @@
 
       <label for="loginPassword">Password</label>
       <div class="password-field">
-        <input type="password" id="loginPassword" required autocomplete="current-password" minlength="8" placeholder="Enter your password">
+        <input type="password" id="loginPassword" required autocomplete="current-password" placeholder="Enter your password">
         <button type="button" class="pw-toggle" data-target="loginPassword" aria-label="Show password" aria-pressed="false">
           <svg class="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>
           <svg class="icon-eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.9 10.9 0 0 1 12 20c-7 0-11-8-11-8a19.4 19.4 0 0 1 5.06-6.06M9.9 4.24A9.1 9.1 0 0 1 12 4c7 0 11 8 11 8a19.5 19.5 0 0 1-2.61 3.87M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg>
@@ -154,8 +154,6 @@
 <script type="module">
 import './shared/config.js';
 import { apiFetch, saveSession, getSession, goToPostAuthDestination } from './shared/auth.js';
-import { initBackNav } from './shared/back-nav.js';
-initBackNav(null);
 
 // Already logged in? skip straight to chat/onboarding (whichever applies).
 if ((await getSession())?.access_token) {
@@ -180,9 +178,49 @@ const screens = {
   forgotVerify: document.getElementById('screenForgotVerify')
 };
 
+// Tracked so the hardware/gesture back button (below) can navigate the
+// user one logical step back instead of always minimizing the app —
+// this page has 5 screens toggled purely via display:none, with no
+// real URL/history change, so back-nav.js's generic "go to this URL"
+// model doesn't apply here. Handled locally instead of extending the
+// shared helper's contract for every other page.
+let currentScreenName = 'login';
+
 function showScreen(name) {
   for (const key in screens) screens[key].style.display = (key === name) ? '' : 'none';
+  currentScreenName = name;
 }
+
+// ── Hardware/gesture back button ────────────────────────────────────
+// Maps each screen to the screen one logical step behind it. 'login' is
+// the root of this page — back from there falls through to minimizing
+// the app (standard Android behavior, never kill the process on back).
+const BACK_TARGET = {
+  signupStart: 'login',
+  signupVerify: 'signupStart',
+  forgotStart: 'login',
+  forgotVerify: 'forgotStart'
+};
+
+(function initLoginBackNav() {
+  const App = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App;
+  if (!App) return; // not running inside the native app (e.g. browser preview) — no-op
+
+  App.addListener('backButton', () => {
+    if (isAuthBusy) return; // mid-request (OTP verifying, logging in, etc.) — don't yank the screen away
+    const target = BACK_TARGET[currentScreenName];
+    if (target) {
+      setStatus('loginStatus', '');
+      setStatus('signupStartStatus', '');
+      setStatus('signupVerifyStatus', '');
+      setStatus('forgotStartStatus', '');
+      setStatus('forgotVerifyStatus', '');
+      showScreen(target);
+    } else {
+      App.minimizeApp(); // already at 'login' (root screen) — send to background, don't kill the process
+    }
+  });
+})();
 
 function setStatus(elId, text, cls) {
   const el = document.getElementById(elId);

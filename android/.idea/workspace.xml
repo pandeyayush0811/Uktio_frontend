@@ -7,7 +7,7 @@
     <list default="true" id="a9290705-c354-4871-9e50-654ac448cc40" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/login.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/login.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/shared/style.css" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/shared/style.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/shared/auth.js" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/shared/auth.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

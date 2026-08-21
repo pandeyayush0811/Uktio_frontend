@@ -124,16 +124,39 @@ export async function requireAuthOrRedirect() {
 
 // Thin wrapper around fetch() that talks to YOUR backend (not Supabase
 // directly) and attaches the Supabase access token as a Bearer header.
+//
+// Distinguishes two failure modes callers need to treat differently:
+//   1. Network-level failure (offline, DNS fail, CORS block, server
+//      totally unreachable) — fetch() itself throws here. We catch it
+//      and rethrow a friendly, user-facing message with err.status = 0.
+//   2. HTTP-level failure (4xx/5xx) — fetch() resolves fine, res.ok is
+//      false. err.status is the real HTTP status in this case.
+// Callers (fetchProfileWithRetry, every form handler) key off err.status
+// to decide what to show/do — 0 always means "never reached the server".
 export async function apiFetch(path, options = {}) {
   const token = await getValidAccessToken();
-  const res = await fetch(cfg.BACKEND_URL + path, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: 'Bearer ' + token } : {}),
-      ...(options.headers || {})
-    }
-  });
+
+  let res;
+  try {
+    res = await fetch(cfg.BACKEND_URL + path, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: 'Bearer ' + token } : {}),
+        ...(options.headers || {})
+      }
+    });
+  } catch (networkErr) {
+    // fetch() rejected before we got any HTTP response at all — this is
+    // NOT a server error, it's "we never reached the server". Surface a
+    // message a non-technical user can act on instead of the raw
+    // "Failed to fetch" / "NetworkError" the browser/WebView throws.
+    const err = new Error('No internet connection. Please check your network and try again.');
+    err.status = 0; // convention: 0 = network-level failure (see comment above)
+    err.cause = networkErr;
+    throw err;
+  }
+
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     const err = new Error(data.error || ('Request failed (' + res.status + ')'));
@@ -159,11 +182,32 @@ export async function apiFetch(path, options = {}) {
 // UKTIO_CONFIG.BACKEND_COLD_START to false in shared/config.js and this
 // automatically drops to one quick retry, which is all a paid/always-on
 // backend ever needs (covers a normal network blip, not a 15-30s wake-up).
-export async function fetchProfileWithRetry(onStatus) {
+//
+// `graceOnUnauthorized` (default false): when true, a 401/403 on the
+// FIRST attempt only is treated as "maybe not propagated yet" instead of
+// "definitely bad token" — it gets one short extra retry before the
+// session is cleared. This exists specifically for the moment right
+// after signup/login/google-auth, where the access token was issued by
+// the backend milliseconds ago: on some backends (e.g. a DB trigger that
+// creates the user's profile row asynchronously after the auth user is
+// created, or read-replica lag) /users/me can 401 for a brief window
+// even though the token itself is perfectly valid — the profile/auth
+// record just hasn't propagated yet. Without this grace window, that
+// timing race silently deletes a *just-saved, genuinely valid* session
+// and bounces a freshly-created user straight back to the login screen,
+// even though their account was created successfully.
+// Callers checking an *existing, already-used* session (requireAuthOrRedirect
+// / requireCompleteProfile on every other page load) intentionally pass
+// false — for those, a 401 really does mean "log this person out now",
+// and adding a delay there would only slow down a legitimate logout.
+export async function fetchProfileWithRetry(onStatus, graceOnUnauthorized = false) {
   const hasColdStart = !cfg || cfg.BACKEND_COLD_START !== false; // default true = today's free-tier behavior, safe if config.js hasn't been updated yet
   const delaysMs = hasColdStart
     ? [0, 2000, 4000, 8000]   // ~14s total — covers a free-tier cold start
     : [0, 1500];              // one quick retry — covers an ordinary network blip on an always-on backend
+
+  let grantedGraceRetry = false; // ensures the grace window fires at most once, not on every attempt
+
   for (let attempt = 0; attempt < delaysMs.length; attempt++) {
     if (delaysMs[attempt] > 0) {
       onStatus && onStatus(`Server se connect ho raha hai... (${attempt}/${delaysMs.length - 1})`);
@@ -174,7 +218,15 @@ export async function fetchProfileWithRetry(onStatus) {
       return { ok: true, profile: data.profile || null };
     } catch (err) {
       if (err.status === 401 || err.status === 403) {
-        await clearSession(); // token is bad — never keep retrying or looping on it
+        if (graceOnUnauthorized && !grantedGraceRetry) {
+          // Give the backend a brief moment to catch up (new-user profile
+          // row / auth propagation) before treating this as a real logout.
+          grantedGraceRetry = true;
+          onStatus && onStatus('Setting up your account...');
+          await new Promise(r => setTimeout(r, 1500));
+          continue; // retry immediately, does not consume a cold-start delay slot
+        }
+        await clearSession(); // token is bad (or grace retry also failed) — never keep retrying or looping on it
         return { ok: false, reason: 'unauthenticated' };
       }
       // Network error / server down / cold start — worth retrying.
@@ -320,8 +372,15 @@ export async function logout() {
 // home.html (the app's hub) otherwise. Loop-safe: an invalid token clears
 // itself instead of bouncing forever, and an unreachable server shows a
 // retry screen instead of guessing where to send the user.
+//
+// Passes graceOnUnauthorized=true to fetchProfileWithRetry — this is
+// always called with a token that was issued moments ago (see the big
+// comment on fetchProfileWithRetry for why that matters: a same-second
+// 401 right after signup is more likely backend propagation lag than a
+// genuinely bad token, and deserves one short retry before we give up
+// and boot a freshly-created user back to the login screen).
 export async function goToPostAuthDestination(onStatus) {
-  const result = await fetchProfileWithRetry(onStatus);
+  const result = await fetchProfileWithRetry(onStatus, /* graceOnUnauthorized */ true);
   if (result.ok) {
     window.location.href = (result.profile && result.profile.onboarding_completed)
       ? 'home.html'
@@ -337,6 +396,11 @@ export async function goToPostAuthDestination(onStatus) {
 // etc). Redirects to login.html if not logged in (or if the token turns out
 // to be invalid), or onboarding.html if logged in but onboarding isn't done
 // yet. Returns the profile on success, or null (already handled the page).
+//
+// graceOnUnauthorized is intentionally left at its default (false) here —
+// this runs on ordinary page loads with a session that's already been
+// working, so a 401 here means the user should actually be logged out,
+// not given a grace-period retry.
 export async function requireCompleteProfile(onStatus) {
   const s = await requireAuthOrRedirect();
   if (!s) return null;
