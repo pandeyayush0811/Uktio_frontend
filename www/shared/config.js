@@ -33,10 +33,18 @@ if (ACTIVE_BACKEND === 'local') {
   console.warn('If this is a production/release build, flip ACTIVE_BACKEND to \'main\' before shipping.');
 }
 
-window.UKTIO_CONFIG = {
+export const DEFAULT_LIVE_MODEL = 'gemini-3.1-flash-live-preview';
+
+const root = typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : global);
+
+root.UKTIO_CONFIG = {
   SUPABASE_URL: 'https://pwdglktwuquoswqoyely.supabase.co',
   SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB3ZGdsa3R3dXF1b3N3cW95ZWx5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU2MTYyODAsImV4cCI6MjEwMTE5MjI4MH0.GdwAJAXx8x98QvkvW1HAZh7F3PIZiV3Uqeoqm54ohRo',
   BACKEND_URL: BACKENDS[ACTIVE_BACKEND], // no trailing slash
+
+  // ── Gemini Live Voice Model ──────────────────────────────────────────────
+  // Single source of truth for the real-time bidirectional audio stream.
+  LIVE_MODEL: DEFAULT_LIVE_MODEL,
 
   // ── Community / support link ────────────────────────────────────────────
   // Change only this one string whenever the Telegram group URL changes —

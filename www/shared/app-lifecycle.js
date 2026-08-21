@@ -26,7 +26,7 @@
 let initialized = false;
 
 export function initAppLifecycle() {
-  if (initialized) return;
+  if (initialized || typeof window === 'undefined') return;
   const App = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App;
   if (!App) return; // browser preview / plugin missing — no background service to resync with anyway
   initialized = true;
@@ -57,6 +57,7 @@ export function initAppLifecycle() {
 // throw out of the appStateChange handler or block page-specific resume
 // listeners from also running.
 export function registerDefaultResumeHandling() {
+  if (typeof window === 'undefined') return;
   window.addEventListener('utkio:resume', async () => {
     try {
       const { invalidateChatSessionsCache, getValidAccessToken } = await import('./auth.js');

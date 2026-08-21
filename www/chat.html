@@ -192,20 +192,14 @@
 </script>
 
 <script type="module">
-import { GoogleGenAI, Modality } from "./vendor/google-genai.bundle.mjs";
-import { createVoiceSession } from './shared/voice-live-session.js';
+import { createVoiceSession, LIVE_MODEL } from './shared/voice-live-session.js';
 import { PENDING_CHAT_SESSION_KEY, syncPendingChatSession, apiFetch } from './shared/auth.js';
 import { checkGeminiApiKey } from './shared/gemini-key-check.js';
 import { getApiKey, getMicCapturePlugin } from './shared/mic-helpers.js';
 import { getPlanStatus } from './shared/plan.js';
 import { renderCommitModeBanner } from './shared/commit-mode-widget.js';
 import { maybeShowPostSessionUpsell } from './shared/upsell.js';
-
-// Single source of truth — used both for the actual connect() call below
-// AND in the permission-denied error message, so the two can never drift
-// out of sync (they used to be two separately hand-typed copies of the
-// same string).
-const LIVE_MODEL = 'gemini-3.1-flash-live-preview';
+import { invalidateCache } from './shared/api-cache.js';
 
 function buildBaseInstruction(userName){
   return `ROLE:
@@ -930,6 +924,9 @@ async function finalizeAndSyncSession(){
         // immediately, not on next app-open.
         renderCommitModeBanner(document.getElementById('commitModeBanner'), status);
       }).catch(() => {});
+
+      // Invalidate streak cache so home.html gets the updated streak count
+      invalidateCache('user_streak');
     }
 
     sessionTurns = [];

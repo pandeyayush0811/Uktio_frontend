@@ -18,7 +18,7 @@ import * as Sentry from '../vendor/sentry-browser.bundle.mjs';
 let ready = false;
 
 export function initCrashReporting() {
-  const cfg = window.UKTIO_CONFIG || {};
+  const cfg = (typeof window !== 'undefined' ? window.UKTIO_CONFIG : (typeof globalThis !== 'undefined' ? globalThis.UKTIO_CONFIG : null)) || {};
   if (!cfg.SENTRY_DSN) {
     console.info(
       'Crash reporting is OFF — set UKTIO_CONFIG.SENTRY_DSN in shared/config.js to enable it before shipping to real users.'

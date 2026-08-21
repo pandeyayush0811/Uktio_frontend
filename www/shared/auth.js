@@ -60,6 +60,8 @@ export async function getSession() {
 export async function clearSession() {
   try { await secureRemoveItem(SESSION_KEY); }
   catch (e) { /* ignore */ }
+  clearCachedProfileBasic();
+  clearCachedStreak();
 }
 
 export async function getAccessToken() {
@@ -299,6 +301,25 @@ export function setCachedProfileBasic({ name, email }) {
 
 function clearCachedProfileBasic() {
   try { localStorage.removeItem(PROFILE_CACHE_KEY); } catch (e) { /* ignore */ }
+}
+
+const STREAK_CACHE_KEY = 'utkio_streak_cache';
+
+export function getCachedStreak() {
+  try {
+    const raw = localStorage.getItem(STREAK_CACHE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) { return null; }
+}
+
+export function setCachedStreak(data) {
+  try {
+    localStorage.setItem(STREAK_CACHE_KEY, JSON.stringify(data));
+  } catch (e) { /* ignore */ }
+}
+
+export function clearCachedStreak() {
+  try { localStorage.removeItem(STREAK_CACHE_KEY); } catch (e) { /* ignore */ }
 }
 
 // Recent chat sessions (used by the drawer's "Recent chats" list AND by

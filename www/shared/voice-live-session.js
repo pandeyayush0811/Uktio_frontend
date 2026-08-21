@@ -15,13 +15,11 @@
 
 import { getApiKey, getMicCapturePlugin } from './mic-helpers.js';
 import { checkGeminiApiKey } from './gemini-key-check.js';
+import { DEFAULT_LIVE_MODEL } from './config.js';
 
-// Same model chat.html uses — single source of truth would ideally live
-// in one shared constant, but chat.html isn't importing from here (see
-// note above), so for now this is the second (and only other) copy.
-// Keep in sync with chat.html's LIVE_MODEL if that ever changes.
-// export const LIVE_MODEL = 'gemini-2.5-flash-native-audio-preview-12-2025';
-export const LIVE_MODEL = 'gemini-3.1-flash-live-preview';
+// Single source of truth for the Gemini Live API model string.
+// Reads from window.UKTIO_CONFIG.LIVE_MODEL if present, with fallback to DEFAULT_LIVE_MODEL.
+export const LIVE_MODEL = (typeof window !== 'undefined' && window.UKTIO_CONFIG?.LIVE_MODEL) || DEFAULT_LIVE_MODEL;
 
 function base64ToInt16(base64) {
   const binary = atob(base64);

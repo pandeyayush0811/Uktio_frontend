@@ -74,7 +74,7 @@
 
 <script type="module">
 import './shared/config.js';
-import { requireCompleteProfile, getCachedProfileBasic, apiFetch } from './shared/auth.js';
+import { requireCompleteProfile, getCachedProfileBasic, getCachedStreak, setCachedStreak, apiFetch } from './shared/auth.js';
 import { getPlanStatus } from './shared/plan.js';
 import { renderCommitModeBanner } from './shared/commit-mode-widget.js';
 import { renderAnnouncementBanner } from './shared/announcement-banner.js';
@@ -95,6 +95,16 @@ document.getElementById('homeEyebrow').textContent =
 const cachedBasic = getCachedProfileBasic();
 if (cachedBasic && cachedBasic.name) {
   document.getElementById('homeName').textContent = cachedBasic.name;
+}
+
+// Cache-first streak (instant, zero flicker on frame 0) — corrected
+// below in background once the API resolves.
+const cachedStreak = getCachedStreak();
+if (cachedStreak && typeof cachedStreak.current_streak === 'number') {
+  document.getElementById('homeStreakValue').textContent = cachedStreak.current_streak;
+  if (cachedStreak.practiced_today) {
+    document.getElementById('homeStreakBadge')?.classList.add('practiced');
+  }
 }
 
 // Announcement banner is static config too (no network dependency) —
@@ -143,19 +153,20 @@ PROMO_CARDS.forEach(card => {
   const planStatus = await getPlanStatus();
   renderCommitModeBanner(document.getElementById('commitBanner'), planStatus);
 
-  // Real Day Streak — loaded live from backend
+  // Real Day Streak — background revalidation
   try {
     const streakData = await apiFetch('/chat/streak');
     if (streakData && typeof streakData.current_streak === 'number') {
+      setCachedStreak(streakData);
       const streakValEl = document.getElementById('homeStreakValue');
       if (streakValEl) streakValEl.textContent = streakData.current_streak;
       const streakBadge = document.getElementById('homeStreakBadge');
-      if (streakBadge && streakData.practiced_today) {
-        streakBadge.classList.add('practiced');
+      if (streakBadge) {
+        streakBadge.classList.toggle('practiced', !!streakData.practiced_today);
       }
     }
   } catch (e) {
-    console.warn('Could not load streak:', e);
+    // Fail-safe: cached streak stays on screen seamlessly
   }
 })();
 </script>
