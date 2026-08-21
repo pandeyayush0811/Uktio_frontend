@@ -51,10 +51,31 @@ label{display:block;font-size:0.8rem;color:var(--ink-dim);margin-bottom:6px;}
 input[type=password], input[type=text], input[type=email]{
   width:100%; background:var(--panel-2); border:1px solid var(--line); color:var(--ink);
   padding:11px 13px; border-radius:10px; font-size:0.95rem; outline:none; margin-bottom:14px;
+  transition:border-color 0.15s, box-shadow 0.15s;
 }
-input:focus{border-color:var(--accent);}
+input:focus{border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft);}
+input::placeholder{color:var(--ink-dim); opacity:0.55; font-weight:400;}
 .hint{font-size:0.76rem;color:var(--ink-dim);margin-top:8px;line-height:1.5;}
 .hint a{color:var(--accent);}
+
+/* ---- Password field with show/hide eye toggle ---- */
+.password-field{ position:relative; }
+.password-field input[type=password], .password-field input[type=text]{
+  padding-right:44px; margin-bottom:0;
+}
+.password-field .pw-toggle{
+  position:absolute; right:4px; top:50%; transform:translateY(-50%);
+  width:36px; height:36px; display:flex; align-items:center; justify-content:center;
+  background:none; border:none; padding:0; cursor:pointer; color:var(--ink-dim);
+  border-radius:8px; transition:color 0.15s;
+}
+.password-field .pw-toggle:hover{ color:var(--ink); }
+.password-field .pw-toggle svg{ width:19px; height:19px; }
+.password-field .pw-toggle .icon-eye-off{ display:none; }
+.password-field .pw-toggle.is-visible .icon-eye{ display:none; }
+.password-field .pw-toggle.is-visible .icon-eye-off{ display:block; }
+.password-field + .password-field, label + .password-field{ margin-bottom:14px; }
+.password-field{ margin-bottom:14px; }
 
 button.primary{
   width:100%; font-family:inherit; font-size:0.95rem; font-weight:600;
@@ -774,4 +795,3 @@ footer{margin-top:16px;color:var(--ink-dim);font-size:0.72rem;line-height:1.6;te
 }
 .quick-nav-tile-icon svg{ width:19px; height:19px; }
 .quick-nav-tile-label{ font-weight:600; font-size:0.88rem; }
-

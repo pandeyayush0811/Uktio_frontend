@@ -24,8 +24,28 @@ async function ensureMigrated() {
 
 export async function saveSession(session) {
   await ensureMigrated();
-  try { await secureSetItem(SESSION_KEY, JSON.stringify(session)); }
-  catch (e) { console.warn('saveSession failed', e); }
+  const payload = JSON.stringify(session);
+  let writeOk = false;
+  try { writeOk = await secureSetItem(SESSION_KEY, payload); }
+  catch (e) { console.warn('saveSession: write threw', e); }
+
+  if (!writeOk) {
+    throw new Error('Could not save your session on this device. Please try again.');
+  }
+
+  // Read-back verification: on real devices the native SecureStorage
+  // bridge call can resolve "successfully" but the write hasn't actually
+  // landed yet (or silently no-ops) — without this check, a bad write
+  // sails through as if nothing went wrong, and the very next request
+  // (goToPostAuthDestination -> /users/me) goes out with no token, gets
+  // a 401, and bounces the freshly-signed-up user straight back to
+  // login.html with zero explanation. This turns that silent failure
+  // into a loud, retryable one at the source instead of two screens away.
+  let readBack = null;
+  try { readBack = await secureGetItem(SESSION_KEY); } catch (e) { /* treated as mismatch below */ }
+  if (readBack !== payload) {
+    throw new Error('Could not save your session on this device. Please try again.');
+  }
 }
 
 export async function getSession() {

@@ -17,7 +17,13 @@
       <input type="text" id="loginIdentifier" required autocomplete="username" placeholder="you@email.com or 9876543210">
 
       <label for="loginPassword">Password</label>
-      <input type="password" id="loginPassword" required autocomplete="current-password" minlength="8">
+      <div class="password-field">
+        <input type="password" id="loginPassword" required autocomplete="current-password" minlength="8" placeholder="Enter your password">
+        <button type="button" class="pw-toggle" data-target="loginPassword" aria-label="Show password" aria-pressed="false">
+          <svg class="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+          <svg class="icon-eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.9 10.9 0 0 1 12 20c-7 0-11-8-11-8a19.4 19.4 0 0 1 5.06-6.06M9.9 4.24A9.1 9.1 0 0 1 12 4c7 0 11 8 11 8a19.5 19.5 0 0 1-2.61 3.87M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg>
+        </button>
+      </div>
 
       <div class="status-msg" id="loginStatus" role="status" aria-live="polite"></div>
 
@@ -35,8 +41,7 @@
 
   <!-- ── SIGNUP screen, step 1: email + phone ──────────────────────── -->
   <div class="card" id="screenSignupStart" style="display:none;">
-    <div class="step-title">Naya account banao</div>
-    <div class="step-sub" style="margin-bottom:16px;">Email pe OTP bhejenge verify karne ke liye. Mobile number bhi de do — verify nahi hoga, bas profile ke liye save hoga.</div>
+    <div class="step-title" style="margin-bottom:18px;">Create your account</div>
     <form id="signupStartForm">
       <label for="signupEmail">Email</label>
       <input type="email" id="signupEmail" required autocomplete="email" placeholder="you@email.com">
@@ -53,14 +58,20 @@
 
   <!-- ── SIGNUP screen, step 2: OTP + password ─────────────────────── -->
   <div class="card" id="screenSignupVerify" style="display:none;">
-    <div class="step-title">OTP verify karo</div>
+    <div class="step-title">Verify your email</div>
     <div class="step-sub" style="margin-bottom:16px;" id="signupVerifySub"></div>
     <form id="signupVerifyForm">
       <label for="signupOtp">6-digit OTP</label>
       <input type="text" id="signupOtp" required inputmode="numeric" pattern="\d{6}" maxlength="6" autocomplete="one-time-code" placeholder="123456">
 
       <label for="signupPassword">Set a Password</label>
-      <input type="password" id="signupPassword" required autocomplete="new-password" minlength="8" placeholder="Min 8 characters">
+      <div class="password-field">
+        <input type="password" id="signupPassword" required autocomplete="new-password" minlength="8" placeholder="Min 8 characters">
+        <button type="button" class="pw-toggle" data-target="signupPassword" aria-label="Show password" aria-pressed="false">
+          <svg class="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+          <svg class="icon-eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.9 10.9 0 0 1 12 20c-7 0-11-8-11-8a19.4 19.4 0 0 1 5.06-6.06M9.9 4.24A9.1 9.1 0 0 1 12 4c7 0 11 8 11 8a19.5 19.5 0 0 1-2.61 3.87M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg>
+        </button>
+      </div>
 
       <div class="status-msg" id="signupVerifyStatus" role="status" aria-live="polite"></div>
 
@@ -72,8 +83,8 @@
 
   <!-- ── FORGOT PASSWORD screen, step 1: email or phone ─────────────── -->
   <div class="card" id="screenForgotStart" style="display:none;">
-    <div class="step-title">Password reset karo</div>
-    <div class="step-sub" style="margin-bottom:16px;">Apna email ya registered mobile number daalo — OTP hamesha aapke registered email pe jaayega.</div>
+    <div class="step-title">Reset your password</div>
+    <div class="step-sub" style="margin-bottom:16px;">Enter your email or registered mobile number — the code will always be sent to your registered email.</div>
     <form id="forgotStartForm">
       <label for="forgotIdentifier">Email or Mobile Number</label>
       <input type="text" id="forgotIdentifier" required placeholder="you@email.com or 9876543210">
@@ -87,14 +98,20 @@
 
   <!-- ── FORGOT PASSWORD screen, step 2: OTP + new password ────────── -->
   <div class="card" id="screenForgotVerify" style="display:none;">
-    <div class="step-title">Naya password set karo</div>
-    <div class="step-sub" style="margin-bottom:16px;" id="forgotVerifySub">Apne email ka inbox check karo OTP ke liye.</div>
+    <div class="step-title">Set a new password</div>
+    <div class="step-sub" style="margin-bottom:16px;" id="forgotVerifySub">Check your email inbox for the verification code.</div>
     <form id="forgotVerifyForm">
       <label for="forgotOtp">6-digit OTP</label>
       <input type="text" id="forgotOtp" required inputmode="numeric" pattern="\d{6}" maxlength="6" autocomplete="one-time-code" placeholder="123456">
 
       <label for="forgotNewPassword">New Password</label>
-      <input type="password" id="forgotNewPassword" required autocomplete="new-password" minlength="8" placeholder="Min 8 characters">
+      <div class="password-field">
+        <input type="password" id="forgotNewPassword" required autocomplete="new-password" minlength="8" placeholder="Min 8 characters">
+        <button type="button" class="pw-toggle" data-target="forgotNewPassword" aria-label="Show password" aria-pressed="false">
+          <svg class="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+          <svg class="icon-eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.9 10.9 0 0 1 12 20c-7 0-11-8-11-8a19.4 19.4 0 0 1 5.06-6.06M9.9 4.24A9.1 9.1 0 0 1 12 4c7 0 11 8 11 8a19.5 19.5 0 0 1-2.61 3.87M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg>
+        </button>
+      </div>
 
       <div class="status-msg" id="forgotVerifyStatus" role="status" aria-live="polite"></div>
 
@@ -145,6 +162,21 @@ function setStatus(elId, text, cls) {
   el.textContent = text || '';
   el.className = 'status-msg' + (cls ? ' ' + cls : '');
 }
+
+// ── Password show/hide toggles ─────────────────────────────────────
+// Delegated on document so any .pw-toggle button (current or future)
+// works without needing to be wired up individually.
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('.pw-toggle');
+  if (!btn) return;
+  const input = document.getElementById(btn.dataset.target);
+  if (!input) return;
+  const nowVisible = input.type === 'password';
+  input.type = nowVisible ? 'text' : 'password';
+  btn.classList.toggle('is-visible', nowVisible);
+  btn.setAttribute('aria-pressed', String(nowVisible));
+  btn.setAttribute('aria-label', nowVisible ? 'Hide password' : 'Show password');
+});
 
 function allBusyToggles() {
   return [
@@ -233,7 +265,7 @@ document.getElementById('signupStartForm').addEventListener('submit', async (e) 
     pendingSignupPhone = phone;
     document.getElementById('signupOtp').value = '';
     document.getElementById('signupPassword').value = '';
-    document.getElementById('signupVerifySub').textContent = `OTP bheja gaya ${pendingSignupEmail} pe.`;
+    document.getElementById('signupVerifySub').textContent = `We've sent a verification code to ${pendingSignupEmail}.`;
     setStatus('signupVerifyStatus', '');
     showScreen('signupVerify');
     startResendCooldown('signupResendOtp');
