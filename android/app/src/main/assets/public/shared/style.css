@@ -46,9 +46,101 @@ body{
   box-shadow:0 20px 40px -20px rgba(60,60,120,0.18);
 }
 
+/* ==== Auth screens (login / signup / forgot-password) — premium
+   redesign, scoped to login.html only via .auth-* classes. Reuses the
+   app-wide --accent-orange / --font-serif tokens (see "Chats" design
+   system block below) so this matches home.html's brand language
+   instead of the old generic-purple template look. ==== */
+.auth-wrap{
+  justify-content:center; position:relative; overflow:hidden;
+}
+/* Soft ambient glow behind the logo — quiet, not a hero image */
+.auth-glow{
+  position:absolute; top:-120px; left:50%; transform:translateX(-50%);
+  width:340px; height:340px; border-radius:50%; pointer-events:none; z-index:0;
+  background:radial-gradient(circle, rgba(217,105,75,0.22) 0%, rgba(217,105,75,0) 70%);
+}
+.auth-header{ position:relative; z-index:1; text-align:center; margin-bottom:22px; }
+.auth-logo{
+  width:52px; height:52px; border-radius:16px; margin:0 auto 14px;
+  background:var(--accent-soft-orange); display:flex; align-items:center; justify-content:center;
+}
+.auth-logo svg{ width:30px; height:30px; }
+.auth-title{
+  font-family:var(--font-serif); font-size:1.9rem; font-weight:700; margin:0;
+  letter-spacing:-0.01em; color:var(--ink);
+}
+.auth-title::after{ content:'.'; color:var(--accent-orange); }
+.auth-subtitle{ font-size:0.85rem; color:var(--ink-dim); margin:6px 0 0; line-height:1.5; }
+
+.auth-card{
+  position:relative; z-index:1; background:var(--card); border-radius:26px;
+  padding:26px 22px; box-shadow:0 22px 44px -22px rgba(140,72,40,0.28);
+  border:1px solid rgba(217,105,75,0.08);
+}
+.auth-card label{ font-size:0.78rem; font-weight:600; color:var(--ink-dim); text-transform:uppercase; letter-spacing:0.03em; }
+.auth-card input[type=password], .auth-card input[type=text], .auth-card input[type=email], .auth-card input[type=tel]{
+  background:var(--panel-2); border:1.5px solid var(--line);
+}
+.auth-card input:focus{ border-color:var(--accent-orange); box-shadow:0 0 0 3px var(--accent-soft-orange); }
+
+.auth-card button.primary{
+  background:var(--accent-orange); border-radius:999px; font-weight:700;
+  box-shadow:0 10px 22px -10px rgba(217,105,75,0.55); letter-spacing:0.01em;
+}
+.auth-card button.primary:active{ transform:scale(0.99); }
+.auth-card button.secondary{
+  border-radius:999px; border:1.5px solid var(--line); font-weight:600;
+}
+.auth-card button.secondary:hover{ border-color:var(--accent-orange); background:var(--accent-soft-orange); }
+.auth-card .text-link{ color:var(--accent-orange); font-weight:600; }
+.auth-card .status-msg.ok{ color:var(--accent-orange); }
+
+.auth-divider{
+  display:flex; align-items:center; gap:10px; margin:16px 0 4px;
+  font-size:0.72rem; color:var(--ink-dim); text-transform:uppercase; letter-spacing:0.05em;
+}
+.auth-divider::before, .auth-divider::after{ content:''; flex:1; height:1px; background:var(--line); }
+
+.auth-step-title{
+  font-family:var(--font-serif); font-size:1.3rem; font-weight:700; margin:0 0 6px; color:var(--ink);
+}
+.auth-step-sub{ font-size:0.85rem; color:var(--ink-dim); margin:0 0 20px; line-height:1.5; }
+
+.auth-footer-links{ display:flex; flex-direction:column; align-items:center; gap:4px; margin-top:18px; }
+.auth-footer-links .text-link{ font-size:0.78rem; font-weight:500; margin-top:0; opacity:0.85; }
+.auth-footer-links .text-link:hover{ opacity:1; }
+
+/* ---- Terms & conditions checkbox (signup only) ---- */
+.auth-consent{
+  display:flex; align-items:flex-start; gap:10px; margin:2px 0 16px;
+}
+.auth-consent input[type=checkbox]{
+  appearance:none; -webkit-appearance:none; flex-shrink:0; margin:1px 0 0;
+  width:18px; height:18px; border-radius:5px; border:1.5px solid var(--line);
+  background:var(--panel-2); cursor:pointer; position:relative;
+  transition:background 0.15s, border-color 0.15s;
+}
+.auth-consent input[type=checkbox]:checked{
+  background:var(--accent-orange); border-color:var(--accent-orange);
+}
+.auth-consent input[type=checkbox]:checked::after{
+  content:''; position:absolute; left:5px; top:1px; width:5px; height:9px;
+  border:solid #fff; border-width:0 2px 2px 0; transform:rotate(45deg);
+}
+.auth-consent input[type=checkbox]:focus-visible{
+  outline:none; box-shadow:0 0 0 3px var(--accent-soft-orange);
+}
+.auth-consent label{
+  font-size:0.8rem; color:var(--ink-dim); line-height:1.45; margin:0; cursor:pointer;
+  text-transform:none; letter-spacing:normal; font-weight:400;
+}
+.auth-consent a{ color:var(--accent-orange); font-weight:600; text-decoration:none; }
+.auth-consent a:hover{ text-decoration:underline; }
+
 /* ---- Forms ---- */
 label{display:block;font-size:0.8rem;color:var(--ink-dim);margin-bottom:6px;}
-input[type=password], input[type=text], input[type=email]{
+input[type=password], input[type=text], input[type=email], input[type=tel]{
   width:100%; background:var(--panel-2); border:1px solid var(--line); color:var(--ink);
   padding:11px 13px; border-radius:10px; font-size:0.95rem; outline:none; margin-bottom:14px;
   transition:border-color 0.15s, box-shadow 0.15s;
