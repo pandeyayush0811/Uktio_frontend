@@ -4,7 +4,7 @@
 // someone who already converted).
 //
 // Deliberately built as plain DOM here (no framework) so it can be reused
-// from any page (chat.html today; report.html/quiz.html could import the
+// from any page (chat.html today; report.html could import the
 // same function later) with a single import + one function call.
 //
 // This is a soft nudge, NOT the paywall — it never blocks anything, it's

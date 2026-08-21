@@ -75,8 +75,47 @@ export async function secureRemoveItem(key) {
     try { localStorage.removeItem(key); } catch (e) { /* ignore */ }
     return;
   }
+
+  // ROOT-CAUSE FIX: on real devices, @aparajita/capacitor-secure-storage's
+  // native `internalRemoveItem` has been observed to silently fail (throw,
+  // or no-op) on Android even though `internalSetItem`/`internalGetItem`
+  // work perfectly fine — this is why a "deleted" API key kept reappearing
+  // after logout -> login: the delete call never actually removed
+  // anything, and the very next read still found the old value.
+  //
+  // Fix: never rely on remove as the ONLY erasure mechanism. Overwrite the
+  // value with an empty string using the SAME internalSetItem call path
+  // that we already know works reliably (proven by the fact that saved
+  // keys are correctly read back elsewhere in the app). Every reader in
+  // this codebase (getApiKey, getSession, etc.) already treats an empty
+  // string as "nothing saved" — '' is falsy, so `raw ? ... : null` and
+  // `(v || '').trim()` both already do the right thing with no other
+  // changes needed. We still attempt the real native remove afterwards,
+  // best-effort, purely as extra hygiene (actually free the storage
+  // entry) — its failure is no longer load-bearing.
+  let overwriteOk = false;
+  try {
+    await plugin.internalSetItem({ prefixedKey: KEY_PREFIX + key, data: '' });
+    overwriteOk = true;
+  } catch (e) {
+    console.warn('secureRemoveItem: overwrite-with-empty failed for', key, e);
+  }
+
   try { await plugin.internalRemoveItem({ prefixedKey: KEY_PREFIX + key }); }
-  catch (e) { console.warn('secureRemoveItem failed for', key, e); }
+  catch (e) {
+    // Expected to sometimes fail per the note above — not fatal as long
+    // as the overwrite above succeeded, since every reader treats '' as
+    // "no value". Only worth a console note for debugging.
+    console.warn('secureRemoveItem: native remove failed for', key, '(non-fatal, value was already overwritten)', e);
+  }
+
+  if (!overwriteOk) {
+    // Both erasure paths failed — this is the one case that's genuinely
+    // dangerous (old value could still be read back). Surface it loudly
+    // so it shows up in device logs / crash reporting instead of vanishing
+    // into a console.warn no one sees.
+    console.error('secureRemoveItem: FAILED TO ERASE key', key, '— value may still be readable.');
+  }
 }
 
 // One-time upgrade path: older app versions kept this data in plain

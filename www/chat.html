@@ -193,6 +193,7 @@
 
 <script type="module">
 import { GoogleGenAI, Modality } from "./vendor/google-genai.bundle.mjs";
+import { createVoiceSession } from './shared/voice-live-session.js';
 import { PENDING_CHAT_SESSION_KEY, syncPendingChatSession, apiFetch } from './shared/auth.js';
 import { checkGeminiApiKey } from './shared/gemini-key-check.js';
 import { getApiKey, getMicCapturePlugin } from './shared/mic-helpers.js';
@@ -809,348 +810,74 @@ function persistLocalSession(){
   } catch(e){ console.warn('persistLocalSession failed', e); }
 }
 
-function describeMicError(err){
-  const name = err && err.name;
-  if (name === 'NotAllowedError' || name === 'PermissionDeniedError')
-    return 'Microphone access was denied. Tap the mic icon in your address bar and select Allow.';
-  if (name === 'NotFoundError' || name === 'DevicesNotFoundError')
-    return 'Mic nahi mila: is device/browser mein koi microphone connected nahi hai.';
-  if (name === 'NotReadableError' || name === 'TrackStartError')
-    return 'Could not open the microphone (already retried). If another app is using it, close that app and try again.';
-  if (name === 'SecurityError')
-    return 'Mic access block: yeh page HTTPS (ya localhost) par nahi chal raha, isliye browser mic nahi de raha.';
-  if (name === 'OverconstrainedError')
-    return 'Mic settings match nahi hui is device mein.';
-  return 'Mic access mein error: ' + (err && err.message ? err.message : 'wajah pata nahi chali (' + err + ')');
-}
-
-function describeConnectError(err){
-  const msg = (err && err.message) ? err.message : String(err);
-  if (/api key not valid|api_key_invalid|invalid api key/i.test(msg))
-    return 'Invalid API key — go to Settings and paste a valid key from Google AI Studio.';
-  if (/quota|resource_exhausted|rate limit/i.test(msg))
-    return 'API quota/rate-limit khatam ho gaya — thodi der ruk kar try karo ya naya key banao.';
-  if (/permission_denied|not authorized/i.test(msg))
-    return `This API key cannot use Live API (${LIVE_MODEL}) — check the key's permissions in Google AI Studio.`;
-  if (/failed to fetch|network|timeout|ENOTFOUND/i.test(msg))
-    return 'Could not connect to Google — please check your internet connection.';
-  if (/model not found|not_found/i.test(msg))
-    return 'Model available nahi hai is region/account ke liye.';
-  return 'Connect nahi ho paya, wajah: ' + msg;
-}
-
-function describeCloseEvent(e){
-  if (!e) return 'Session band ho gaya (koi close-details nahi mile).';
-  if (e.code === 1000) return null;
-  const reason = e.reason ? (' — ' + e.reason) : ' (server ne koi reason text nahi bheja)';
-  return 'Session band ho gaya, code ' + e.code + reason + '. Ye us API key/model access ki taraf se koi dikkat ho sakti hai.';
-}
-
-function floatTo16BitPCM(float32Array){
-  const out = new Int16Array(float32Array.length);
-  for (let i = 0; i < float32Array.length; i++){
-    const s = Math.max(-1, Math.min(1, float32Array[i]));
-    out[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
-  }
-  return out;
-}
-
-function int16ToBase64(int16Array){
-  const bytes = new Uint8Array(int16Array.buffer);
-  const CHUNK = 0x8000;
-  let binary = '';
-  for (let i = 0; i < bytes.length; i += CHUNK){
-    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK));
-  }
-  return btoa(binary);
-}
-
-function base64ToInt16(base64){
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return new Int16Array(bytes.buffer);
-}
-
-function playAudioChunk(base64Data){
-  if (!playCtx) return;
-  try{
-    isModelSpeaking = true;
-    const int16 = base64ToInt16(base64Data);
-    const float32 = new Float32Array(int16.length);
-    for (let i = 0; i < int16.length; i++) float32[i] = int16[i] / 32768;
-
-    const buffer = playCtx.createBuffer(1, float32.length, 24000);
-    buffer.copyToChannel(float32, 0);
-
-    const src = playCtx.createBufferSource();
-    src.buffer = buffer;
-    src.connect(playCtx.destination);
-
-    const now = playCtx.currentTime;
-    if (nextPlayTime < now) nextPlayTime = now + 0.05;
-    src.start(nextPlayTime);
-    nextPlayTime += buffer.duration;
-    scheduledSources.push(src);
-    src.onended = () => {
-      scheduledSources = scheduledSources.filter(s => s !== src);
-      if (scheduledSources.length === 0){
-        setTimeout(() => {
-          if (scheduledSources.length === 0) isModelSpeaking = false;
-        }, 200);
-      }
-    };
-  }catch(err){
-    console.error('playback error', err);
-    setStatus('Audio playback error: ' + err.message, 'err');
-  }
-}
-
-function stopPlayback(){
-  scheduledSources.forEach(s => { try{ s.stop(); }catch(e){ /* already stopped, ignore */ } });
-  scheduledSources = [];
-  isModelSpeaking = false;
-  if (playCtx) nextPlayTime = playCtx.currentTime;
-}
-
-// ---- screen-off fix: keep the app process alive (foreground service +
-// wakelock, see VoiceKeepAliveService.java) for the whole live session —
-// this session's mic stays open continuously and playback happens
-// interleaved with it (see isModelSpeaking), so tying this to session
-// start/stop (below) is sufficient — no per-turn handling needed here.
-let keepAliveActive = false;
-async function startKeepAlive(){
-  if (keepAliveActive) return;
-  keepAliveActive = true;
-  try{ await getMicCapturePlugin().startKeepAlive(); }catch(e){ /* browser preview or plugin missing — ignore */ }
-}
-async function stopKeepAlive(){
-  if (!keepAliveActive) return;
-  keepAliveActive = false;
-  try{ await getMicCapturePlugin().stopKeepAlive(); }catch(e){ /* ignore */ }
-}
-
-async function startNativeMic(){
-  const MicCapture = getMicCapturePlugin();
-
-  micListenerHandle = await MicCapture.addListener('audioChunk', (data) => {
-    if (!session || !data || !data.audio) return;
-    if (isModelSpeaking) return;
-    try{
-      session.sendRealtimeInput({ audio: { data: data.audio, mimeType: 'audio/pcm;rate=16000' } });
-    }catch(err){
-      console.error('mic send error', err);
-      setStatus('Audio bhejte waqt error: ' + err.message, 'err');
+const voiceSession = createVoiceSession({
+  getSystemInstruction: buildSystemInstruction,
+  voiceName: 'Puck',
+  callbacks: {
+    onStatus: (text, mode) => {
+      setStatus(text, mode);
+    },
+    onUserText: (text) => {
+      currentModelLine = null;
+      if (!currentUserLine) currentUserLine = addLine('user');
+      currentUserLine.textContent += text;
+      if (currentTurnIndex >= 0) sessionTurns[currentTurnIndex].content += text;
+      scrollTranscriptToBottom();
+    },
+    onModelText: (text) => {
+      currentUserLine = null;
+      if (!currentModelLine) currentModelLine = addLine('model');
+      currentModelLine.textContent += text;
+      if (currentTurnIndex >= 0) sessionTurns[currentTurnIndex].content += text;
+      scrollTranscriptToBottom();
+    },
+    onTurnComplete: () => {
+      isModelSpeaking = false;
+    },
+    onSpeakingChange: (isSpeaking) => {
+      isModelSpeaking = isSpeaking;
+    },
+    onOpen: () => {
+      micBtn.disabled = false;
+      isBusy = false;
+    },
+    onClose: (closeEvent) => {
+      micBtn.disabled = false;
+      isBusy = false;
+      finalizeAndSyncSession();
     }
-  });
-
-  await MicCapture.start();
-}
-
-async function stopNativeMic(){
-  try{
-    const MicCapture = getMicCapturePlugin();
-    await MicCapture.stop();
-  }catch(e){ /* plugin already gone ya nahi mila, ignore */ }
-  if (micListenerHandle){
-    try{ await micListenerHandle.remove(); }catch(e){}
-    micListenerHandle = null;
   }
-}
+});
 
 async function startSession(){
-  if (session || isBusy) return;
+  if (voiceSession.isActive() || isBusy) return;
   if (isLocked){ setStatus('This chat already has a report — start a new chat to continue.', 'err'); return; }
 
-  // Lock IMMEDIATELY, synchronously — before any `await` touches this
-  // function. This closes a real race: previously isBusy/micBtn.disabled
-  // were only set after `await getApiKey()`, so a fast double-tap on the
-  // mic (both taps landing before that first await resolved) would let
-  // BOTH calls slip past the `session || isBusy` guard above and each
-  // independently hit checkGeminiApiKey() — i.e. one double-tap = two
-  // real network requests to Google. Setting the lock here, before any
-  // await, means the second tap always sees isBusy === true and bails
-  // out immediately.
   isBusy = true;
   micBtn.disabled = true;
 
-  // Do NOT reset sessionTurns/currentTurnIndex here — if the user stops
-  // the mic and taps it again without leaving this page, we want THIS
-  // restart to continue the same conversation (same backend session,
-  // same memory of what was said), not start a blank one. Only the
-  // very first tap in this page view sets sessionStartedAt.
   if (!sessionStartedAt) sessionStartedAt = new Date().toISOString();
 
-  // Proactive offline check FIRST, before spending a network round-trip
-  // on key validation. Checking this before checkGeminiApiKey() (rather
-  // than after, as before) means: (a) we never fire a doomed request to
-  // Google's API when we already know it can't reach anywhere, and
-  // (b) a plain "no internet" situation can no longer be misreported as
-  // "invalid key" (checkGeminiApiKey's fetch() throws when offline,
-  // which — if checked second — used to fall into the invalid-key
-  // branch below and wrongly redirect to Settings).
-  const { isOnline } = await import('./shared/network-status.js');
-  if (!(await isOnline())){
+  const result = await voiceSession.start({ GoogleGenAI, Modality });
+  if (!result.ok) {
     isBusy = false;
     micBtn.disabled = false;
-    setStatus('Internet connection nahi hai — check karke phir try karo.', 'err');
-    return;
-  }
-
-  const apiKey = await getApiKey();
-  if (!apiKey){
-    isBusy = false;
-    micBtn.disabled = false;
-    setStatus('Pehle Settings mein apni Gemini API key daalo.', 'err');
-    window.location.href = 'settings.html?needsKey=missing';
-    return;
-  }
-
-  setStatus('Key check ho rahi hai...', null);
-  const keyCheck = await checkGeminiApiKey(apiKey);
-  if (keyCheck.status !== 'valid'){
-    isBusy = false;
-    micBtn.disabled = false;
-    setStatus((keyCheck.message || 'Invalid API key') + ' — go to Settings to fix this.', 'err');
-    setTimeout(() => { window.location.href = 'settings.html?needsKey=invalid'; }, 1600);
-    return;
-  }
-
-  await startKeepAlive(); // before connect — covers the whole session below, mic + playback both
-
-  setStatus('Gemini se connect ho raha hai...', null);
-  try{
-    const ai = new GoogleGenAI({ apiKey, apiVersion: 'v1alpha' });
-
-    session = await ai.live.connect({
-      model: LIVE_MODEL,
-      config: {
-        responseModalities: [Modality.AUDIO],
-        systemInstruction: { parts: [{ text: buildSystemInstruction() }] },
-        inputAudioTranscription: {},
-        outputAudioTranscription: {},
-        speechConfig: {
-          voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Puck' } }
-        }
-      },
-      callbacks: {
-        onopen: () => {
-          setStatus('Connected — mic on, bolna shuru karo', 'live');
-          micBtn.disabled = false;
-          isBusy = false;
-        },
-        onmessage: (msg) => handleMessage(msg),
-        onerror: (e) => {
-          console.error('live session error', e);
-          const detail = (e && e.message) ? e.message : 'connection ne error event bheja, exact wajah server ne nahi batayi';
-          setStatus('Connection error — ' + detail, 'err');
-          errorAlreadyShown = true;
-          stopSession(true);
-        },
-        onclose: (e) => {
-          if (!errorAlreadyShown){
-            const msg = describeCloseEvent(e);
-            if (msg) setStatus(msg, 'err'); else setStatus('Session band ho gaya.', null);
-          }
-          errorAlreadyShown = false;
-          // The connection is already dead by the time this fires — clear
-          // it so the next mic tap starts a fresh session instead of
-          // trying to "stop" one that's already closed. This is the path
-          // a phone call (or the OS otherwise taking the mic away) goes
-          // through: the SDK closes the connection on its own, without
-          // ever going through our own stopSession().
-          session = null;
-          micBtn.disabled = false;
-          isBusy = false;
-          // Make sure whatever was said in this session actually gets
-          // synced — this is the same recovery path stopSession() uses.
-          // Safe to call unconditionally: if stopSession() already
-          // triggered this (a normal user-initiated stop), sessionTurns
-          // is already empty / finalizeInFlight is already set, so this
-          // is a harmless no-op.
-          finalizeAndSyncSession();
-        }
-      }
-    });
-
-    playCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
-    nextPlayTime = 0;
-
-    setStatus('Mic (native) shuru ho raha hai...', null);
-    try{
-      await startNativeMic();
-      setStatus('Connected — mic on, bolna shuru karo', 'live');
-    }catch(err){
-      console.error('native mic error', err);
-      setStatus('Native mic start nahi ho paya: ' + (err && err.message ? err.message : err), 'err');
-      errorAlreadyShown = true;
-      stopSession(true);
-      return;
+    if (result.reason === 'no_api_key') {
+      setStatus('Pehle Settings mein apni Gemini API key daalo.', 'err');
+      window.location.href = 'settings.html?needsKey=missing';
+    } else if (result.reason === 'invalid_api_key') {
+      setStatus((result.message || 'Invalid API key') + ' — go to Settings to fix this.', 'err');
+      setTimeout(() => { window.location.href = 'settings.html?needsKey=invalid'; }, 1600);
+    } else if (result.message) {
+      setStatus(result.message, 'err');
     }
-
-  }catch(err){
-    console.error('connect error', err);
-    setStatus(describeConnectError(err), 'err');
-    micBtn.disabled = false;
-    isBusy = false;
-    stopKeepAlive(); // connect itself failed — no session was ever created, so stopSession() never runs to release this
-  }
-}
-
-function handleMessage(msg){
-  try{
-    const content = msg.serverContent;
-    if (!content) return;
-
-    if (content.interrupted){
-      stopPlayback();
-    }
-
-    if (content.inputTranscription && content.inputTranscription.text){
-      currentModelLine = null;
-      if (!currentUserLine) currentUserLine = addLine('user');
-      currentUserLine.textContent += content.inputTranscription.text;
-      if (currentTurnIndex >= 0) sessionTurns[currentTurnIndex].content += content.inputTranscription.text;
-      scrollTranscriptToBottom();
-    }
-
-    if (content.outputTranscription && content.outputTranscription.text){
-      currentUserLine = null;
-      if (!currentModelLine) currentModelLine = addLine('model');
-      currentModelLine.textContent += content.outputTranscription.text;
-      if (currentTurnIndex >= 0) sessionTurns[currentTurnIndex].content += content.outputTranscription.text;
-      scrollTranscriptToBottom();
-    }
-
-    if (content.modelTurn && content.modelTurn.parts){
-      for (const part of content.modelTurn.parts){
-        if (part.inlineData && part.inlineData.data){
-          playAudioChunk(part.inlineData.data);
-        }
-      }
-    }
-
-    if (content.turnComplete){
-      isModelSpeaking = false;
-    }
-  }catch(err){
-    console.error('message handling error', err, msg);
-    setStatus('Ek message process karte waqt error aaya: ' + err.message, 'err');
   }
 }
 
 function stopSession(silent){
-  stopKeepAlive();
-  stopNativeMic().catch((e) => console.error('stopNativeMic error', e));
-
-  stopPlayback();
-  if (playCtx){ try{ playCtx.close(); }catch(e){} playCtx = null; }
-  if (session){ try{ session.close(); }catch(e){ console.error('session close error', e); } session = null; }
-
+  voiceSession.stop(silent);
   isBusy = false;
   micBtn.disabled = false;
-  if (!silent) setStatus('Ruk gaya. Dobara shuru karne ke liye mic dabao.', null);
-
   finalizeAndSyncSession();
 }
 
@@ -1215,7 +942,7 @@ async function finalizeAndSyncSession(){
 }
 
 window.addEventListener('beforeunload', () => {
-  if (session) stopSession(true);
+  if (voiceSession && voiceSession.isActive()) stopSession(true);
 });
 
 window.addEventListener('error', (e) => {
@@ -1233,11 +960,11 @@ window.addEventListener('unhandledrejection', (e) => {
 // silently confusing whoever's debugging a "voice stopped after I
 // switched apps" report.
 window.addEventListener('utkio:resume', () => {
-  console.info('[lifecycle] app resumed on chat.html — session active:', !!session);
+  console.info('[lifecycle] app resumed on chat.html — session active:', !!voiceSession && voiceSession.isActive());
 });
 
 micBtn.addEventListener('click', () => {
-  if (session) stopSession();
+  if (voiceSession && voiceSession.isActive()) stopSession();
   else startSession();
 });
 
@@ -1248,7 +975,7 @@ micBtn.addEventListener('click', () => {
 // with an error) never happens in the first place.
 //
 // Both callbacks below only ever touch the mic when we're genuinely
-// idle (!session && !isBusy && !isLocked). That guard is deliberate and
+// idle (!voiceSession.isActive() && !isBusy && !isLocked). That guard is deliberate and
 // load-bearing: it means this code can NEVER re-enable a mic that's
 // disabled for some other reason (isLocked — chat already has a
 // report; isBusy — a connect/key-check is mid-flight) and can never
@@ -1259,13 +986,13 @@ micBtn.addEventListener('click', () => {
 import('./shared/offline-banner.js').then(({ initOfflineBanner }) => {
   initOfflineBanner({
     onOffline: () => {
-      if (!session && !isBusy && !isLocked){
+      if (!voiceSession.isActive() && !isBusy && !isLocked){
         micBtn.disabled = true;
         setStatus('Internet connection nahi hai — check karke phir try karo.', 'err');
       }
     },
     onBackOnline: () => {
-      if (!session && !isBusy && !isLocked){
+      if (!voiceSession.isActive() && !isBusy && !isLocked){
         micBtn.disabled = false;
         setStatus('Internet wapas aa gaya — mic dabao', null);
       }

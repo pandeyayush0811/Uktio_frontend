@@ -35,7 +35,7 @@ export function invalidatePlanCache() {
 }
 
 // Call this right after requireCompleteProfile() on any page that needs
-// an active plan (chat.html, quiz.html). Redirects to pricing.html if
+// an active plan (chat.html, scenario.html). Redirects to pricing.html if
 // the user doesn't have one.
 //
 // This is a UX check only, NOT the security boundary — it just saves a

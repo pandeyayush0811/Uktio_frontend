@@ -21,9 +21,9 @@ structural change (new page, new shared module, new pattern).
 | `history.html` | ~250 | "Chats" list — past sessions, date-grouped (structural rebuild) | Main app (uses newer serif "Chats" design system) |
 | `chat.html` | 1129 | **Core feature** — live voice chat (BYOK, direct-to-Gemini) | Main app |
 | `scenario.html` | 567 | Timed roleplay mode | Main app |
-| `report.html` | 173 | Post-session AI report | Post-chat |
-| `mistakes.html` | 350 | Mistake cards from report | Post-chat |
-| `quiz.html` | 454 | Post-session quiz (incl. a "speak" question, also BYOK-direct) | Post-chat |
+| `report.html` | 175 | Post-session AI report (Hinglish natural write-up) | Post-chat |
+| `mistakes.html` | ~20 | Backward-compatible redirect bridge to report.html | Legacy route |
+| `quiz.html` | ~20 | Backward-compatible redirect bridge to report.html | Legacy route |
 | `profile.html` | 271 | View/edit profile (uses newer "Chats" design system) | Main app |
 | `settings.html` | 275 | Account settings, Gemini key management | Main app |
 | `pricing.html` | 466 | Plans (Free/Starter/Commit Mode/Unlimited), Commit Mode disclosure modal | Main app / upsell |

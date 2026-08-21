@@ -329,11 +329,17 @@ function flashMsg(text) {
 // Load saved key on start
 try {
   const savedKey = await getApiKey();
-  if (savedKey) { apiKeyInput.value = savedKey; validateKeyDebounced(); }
+  // BUG FIX: lastSavedValue used to stay null here even though a key was
+  // already on disk. That mismatch meant the very next 'input' event
+  // (including a browser/password-manager autofill firing on an
+  // untouched field) was treated as "changed" and queued an unnecessary
+  // secure-storage write — extra churn that also widens the window for
+  // the logout race described below.
+  if (savedKey) { apiKeyInput.value = savedKey; lastSavedValue = savedKey; validateKeyDebounced(); }
 } catch (e) { console.warn('secure storage read failed', e); }
 
 // ── "Sent here to add/fix your key" flow ────────────────────────────────
-// chat.html/scenario.html/quiz.html redirect here with ?needsKey=missing
+// chat.html/scenario.html redirect here with ?needsKey=missing
 // or ?needsKey=invalid when they can't start a session — without this,
 // the user lands on a long Settings page with no clue *why* they're here
 // or which field needs their attention. This makes that reason loud and
@@ -416,7 +422,53 @@ deleteKeyBtn.addEventListener('click', async () => {
 });
 
 // ── Logout ────────────────────────────────────────────────────────────────
-document.getElementById('logoutBtn').addEventListener('click', logout);
+// Root-cause fix: logout() (shared/auth.js) reliably deletes the API key
+// on its own — but this page can have a DEBOUNCED write in flight
+// (saveTimer, 400ms) at the exact moment the user hits Logout — e.g. they
+// just typed/pasted/autofilled a key and immediately tapped Logout before
+// the debounce fired. On a real device the native secure-storage bridge
+// call inside logout() can itself take 100–500ms (Keystore hardware
+// operation), so that pending save can land AFTER logout's delete —
+// silently resurrecting the key the user just "deleted" by logging out.
+//
+// Fix: cancel (never flush) any pending save and lock the input BEFORE
+// calling logout(), so no write can possibly race the delete. We also
+// disable the button to stop a rapid double-tap from firing logout()
+// twice concurrently, and confirm first since this now visibly costs the
+// user their saved key.
+const logoutBtn = document.getElementById('logoutBtn');
+let loggingOut = false;
+logoutBtn.addEventListener('click', async () => {
+  if (loggingOut) return;
+
+  const confirmed = window.confirm(
+    'Log out karna hai? Aapki Gemini API key is device se delete ho jaayegi — ' +
+    'dobara login karne par aapko wo phir se daalni hogi.'
+  );
+  if (!confirmed) return;
+
+  loggingOut = true;
+  logoutBtn.disabled = true;
+  logoutBtn.textContent = 'Logging out…';
+
+  // Kill the pending debounced save FIRST, and stop new ones from being
+  // scheduled — this is what actually closes the race.
+  clearTimeout(saveTimer);
+  saveTimer = null;
+  apiKeyInput.disabled = true;
+
+  try {
+    await logout(); // navigates to login.html on success
+  } catch (e) {
+    // logout() itself doesn't currently throw, but if that ever changes,
+    // don't leave the user stuck on a dead button.
+    console.error('logout failed', e);
+    loggingOut = false;
+    logoutBtn.disabled = false;
+    logoutBtn.textContent = 'Log out';
+    apiKeyInput.disabled = false;
+  }
+});
 </script>
 </body>
 </html>

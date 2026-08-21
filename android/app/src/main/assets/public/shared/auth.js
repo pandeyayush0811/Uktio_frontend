@@ -3,6 +3,7 @@
 
 import { secureGetItem, secureSetItem, secureRemoveItem, migrateLegacyKey } from './secure-store.js';
 import { cachedFetch, invalidateCache, invalidateAllCache } from './api-cache.js';
+import { removeApiKey } from './mic-helpers.js';
 
 const cfg = window.UKTIO_CONFIG;
 const SESSION_KEY = 'utkio_session';
@@ -275,10 +276,6 @@ export function showConnectionError() {
     </div>`;
 }
 
-// Must match the key used in settings.html — kept here too so logout()
-// can wipe it without importing settings.html's script.
-export const API_KEY_STORAGE_KEY = 'utkio_gemini_api_key';
-
 // Cache-first profile display (stale-while-revalidate): only the small,
 // non-sensitive display fields — never the full profile, and never
 // anything auth-related. Used so the drawer/profile header can render
@@ -385,8 +382,14 @@ export async function logout() {
   await clearSession();
   clearCachedProfileBasic();
   invalidateAllCache(); // wipe plan/profile/sessions caches — next login must never show the previous account's cached data
-  try { await secureRemoveItem(API_KEY_STORAGE_KEY); }
-  catch (e) { console.warn('failed to clear API key on logout', e); }
+
+  // Delegates to mic-helpers.js's removeApiKey(), which is the single
+  // owner of the API key's storage. See the big comment on that function
+  // for why this is now guaranteed reliable regardless of secure-storage
+  // plugin quirks (it no longer depends on a native remove/overwrite
+  // succeeding — see mic-helpers.js).
+  await removeApiKey();
+
   window.location.href = 'login.html';
 }
 
