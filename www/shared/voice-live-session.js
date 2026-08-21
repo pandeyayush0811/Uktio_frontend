@@ -274,28 +274,35 @@ export function createVoiceSession({ getSystemInstruction, voiceName = 'Puck', c
     const apiKey = await getApiKey();
     if (!apiKey) { audioPlayer.close(); audioPlayer = null; return { ok: false, reason: 'no_api_key' }; }
 
+    // Lock as early as we safely can — right after the audio-gesture-
+    // linked open() above and the (local, non-network) getApiKey() read,
+    // and BEFORE any further await. Guards against a theoretical race
+    // where two overlapping start() calls both slip past the `session ||
+    // isBusy` check at the top before either sets isBusy.
     isBusy = true;
+
+    // Proactive offline check FIRST — before checkGeminiApiKey(), which
+    // itself makes a real network request to Google. Checking this
+    // first means: (a) we never spend a doomed round-trip validating a
+    // key we can't possibly reach Google with, and (b) a plain "no
+    // internet" situation never gets misreported as reason:
+    // 'invalid_api_key' (checkGeminiApiKey's fetch() throws when
+    // offline — if checked first, as before, that failure used to be
+    // indistinguishable from a genuinely bad key, sending the caller
+    // off to Settings for a problem Settings can't fix).
+    const { isOnline } = await import('./network-status.js');
+    if (!(await isOnline())) {
+      isBusy = false;
+      if (audioPlayer) { audioPlayer.close(); audioPlayer = null; }
+      return { ok: false, reason: 'offline', message: 'Internet connection nahi hai — check karke phir try karo.' };
+    }
+
     callbacks.onStatus && callbacks.onStatus('Key check ho rahi hai...', null);
     const keyCheck = await checkGeminiApiKey(apiKey);
     if (keyCheck.status !== 'valid') {
       isBusy = false;
       if (audioPlayer) { audioPlayer.close(); audioPlayer = null; }
       return { ok: false, reason: 'invalid_api_key', message: keyCheck.message };
-    }
-
-    // Proactive offline check: fail fast with a clear message instead of
-    // letting ai.live.connect() hang/timeout and surface a generic
-    // "connection error" a few seconds later. Best-effort signal (see
-    // shared/network-status.js) — deliberately checked here rather than
-    // before the key check above, since it doesn't change the audio
-    // gesture-linkage timing (we're already well past the user's tap by
-    // this point) and this way "no key" / "invalid key" still take
-    // priority over "offline" when multiple things are wrong at once.
-    const { isOnline } = await import('./network-status.js');
-    if (!(await isOnline())) {
-      isBusy = false;
-      if (audioPlayer) { audioPlayer.close(); audioPlayer = null; }
-      return { ok: false, reason: 'offline', message: 'Internet connection nahi hai — check karke phir try karo.' };
     }
 
     await startKeepAlive();

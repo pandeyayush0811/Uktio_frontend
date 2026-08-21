@@ -561,6 +561,20 @@ unlimitedBtn.addEventListener('click', async () => {
     unlimitedBtn.disabled = false;
   }
 });
+
+// Proactively disable every button that actually spends money / hits
+// payments (starterBtn, commitModeConfirmBtn, unlimitedBtn) the moment
+// we're offline — nothing here can meaningfully happen without a
+// network, and this is the one place in the app where "user tapped it,
+// nothing visibly happened for a beat" is worst (payment flow). Only
+// ever re-enables a button THIS code itself disabled — see
+// disableOfflineFor's WeakSet tracking — so unlimitedBtn's permanent
+// post-waitlist disabled state, and each button's own
+// disable/try/finally-enable cycle around its request above, are both
+// completely untouched.
+import('./shared/offline-banner.js').then(({ disableOfflineFor }) => {
+  disableOfflineFor([starterBtn, commitModeConfirmBtn, unlimitedBtn]);
+});
 </script>
 </body>
 </html>

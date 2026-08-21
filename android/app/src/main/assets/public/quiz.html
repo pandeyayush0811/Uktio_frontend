@@ -125,10 +125,28 @@ let attemptedCount = 0;
 // Checked once per quiz (not per question) and cached — only 'speak'
 // questions actually need the Gemini key, so this only fires if the quiz
 // has at least one of those (see init() below).
+// Cached across all 'speak' questions in a quiz — the key is checked
+// once, not once per question. IMPORTANT: only a REAL verdict (valid /
+// invalid / quota_exceeded) gets cached. A network_error (device was
+// offline at the moment of this check) is deliberately NOT cached —
+// caching it would permanently disable the mic for the rest of the
+// quiz with a wrong "go to Settings" message, even after the user's
+// internet comes back. Leaving it uncached means the very next 'speak'
+// question calls this again and gets a fresh, accurate answer.
 let keyStatusPromise = null;
-function ensureKeyChecked(){
-  if (!keyStatusPromise) keyStatusPromise = getApiKey().then(k => checkGeminiApiKey(k));
-  return keyStatusPromise;
+async function ensureKeyChecked(){
+  if (keyStatusPromise) return keyStatusPromise;
+  const attempt = (async () => {
+    const { isOnline } = await import('./shared/network-status.js');
+    if (!(await isOnline())) {
+      return { status: 'network_error', message: 'Internet connection nahi hai — check karke phir try karo.' };
+    }
+    return checkGeminiApiKey(await getApiKey());
+  })();
+  keyStatusPromise = attempt;
+  const result = await attempt;
+  if (result.status === 'network_error') keyStatusPromise = null; // don't persist a transient offline verdict
+  return result;
 }
 
 function renderProgress(){
@@ -336,7 +354,10 @@ function renderSpeak(q, colorClass){
   // ensureKeyChecked()) — fires once, not once per question.
   ensureKeyChecked().then((keyStatus) => {
     if (resolved) return; // user already moved past this question by the time this resolves
-    if (keyStatus.status !== 'valid') {
+    if (keyStatus.status === 'network_error') {
+      micStatus.textContent = keyStatus.message; // "Internet connection nahi hai..." — no Settings redirect, nothing wrong with the key
+      micBtn.disabled = true;
+    } else if (keyStatus.status !== 'valid') {
       micStatus.textContent = (keyStatus.message || 'Invalid API key') + ' — Go to Settings to fix this, then come back.';
       micBtn.disabled = true;
     }
@@ -378,6 +399,19 @@ function renderSpeak(q, colorClass){
         finish(!!result.correct, result.heard);
       }catch(e){
         console.error('speech eval failed', e);
+        // Check connectivity FIRST — before spending another network
+        // round-trip on checkGeminiApiKey(). Same reasoning as
+        // chat.html/scenario.html: checking the key AFTER an offline
+        // failure used to mean the key-check's own fetch() also failed
+        // (network_error), which read as "invalid key" and told the
+        // user to go fix their Settings — when nothing was wrong with
+        // their key at all.
+        const { isOnline } = await import('./shared/network-status.js');
+        if (!(await isOnline())){
+          micStatus.textContent = 'Internet connection nahi hai — check karke phir try karo.';
+          micBtn.disabled = true;
+          return; // don't auto-skip — let them see the real reason and retry once back online
+        }
         const keyStatus = await checkGeminiApiKey(await getApiKey());
         if (keyStatus.status !== 'valid') {
           micStatus.textContent = (keyStatus.message || 'Invalid API key') + ' — Go to Settings to fix this.';

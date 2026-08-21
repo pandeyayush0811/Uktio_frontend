@@ -301,10 +301,9 @@
 </script>
 
 <script type="module">
-import { PENDING_CHAT_SESSION_KEY, syncPendingChatSession, apiFetch, invalidateChatSessionsCache } from './shared/auth.js';
+import { PENDING_CHAT_SESSION_KEY, syncPendingChatSession, apiFetch } from './shared/auth.js';
 import { createVoiceSession } from './shared/voice-live-session.js';
 import { formatCountdown } from './shared/scenario-phase.js';
-import { initOfflineBanner } from './shared/offline-banner.js';
 
 // Same 3-minute roleplay window the feature spec calls for. A constant
 // (not scenario-config-driven) since every scenario shares the same
@@ -672,10 +671,12 @@ const voiceSession = createVoiceSession({
       updateMicUI(isSpeaking);
     },
     onOpen: () => {
+      sessionAttemptInFlight = false;
       micBtn.disabled = false;
       startPhaseTimer();
     },
     onClose: () => {
+      sessionAttemptInFlight = false;
       micBtn.disabled = false;
       updateMicUI(false);
       stopPhaseTimer();
@@ -700,9 +701,21 @@ const voiceSession = createVoiceSession({
   }
 });
 
+// Tracks "a start() attempt is currently mid-flight" — true from the
+// moment startSession() commits to trying, until either it succeeds
+// (voiceSession.isActive() becomes the source of truth from then on)
+// or it fails and resets this. voiceSession.isActive() alone isn't
+// enough for that window because it only flips true once the session
+// actually connects — it's still false during the key-check/connect
+// awaits, which is exactly the window the offline-banner wiring below
+// needs to know about so it never re-enables/disables the mic out from
+// under an attempt that's already in progress.
+let sessionAttemptInFlight = false;
+
 async function startSession(){
   if (voiceSession.isActive() || !todaysScenario) return;
 
+  sessionAttemptInFlight = true;
   sessionStartedAt = new Date().toISOString();
   phase = 'roleplay';
   explicitStop = false;
@@ -714,6 +727,7 @@ async function startSession(){
   const result = await voiceSession.start({ GoogleGenAI, Modality });
 
   if (!result.ok){
+    sessionAttemptInFlight = false;
     micBtn.disabled = false;
     if (result.reason === 'no_api_key'){
       setStatus('Add your Gemini API key in Settings first.', 'err');
@@ -787,18 +801,10 @@ micBtn.addEventListener('click', () => {
 // Boot: load today's scenario (server is the source of truth for both
 // WHICH scenario and whether it's already been completed).
 // ─────────────────────────────────────────────────────────────
-// Named (not an IIFE) so the offline-banner reconnect hook below can
-// call it again — the "check your internet and reload the page" message
-// this used to leave behind on failure is exactly the case where an
-// automatic retry once connectivity returns is worth doing instead of
-// making the user manually reload.
-let scenarioLoadFailed = false;
-
 async function loadTodaysScenario(){
   try {
     const data = await apiFetch('/chat/scenario/today');
     todaysScenario = data.scenario;
-    scenarioLoadFailed = false;
 
     scenarioCard.style.display = 'flex';
     scenarioCategoryEl.textContent = todaysScenario.category;
@@ -814,31 +820,48 @@ async function loadTodaysScenario(){
     }
   } catch (err) {
     console.error('failed to load today\'s scenario', err);
-    scenarioLoadFailed = true;
     setStatus("Couldn't load the scenario — check your internet and reload the page.", 'err');
   }
 }
-
 loadTodaysScenario();
 
-// Visible offline indicator + auto-retry on reconnect. Does NOT
-// auto-start the mic/voice session on reconnect for the same reason
-// chat.html doesn't — no user gesture behind an automatic
-// ai.live.connect() call, and silently turning the mic on would be
-// surprising/bad UX. It DOES auto-retry the scenario load if that's
-// what failed (the one part of this page's boot sequence that's purely
-// data-fetch and safe to redo without any user action), and refreshes
-// the chat-sessions cache so drawer/history don't show stale data from
-// before the outage.
-initOfflineBanner(() => {
-  invalidateChatSessionsCache();
-  if (scenarioLoadFailed) {
-    loadTodaysScenario();
-  } else if (!voiceSession.isActive()) {
-    setStatus('Internet wapas aa gaya.', null);
-  }
-});
+// Live "no internet" banner (on top of the fail-fast checks already in
+// voiceSession.start()/startSession() above), auto-recovery for the
+// initial scenario load, AND proactively disabling the mic while
+// offline so a doomed tap never happens in the first place.
+//
+// "Idle" here — the only state in which these callbacks are allowed to
+// touch the mic — means: scenario data has loaded, today isn't already
+// locked/complete, no connect attempt is in flight, and no session is
+// currently live. Outside that window (mid-connect, mid-session,
+// locked-today) this code does nothing, so it can never fight with
+// onOpen/onClose/lockChatForToday/startSession's own disable/enable
+// calls above — purely additive on top of all existing behaviour.
+function isScenarioIdle(){
+  return !!todaysScenario
+    && !voiceSession.isActive()
+    && !sessionAttemptInFlight
+    && !lockedBanner.classList.contains('show');
+}
 
+import('./shared/offline-banner.js').then(({ initOfflineBanner }) => {
+  initOfflineBanner({
+    onOffline: () => {
+      if (isScenarioIdle()){
+        micBtn.disabled = true;
+        setStatus('Internet connection nahi hai — check karke phir try karo.', 'err');
+      }
+    },
+    onBackOnline: () => {
+      if (!todaysScenario){
+        loadTodaysScenario();
+      } else if (isScenarioIdle()){
+        micBtn.disabled = false;
+        setStatus('Internet wapas aa gaya — mic dabao.', null);
+      }
+    }
+  });
+});
 </script>
 </body>
 </html>

@@ -193,29 +193,12 @@
 
 <script type="module">
 import { GoogleGenAI, Modality } from "./vendor/google-genai.bundle.mjs";
-import { PENDING_CHAT_SESSION_KEY, syncPendingChatSession, apiFetch, invalidateChatSessionsCache } from './shared/auth.js';
+import { PENDING_CHAT_SESSION_KEY, syncPendingChatSession, apiFetch } from './shared/auth.js';
 import { checkGeminiApiKey } from './shared/gemini-key-check.js';
 import { getApiKey, getMicCapturePlugin } from './shared/mic-helpers.js';
 import { getPlanStatus } from './shared/plan.js';
 import { renderCommitModeBanner } from './shared/commit-mode-widget.js';
 import { maybeShowPostSessionUpsell } from './shared/upsell.js';
-import { initOfflineBanner } from './shared/offline-banner.js';
-
-// Visible offline indicator + auto-retry on reconnect. Deliberately does
-// NOT auto-restart the mic/voice session when connectivity returns —
-// that would fire ai.live.connect() with no user gesture behind it,
-// which risks the exact browser/WebView mic-permission gesture-linkage
-// issue documented above startSession() (and surprising the user by
-// silently turning the mic back on is bad UX/privacy behavior on its
-// own). Instead: resync anything data-only that could have failed or
-// gone stale while offline, and let the status text guide the user to
-// tap the mic themselves.
-initOfflineBanner(() => {
-  invalidateChatSessionsCache(); // drawer/history shouldn't show a stale list from before the outage
-  if (!session) {
-    setStatus('Internet wapas aa gaya — mic dabao jab ready ho.', null);
-  }
-});
 
 // Single source of truth — used both for the actual connect() call below
 // AND in the permission-denied error message, so the two can never drift
@@ -979,6 +962,18 @@ async function startSession(){
   if (session || isBusy) return;
   if (isLocked){ setStatus('This chat already has a report — start a new chat to continue.', 'err'); return; }
 
+  // Lock IMMEDIATELY, synchronously — before any `await` touches this
+  // function. This closes a real race: previously isBusy/micBtn.disabled
+  // were only set after `await getApiKey()`, so a fast double-tap on the
+  // mic (both taps landing before that first await resolved) would let
+  // BOTH calls slip past the `session || isBusy` guard above and each
+  // independently hit checkGeminiApiKey() — i.e. one double-tap = two
+  // real network requests to Google. Setting the lock here, before any
+  // await, means the second tap always sees isBusy === true and bails
+  // out immediately.
+  isBusy = true;
+  micBtn.disabled = true;
+
   // Do NOT reset sessionTurns/currentTurnIndex here — if the user stops
   // the mic and taps it again without leaving this page, we want THIS
   // restart to continue the same conversation (same backend session,
@@ -986,15 +981,31 @@ async function startSession(){
   // very first tap in this page view sets sessionStartedAt.
   if (!sessionStartedAt) sessionStartedAt = new Date().toISOString();
 
+  // Proactive offline check FIRST, before spending a network round-trip
+  // on key validation. Checking this before checkGeminiApiKey() (rather
+  // than after, as before) means: (a) we never fire a doomed request to
+  // Google's API when we already know it can't reach anywhere, and
+  // (b) a plain "no internet" situation can no longer be misreported as
+  // "invalid key" (checkGeminiApiKey's fetch() throws when offline,
+  // which — if checked second — used to fall into the invalid-key
+  // branch below and wrongly redirect to Settings).
+  const { isOnline } = await import('./shared/network-status.js');
+  if (!(await isOnline())){
+    isBusy = false;
+    micBtn.disabled = false;
+    setStatus('Internet connection nahi hai — check karke phir try karo.', 'err');
+    return;
+  }
+
   const apiKey = await getApiKey();
   if (!apiKey){
+    isBusy = false;
+    micBtn.disabled = false;
     setStatus('Pehle Settings mein apni Gemini API key daalo.', 'err');
     window.location.href = 'settings.html?needsKey=missing';
     return;
   }
 
-  isBusy = true;
-  micBtn.disabled = true;
   setStatus('Key check ho rahi hai...', null);
   const keyCheck = await checkGeminiApiKey(apiKey);
   if (keyCheck.status !== 'valid'){
@@ -1002,19 +1013,6 @@ async function startSession(){
     micBtn.disabled = false;
     setStatus((keyCheck.message || 'Invalid API key') + ' — go to Settings to fix this.', 'err');
     setTimeout(() => { window.location.href = 'settings.html?needsKey=invalid'; }, 1600);
-    return;
-  }
-
-  // Proactive offline check: fail fast instead of waiting on ai.live.connect()
-  // to time out. Best-effort signal (see shared/network-status.js) — checked
-  // after the key check so "invalid key" still takes priority when both are
-  // wrong, and before startKeepAlive() so we don't spin up the native
-  // keep-alive service for a connection we already know will fail.
-  const { isOnline } = await import('./shared/network-status.js');
-  if (!(await isOnline())){
-    isBusy = false;
-    micBtn.disabled = false;
-    setStatus('Internet connection nahi hai — check karke phir try karo.', 'err');
     return;
   }
 
@@ -1241,6 +1239,38 @@ window.addEventListener('utkio:resume', () => {
 micBtn.addEventListener('click', () => {
   if (session) stopSession();
   else startSession();
+});
+
+// Live "no internet" banner (on top of the fail-fast offline check
+// already inside startSession() above), PLUS proactively disabling the
+// mic button the moment we go offline — so a doomed tap (that would
+// just hit the isOnline() check inside startSession() and bounce back
+// with an error) never happens in the first place.
+//
+// Both callbacks below only ever touch the mic when we're genuinely
+// idle (!session && !isBusy && !isLocked). That guard is deliberate and
+// load-bearing: it means this code can NEVER re-enable a mic that's
+// disabled for some other reason (isLocked — chat already has a
+// report; isBusy — a connect/key-check is mid-flight) and can never
+// disable a mic mid-session, where the existing onerror/onclose
+// handling (and the native keep-alive service, which can ride out a
+// brief blip on its own) already own that mic's state. So this is
+// purely additive — every existing disable/enable path is untouched.
+import('./shared/offline-banner.js').then(({ initOfflineBanner }) => {
+  initOfflineBanner({
+    onOffline: () => {
+      if (!session && !isBusy && !isLocked){
+        micBtn.disabled = true;
+        setStatus('Internet connection nahi hai — check karke phir try karo.', 'err');
+      }
+    },
+    onBackOnline: () => {
+      if (!session && !isBusy && !isLocked){
+        micBtn.disabled = false;
+        setStatus('Internet wapas aa gaya — mic dabao', null);
+      }
+    }
+  });
 });
 </script>
 </body>

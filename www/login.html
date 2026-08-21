@@ -526,6 +526,16 @@ googleBtn.addEventListener('click', async () => {
     setAuthBusy(false);
   }
 });
+
+// Proactively disable every submit/OTP/Google button while offline —
+// these all hit the backend, so there's nothing useful they can do
+// without a network. Only ever re-enables a button THIS code disabled
+// (see disableOfflineFor's WeakSet tracking in offline-banner.js), so
+// it can never interfere with setAuthBusy()'s own disable/enable cycle
+// around each in-flight request above.
+import('./shared/offline-banner.js').then(({ disableOfflineFor }) => {
+  disableOfflineFor(allBusyToggles());
+});
 </script>
 </body>
 </html>

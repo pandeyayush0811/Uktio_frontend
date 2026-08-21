@@ -505,6 +505,14 @@ saveBtn.addEventListener('click', async () => {
   }
 });
 
+// Proactively disable "Save changes" while offline — a PATCH request
+// here is guaranteed to fail without a network. Only re-enables it if
+// THIS code disabled it (WeakSet-tracked in offline-banner.js), so it
+// never fights with showEditMode()/showViewMode() or the try/finally
+// disable-while-saving cycle above.
+import('./shared/offline-banner.js').then(({ disableOfflineFor }) => {
+  disableOfflineFor([saveBtn]);
+});
 </script>
 </body>
 </html>
