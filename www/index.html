@@ -3,6 +3,25 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<!--
+  Content-Security-Policy — defense-in-depth against XSS: even if a spot
+  is ever missed where dynamic content (AI output, transcripts) gets
+  written into the DOM without shared/sanitize.js's escapeHtml(), this
+  stops the resulting script from running/exfiltrating data, and it
+  blocks any request to a domain we didn't explicitly allow below.
+
+  script-src/style-src need 'unsafe-inline': every page in this app uses
+  inline <script type="module"> and <style> blocks (no bundler/build
+  step), so hash- or nonce-based CSP isn't practical here without a much
+  bigger restructure. This is a known, accepted trade-off — it still
+  blocks attribute-injection style XSS (onerror=, javascript: URLs) via
+  object-src/base-uri/form-action, and fully blocks exfiltration to any
+  domain not in connect-src, which covers the actual risk this app faces
+  (innerHTML with unescaped AI/transcript text reaching an attacker's
+  server). Keep connect-src in sync with shared/config.js's BACKEND_URL
+  and any new external API this app starts calling.
+-->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self'; font-src 'self'; connect-src 'self' https://utkio-backend.onrender.com http://10.215.18.30:3999 https://pwdglktwuquoswqoyely.supabase.co https://generativelanguage.googleapis.com wss://generativelanguage.googleapis.com https://*.sentry.io https://*.ingest.sentry.io; media-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';">
 <title>Utkio</title>
 <link rel="stylesheet" href="shared/style.css">
 </head>

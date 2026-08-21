@@ -283,6 +283,21 @@ export function createVoiceSession({ getSystemInstruction, voiceName = 'Puck', c
       return { ok: false, reason: 'invalid_api_key', message: keyCheck.message };
     }
 
+    // Proactive offline check: fail fast with a clear message instead of
+    // letting ai.live.connect() hang/timeout and surface a generic
+    // "connection error" a few seconds later. Best-effort signal (see
+    // shared/network-status.js) — deliberately checked here rather than
+    // before the key check above, since it doesn't change the audio
+    // gesture-linkage timing (we're already well past the user's tap by
+    // this point) and this way "no key" / "invalid key" still take
+    // priority over "offline" when multiple things are wrong at once.
+    const { isOnline } = await import('./network-status.js');
+    if (!(await isOnline())) {
+      isBusy = false;
+      if (audioPlayer) { audioPlayer.close(); audioPlayer = null; }
+      return { ok: false, reason: 'offline', message: 'Internet connection nahi hai — check karke phir try karo.' };
+    }
+
     await startKeepAlive();
 
     callbacks.onStatus && callbacks.onStatus('Gemini se connect ho raha hai...', null);

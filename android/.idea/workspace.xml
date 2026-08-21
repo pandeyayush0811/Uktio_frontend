@@ -5,9 +5,47 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="a9290705-c354-4871-9e50-654ac448cc40" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/caches/deviceStreaming.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/caches/deviceStreaming.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/gradle.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/gradle.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/capacitor.build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/app/capacitor.build.gradle" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/assets/capacitor.plugins.json" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/capacitor.plugins.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/chat.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/chat.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/history.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/history.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/index.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/login.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/login.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/mistakes.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/mistakes.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/onboarding.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/onboarding.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/pricing.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/pricing.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/profile.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/profile.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/quiz.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/quiz.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/report.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/report.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/scenario.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/scenario.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/settings.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/settings.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/shared/auth.js" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/shared/auth.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/shared/config.js" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/shared/config.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/shared/voice-live-session.js" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/shared/voice-live-session.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/capacitor.settings.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/capacitor.settings.gradle" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/../package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../package.json" beforeDir="false" afterPath="$PROJECT_DIR$/../package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../www/chat.html" beforeDir="false" afterPath="$PROJECT_DIR$/../www/chat.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../www/history.html" beforeDir="false" afterPath="$PROJECT_DIR$/../www/history.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../www/home.html" beforeDir="false" afterPath="$PROJECT_DIR$/../www/home.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../www/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/../www/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../www/login.html" beforeDir="false" afterPath="$PROJECT_DIR$/../www/login.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../www/mistakes.html" beforeDir="false" afterPath="$PROJECT_DIR$/../www/mistakes.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../www/onboarding.html" beforeDir="false" afterPath="$PROJECT_DIR$/../www/onboarding.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../www/pricing.html" beforeDir="false" afterPath="$PROJECT_DIR$/../www/pricing.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../www/privacy.html" beforeDir="false" afterPath="$PROJECT_DIR$/../www/privacy.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../www/profile.html" beforeDir="false" afterPath="$PROJECT_DIR$/../www/profile.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../www/quiz.html" beforeDir="false" afterPath="$PROJECT_DIR$/../www/quiz.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../www/report.html" beforeDir="false" afterPath="$PROJECT_DIR$/../www/report.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../www/scenario.html" beforeDir="false" afterPath="$PROJECT_DIR$/../www/scenario.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../www/settings.html" beforeDir="false" afterPath="$PROJECT_DIR$/../www/settings.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../www/shared/auth.js" beforeDir="false" afterPath="$PROJECT_DIR$/../www/shared/auth.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../www/shared/config.js" beforeDir="false" afterPath="$PROJECT_DIR$/../www/shared/config.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../www/shared/voice-live-session.js" beforeDir="false" afterPath="$PROJECT_DIR$/../www/shared/voice-live-session.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../www/terms.html" beforeDir="false" afterPath="$PROJECT_DIR$/../www/terms.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

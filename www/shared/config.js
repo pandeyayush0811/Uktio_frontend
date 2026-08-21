@@ -1,4 +1,5 @@
 import { initCrashReporting } from './crash-log.js';
+import { initAppLifecycle, registerDefaultResumeHandling } from './app-lifecycle.js';
 
 // Fill these in from:
 // - Supabase Dashboard -> Project Settings -> API (URL + anon public key)
@@ -71,3 +72,13 @@ window.UKTIO_CONFIG = {
 // throw. See shared/crash-log.js for what this does when SENTRY_DSN
 // above is empty (nothing — safe no-op).
 initCrashReporting();
+
+// See shared/app-lifecycle.js for why this matters: voice sessions keep
+// running in the background via a native service even when the WebView
+// is paused, so the JS layer needs a signal for "we're back" to resync
+// caches/tokens. Wired here (not per-page) for the same reason crash
+// reporting is wired here — config.js is the first import on every page,
+// so this is guaranteed to be registered before the user can background
+// the app from any screen.
+initAppLifecycle();
+registerDefaultResumeHandling();

@@ -134,6 +134,29 @@ export async function requireAuthOrRedirect() {
 // Callers (fetchProfileWithRetry, every form handler) key off err.status
 // to decide what to show/do — 0 always means "never reached the server".
 export async function apiFetch(path, options = {}) {
+  // Proactive check: fail fast (0ms) instead of waiting on a fetch that's
+  // going to time out anyway. This is a best-effort signal, not a
+  // guarantee — see shared/network-status.js for why (navigator.onLine
+  // fallback can be wrong in the "connected to Wi-Fi with no upstream"
+  // case). We deliberately do NOT skip the fetch attempt when this check
+  // itself fails to load/throws — that would risk turning a working
+  // request into a false "offline" error. It only short-circuits when we
+  // get a *confident* "not connected" answer.
+  try {
+    const { isOnline } = await import('./network-status.js');
+    if (!(await isOnline())) {
+      const err = new Error('No internet connection. Please check your network and try again.');
+      err.status = 0; // same convention the catch block below uses — callers already handle this
+      err.offlineDetected = true; // lets a caller distinguish "we knew before trying" from "fetch failed", if it cares
+      throw err;
+    }
+  } catch (preflightErr) {
+    // Re-throw only if it's the offline error we just constructed above;
+    // any other failure here (e.g. dynamic import glitch) should NOT
+    // block the actual request — fall through to the real fetch attempt.
+    if (preflightErr && preflightErr.offlineDetected) throw preflightErr;
+  }
+
   const token = await getValidAccessToken();
 
   let res;

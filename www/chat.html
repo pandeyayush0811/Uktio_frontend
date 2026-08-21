@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self'; font-src 'self'; connect-src 'self' https://utkio-backend.onrender.com http://10.215.18.30:3999 https://pwdglktwuquoswqoyely.supabase.co https://generativelanguage.googleapis.com wss://generativelanguage.googleapis.com https://*.sentry.io https://*.ingest.sentry.io; media-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';">
 <title>Utkio</title>
 <link rel="stylesheet" href="shared/style.css">
 <style>
@@ -987,6 +988,19 @@ async function startSession(){
     return;
   }
 
+  // Proactive offline check: fail fast instead of waiting on ai.live.connect()
+  // to time out. Best-effort signal (see shared/network-status.js) — checked
+  // after the key check so "invalid key" still takes priority when both are
+  // wrong, and before startKeepAlive() so we don't spin up the native
+  // keep-alive service for a connection we already know will fail.
+  const { isOnline } = await import('./shared/network-status.js');
+  if (!(await isOnline())){
+    isBusy = false;
+    micBtn.disabled = false;
+    setStatus('Internet connection nahi hai — check karke phir try karo.', 'err');
+    return;
+  }
+
   await startKeepAlive(); // before connect — covers the whole session below, mic + playback both
 
   setStatus('Gemini se connect ho raha hai...', null);
@@ -1194,6 +1208,17 @@ window.addEventListener('error', (e) => {
 });
 window.addEventListener('unhandledrejection', (e) => {
   console.error('unhandled promise rejection', e.reason);
+});
+
+// See shared/app-lifecycle.js. Deliberately observation-only — does NOT
+// touch `session`/`micListenerHandle`/audio state. The native
+// VoiceKeepAliveService keeps the actual mic+connection alive across
+// backgrounding, so there's nothing here to "reconnect"; this is just a
+// breadcrumb so a dropped session shows up in logs/Sentry instead of
+// silently confusing whoever's debugging a "voice stopped after I
+// switched apps" report.
+window.addEventListener('utkio:resume', () => {
+  console.info('[lifecycle] app resumed on chat.html — session active:', !!session);
 });
 
 micBtn.addEventListener('click', () => {

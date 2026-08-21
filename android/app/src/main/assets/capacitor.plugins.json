@@ -12,6 +12,10 @@
 		"classpath": "com.capacitorjs.plugins.browser.BrowserPlugin"
 	},
 	{
+		"pkg": "@capacitor/network",
+		"classpath": "com.capacitorjs.plugins.network.NetworkPlugin"
+	},
+	{
 		"pkg": "@capawesome/capacitor-google-sign-in",
 		"classpath": "io.capawesome.capacitorjs.plugins.googlesignin.GoogleSignInPlugin"
 	}
