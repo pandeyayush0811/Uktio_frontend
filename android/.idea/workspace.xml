@@ -4,18 +4,7 @@
     <option name="autoReloadType" value="NONE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="a9290705-c354-4871-9e50-654ac448cc40" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/caches/deviceStreaming.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/caches/deviceStreaming.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/gradle.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/gradle.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/settings.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/settings.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/shared/auth.js" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/shared/auth.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/assets/public/shared/mic-helpers.js" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/public/shared/mic-helpers.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../www/settings.html" beforeDir="false" afterPath="$PROJECT_DIR$/../www/settings.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../www/shared/auth.js" beforeDir="false" afterPath="$PROJECT_DIR$/../www/shared/auth.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../www/shared/mic-helpers.js" beforeDir="false" afterPath="$PROJECT_DIR$/../www/shared/mic-helpers.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../www/shared/secure-store.js" beforeDir="false" afterPath="$PROJECT_DIR$/../www/shared/secure-store.js" afterDir="false" />
-    </list>
+    <list default="true" id="a9290705-c354-4871-9e50-654ac448cc40" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -24,7 +13,7 @@
   <component name="ClangdSettings">
     <option name="formatViaClangd" value="false" />
   </component>
-  <component name="ExecutionTargetManager" SELECTED_TARGET="device_and_snapshot_combo_box_target[LocalEmulator::path=C:\Users\pande\.android\avd\Medium_Phone_2.avd]" />
+  <component name="ExecutionTargetManager" SELECTED_TARGET="device_and_snapshot_combo_box_target[PhysicalDevice::serial=10BF1H16K8005N1]" />
   <component name="ExternalProjectsData">
     <projectState path="$PROJECT_DIR$">
       <ProjectState />
