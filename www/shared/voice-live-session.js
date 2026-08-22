@@ -69,11 +69,12 @@ export function describeCloseEvent(e) {
 // that used to be five separate module-level variables in chat.html —
 // bundled into one object so a caller (scenario.html) doesn't have to
 // juggle them by hand.
-function createAudioPlayer(onSpeakingChange) {
+export function createAudioPlayer(onSpeakingChange) {
   let playCtx = null;
   let nextPlayTime = 0;
   let scheduledSources = [];
   let isModelSpeaking = false;
+  let onVisibilityChange = null;
 
   // Fires whenever isModelSpeaking flips, so a caller (scenario.html)
   // can show a real "mic is closed right now because Utkio is talking"
@@ -86,9 +87,20 @@ function createAudioPlayer(onSpeakingChange) {
     if (onSpeakingChange) onSpeakingChange(val);
   }
 
+  function ensureResumed() {
+    if (playCtx && playCtx.state === 'suspended') {
+      playCtx.resume().catch((e) => {
+        console.warn('AudioContext auto-resume failed:', e);
+      });
+    }
+  }
+
   return {
     async open() {
-      playCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+      const AudioCtxClass = (typeof window !== 'undefined' && (window.AudioContext || window.webkitAudioContext)) ||
+                            (typeof globalThis !== 'undefined' && (globalThis.AudioContext || globalThis.webkitAudioContext));
+      if (!AudioCtxClass) return;
+      playCtx = new AudioCtxClass({ sampleRate: 24000 });
       nextPlayTime = 0;
       // Mobile browsers frequently hand back a context in 'suspended' state,
       // especially if creation happens even a couple of async ticks away
@@ -99,10 +111,25 @@ function createAudioPlayer(onSpeakingChange) {
       if (playCtx.state === 'suspended') {
         try { await playCtx.resume(); } catch (e) { console.error('AudioContext resume failed', e); }
       }
+
+      // Auto-resume if app becomes visible after backgrounding or screen unlock / notification
+      if (typeof document !== 'undefined') {
+        onVisibilityChange = () => {
+          if (document.visibilityState === 'visible') {
+            ensureResumed();
+          }
+        };
+        document.addEventListener('visibilitychange', onVisibilityChange);
+      }
     },
     isModelSpeaking() { return isModelSpeaking; },
+    getPlayCtx() { return playCtx; },
     playChunk(base64Data) {
       if (!playCtx) return;
+
+      // Proactively auto-resume AudioContext if OS suspended it mid-session (notification chime, phone call, BT switch)
+      ensureResumed();
+
       try {
         setSpeaking(true);
         const int16 = base64ToInt16(base64Data);
@@ -142,6 +169,10 @@ function createAudioPlayer(onSpeakingChange) {
     },
     close() {
       this.stop();
+      if (onVisibilityChange && typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', onVisibilityChange);
+        onVisibilityChange = null;
+      }
       if (playCtx) { try { playCtx.close(); } catch (e) { /* ignore */ } playCtx = null; }
     }
   };
