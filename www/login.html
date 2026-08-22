@@ -358,7 +358,11 @@ document.getElementById('signupVerifyForm').addEventListener('submit', async (e)
       method: 'POST',
       body: JSON.stringify({ email: pendingSignupEmail, phone: pendingSignupPhone, token, password })
     });
+    if (!data.session || !data.session.access_token) {
+      throw new Error('Account created, but session could not be established. Please log in.');
+    }
     await saveSession(data.session);
+    setStatus('signupVerifyStatus', 'Account verified! Starting...', 'ok');
     await goToPostAuthDestination(text => setStatus('signupVerifyStatus', text));
     return; // navigating away
   } catch (err) {
