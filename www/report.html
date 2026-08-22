@@ -121,6 +121,16 @@ async function generateReport(){
       pollForReport();
       return;
     }
+    if (err.status === 402){
+      content.innerHTML = `
+        <div class="generate-state">
+          <div style="font-size:2.2rem; margin-bottom:12px;" aria-hidden="true">📊</div>
+          <h2 style="font-size:1.25rem; font-weight:700; margin-bottom:8px; color:var(--ink);">Report Limit Reached</h2>
+          <p style="margin-bottom:24px; color:var(--ink-dim);">${escapeHtml(err.message || 'Free trial ke reports use ho chuke hain — jaari rakhne ke liye plan lo.')}</p>
+          <a class="primary" href="pricing.html?reason=report_limit" style="display:inline-block; text-decoration:none; padding:12px 28px; border-radius:12px;">Upgrade Plan to View Analysis</a>
+        </div>`;
+      return;
+    }
     renderGenerateState('Report banane mein dikkat hui: ' + escapeHtml(err.message || 'Try again') + '.', true);
   } finally {
     generateInFlight = false;

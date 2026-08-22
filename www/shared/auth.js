@@ -5,7 +5,7 @@ import { secureGetItem, secureSetItem, secureRemoveItem, migrateLegacyKey } from
 import { cachedFetch, invalidateCache, invalidateAllCache } from './api-cache.js';
 import { removeApiKey } from './mic-helpers.js';
 
-const cfg = window.UKTIO_CONFIG;
+const cfg = (typeof window !== 'undefined' && window.UKTIO_CONFIG) || (typeof globalThis !== 'undefined' && globalThis.UKTIO_CONFIG) || {};
 const SESSION_KEY = 'utkio_session';
 
 // The session (access + refresh token) now lives in encrypted storage
@@ -377,19 +377,16 @@ export async function syncPendingChatSession() {
     const result = await apiFetch('/chat/sessions', { method: 'POST', body: JSON.stringify(payload) });
     try { localStorage.removeItem(PENDING_CHAT_SESSION_KEY); } catch (_) { /* ignore */ }
     invalidateChatSessionsCache(); // this session is now real — don't let a cached list hide it
+    invalidateCache('plan_status'); // trial credits just decremented — invalidate cache
     return result.session_id || null;
   } catch (err) {
-    // 409 = session locked (its report was already generated — see the
-    // resume-mode check in chatRoutes.js). This is a TERMINAL failure, not
-    // a "try again later" one: the server will refuse this exact payload
-    // forever, so retrying on every future app-open would just loop
-    // silently forever. Drop it instead. In practice this shouldn't happen
-    // — chat.html's own lock (has_report) stops the user from generating
-    // new turns for a reported session before this ever fires — but this
-    // is the backstop for whatever stale-state path got here anyway.
-    if (err.status === 409) {
-      console.warn('pending chat session was locked (report already generated) — discarding instead of retrying', err);
+    // 409 = session locked (report already generated)
+    // 402 = active plan required / trial credits exhausted
+    // Both are TERMINAL failures for saving this session. Discard to prevent endless retry loops.
+    if (err.status === 409 || err.status === 402) {
+      console.warn(`pending chat session discarded due to terminal status ${err.status}:`, err.message);
       try { localStorage.removeItem(PENDING_CHAT_SESSION_KEY); } catch (_) { /* ignore */ }
+      invalidateCache('plan_status');
       return null;
     }
     // Still unreachable/still failing — leave it in place, we'll retry

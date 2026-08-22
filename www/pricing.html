@@ -414,9 +414,16 @@ async function refreshPlanState(forceFresh = false) {
       trialBadge.textContent = 'You are here';
       trialBadge.style.display = '';
 
-      if (t.active) {
+      const reasonParam = new URLSearchParams(window.location.search).get('reason');
+      if (t.active && t.chats_remaining > 0 && t.reports_remaining > 0 && !reasonParam) {
         trialMsg.textContent = `${t.days_left} day${t.days_left !== 1 ? 's' : ''} remaining in your free trial.`;
         trialMsg.className = 'status-msg ok';
+      } else if (reasonParam === 'chat_limit' || t.chats_remaining <= 0) {
+        trialMsg.textContent = 'Free practice sessions use ho chuke hain — choose a plan below to continue.';
+        trialMsg.className = 'status-msg err';
+      } else if (reasonParam === 'report_limit' || t.reports_remaining <= 0) {
+        trialMsg.textContent = 'Free analysis reports use ho chuke hain — choose a plan below to continue.';
+        trialMsg.className = 'status-msg err';
       } else {
         trialMsg.textContent = 'Your free trial has ended — choose a plan below to continue.';
         trialMsg.className = 'status-msg err';

@@ -289,7 +289,7 @@
   const profile = await requireCompleteProfile();
   if (profile) window.__UKTIO_PROFILE = profile;
 
-  const planStatus = await requireActivePlan();
+  const planStatus = await requireActivePlan('chat');
   window.__UKTIO_PLAN_STATUS = planStatus;
   const bannerText = trialBannerText(planStatus);
   if (bannerText) {
