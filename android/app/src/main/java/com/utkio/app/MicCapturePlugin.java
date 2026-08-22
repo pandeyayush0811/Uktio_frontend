@@ -1,11 +1,14 @@
 package com.utkio.app;
 
+import android.media.AudioAttributes;
+import android.media.AudioFocusRequest;
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
 import android.media.audiofx.AcousticEchoCanceler;
 import android.media.audiofx.NoiseSuppressor;
+import android.os.Build;
 import android.util.Base64;
 import android.util.Log;
 import com.getcapacitor.JSObject;
@@ -34,6 +37,8 @@ public class MicCapturePlugin extends Plugin {
     private volatile boolean isRecording = false;
     private AcousticEchoCanceler echoCanceler;
     private NoiseSuppressor noiseSuppressor;
+    private AudioFocusRequest audioFocusRequest;
+    private AudioManager.OnAudioFocusChangeListener audioFocusChangeListener;
 
     private static final int SAMPLE_RATE = 16000;
     private static final int BUFFER_SAMPLES = 4096; // pehle wale ScriptProcessor jaisa hi chunk size
@@ -65,6 +70,39 @@ public class MicCapturePlugin extends Plugin {
             AudioManager audioManager = (AudioManager) getContext().getSystemService(android.content.Context.AUDIO_SERVICE);
             if (audioManager != null) {
                 audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
+
+                if (audioFocusChangeListener == null) {
+                    audioFocusChangeListener = new AudioManager.OnAudioFocusChangeListener() {
+                        @Override
+                        public void onAudioFocusChange(int focusChange) {
+                            if (focusChange == AudioManager.AUDIOFOCUS_LOSS ||
+                                focusChange == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT ||
+                                focusChange == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK) {
+                                Log.d("MicCapturePlugin", "Audio focus lost (call / system interruption): " + focusChange);
+                                JSObject data = new JSObject();
+                                data.put("reason", "audio_focus_loss");
+                                data.put("focusChange", focusChange);
+                                notifyListeners("interrupted", data);
+                                stopRecordingInternal();
+                            }
+                        }
+                    };
+                }
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    AudioAttributes playbackAttributes = new AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                            .build();
+                    audioFocusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE)
+                            .setAudioAttributes(playbackAttributes)
+                            .setAcceptsDelayedFocusGain(false)
+                            .setOnAudioFocusChangeListener(audioFocusChangeListener)
+                            .build();
+                    audioManager.requestAudioFocus(audioFocusRequest);
+                } else {
+                    audioManager.requestAudioFocus(audioFocusChangeListener, AudioManager.STREAM_VOICE_CALL, AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE);
+                }
             }
 
             int minBuf = AudioRecord.getMinBufferSize(
@@ -129,8 +167,7 @@ public class MicCapturePlugin extends Plugin {
         }
     }
 
-    @PluginMethod
-    public void stop(PluginCall call) {
+    private synchronized void stopRecordingInternal() {
         isRecording = false;
         if (recordingThread != null) {
             try { recordingThread.join(300); } catch (InterruptedException ignored) {}
@@ -152,9 +189,20 @@ public class MicCapturePlugin extends Plugin {
         try {
             AudioManager audioManager = (AudioManager) getContext().getSystemService(android.content.Context.AUDIO_SERVICE);
             if (audioManager != null) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && audioFocusRequest != null) {
+                    audioManager.abandonAudioFocusRequest(audioFocusRequest);
+                    audioFocusRequest = null;
+                } else if (audioFocusChangeListener != null) {
+                    audioManager.abandonAudioFocus(audioFocusChangeListener);
+                }
                 audioManager.setMode(AudioManager.MODE_NORMAL);
             }
         } catch (Exception ignored) {}
+    }
+
+    @PluginMethod
+    public void stop(PluginCall call) {
+        stopRecordingInternal();
         call.resolve();
     }
 

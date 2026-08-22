@@ -541,16 +541,10 @@ function buildSystemInstruction(){
   return instruction;
 }
 
-let session = null;
-let playCtx = null;
-let micListenerHandle = null;
-let nextPlayTime = 0;
 let isModelSpeaking = false;
-let scheduledSources = [];
 let currentUserLine = null;
 let currentModelLine = null;
 let isBusy = false;
-let errorAlreadyShown = false;
 
 // Local-write, batch-sync chat history: turns get pushed here live as the
 // conversation happens, persisted to localStorage at each turn boundary
@@ -831,6 +825,12 @@ const voiceSession = createVoiceSession({
     },
     onSpeakingChange: (isSpeaking) => {
       isModelSpeaking = isSpeaking;
+    },
+    onInterrupted: (info) => {
+      micBtn.disabled = false;
+      isBusy = false;
+      finalizeAndSyncSession();
+      setStatus('Call aane ki wajah se session pause ho gaya. Baat jari rakhne ke liye mic dabayein.', null);
     },
     onOpen: () => {
       micBtn.disabled = false;

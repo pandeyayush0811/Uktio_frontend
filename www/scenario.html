@@ -670,6 +670,14 @@ const voiceSession = createVoiceSession({
       // so this just makes that already-true fact VISIBLE via the dock.
       updateMicUI(isSpeaking);
     },
+    onInterrupted: (info) => {
+      sessionAttemptInFlight = false;
+      micBtn.disabled = false;
+      updateMicUI(false);
+      stopPhaseTimer();
+      persistLocalSession();
+      setStatus('Call aane ki wajah se scenario pause ho gaya. Continue karne ke liye mic dabayein.', null);
+    },
     onOpen: () => {
       sessionAttemptInFlight = false;
       micBtn.disabled = false;

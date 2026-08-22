@@ -211,6 +211,7 @@ async function stopKeepAlive() {
 //   onTurnComplete()                  — model finished a turn
 //   onOpen()                          — connection established
 //   onClose(closeEvent)               — connection ended (any reason)
+//   onInterrupted(info)               — session interrupted by incoming call / audio focus loss
 //   onSpeakingChange(isSpeaking)      — Utkio started/stopped talking —
 //                                        this is the real "mic is
 //                                        live-muted right now" signal;
@@ -224,6 +225,7 @@ export function createVoiceSession({ getSystemInstruction, voiceName = 'Puck', c
   let session = null;
   let audioPlayer = null;
   let micListenerHandle = null;
+  let interruptionListenerHandle = null;
   let isBusy = false;
   let errorAlreadyShown = false;
 
@@ -239,6 +241,15 @@ export function createVoiceSession({ getSystemInstruction, voiceName = 'Puck', c
         callbacks.onStatus && callbacks.onStatus('Audio bhejte waqt error: ' + err.message, 'err');
       }
     });
+
+    interruptionListenerHandle = await MicCapture.addListener('interrupted', (info) => {
+      console.warn('Mic capture interrupted by incoming call / audio focus loss:', info);
+      if (callbacks.onInterrupted) {
+        callbacks.onInterrupted(info);
+      }
+      stop(false);
+    });
+
     await MicCapture.start();
   }
 
@@ -250,6 +261,10 @@ export function createVoiceSession({ getSystemInstruction, voiceName = 'Puck', c
     if (micListenerHandle) {
       try { await micListenerHandle.remove(); } catch (e) { /* ignore */ }
       micListenerHandle = null;
+    }
+    if (interruptionListenerHandle) {
+      try { await interruptionListenerHandle.remove(); } catch (e) { /* ignore */ }
+      interruptionListenerHandle = null;
     }
   }
 
