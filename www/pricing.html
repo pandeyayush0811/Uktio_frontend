@@ -126,12 +126,16 @@
         <path d="M20 46h24" stroke="var(--ink-dim)" stroke-width="2" stroke-linecap="round"/>
         <path d="M46 20l2 2M49 24l2 0M45 26l1.5 1.5" stroke="var(--accent-orange)" stroke-width="1.6" stroke-linecap="round"/>
       </svg>
-      <div class="plan-tagline" id="trialTagline">3 days free — 5 chats + 5 reports included</div>
+      <div class="plan-tagline" id="trialTagline">3 days free — 5 chats, 1 scenario + 5 reports included</div>
       <div class="plan-price"><span class="rupee">₹</span><span class="amount">0</span><span class="period">/ 3 days</span></div>
       <ul class="plan-features">
         <li>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="8.5 12 11 14.5 15.5 9.5"/></svg>
           <span id="trialChatsLine">5 voice practice sessions</span>
+        </li>
+        <li>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="8.5 12 11 14.5 15.5 9.5"/></svg>
+          <span id="trialScenariosLine">1 real-world scenario simulation</span>
         </li>
         <li>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="8.5 12 11 14.5 15.5 9.5"/></svg>
@@ -407,6 +411,10 @@ async function refreshPlanState(forceFresh = false) {
       const t = status.trial;
       document.getElementById('trialChatsLine').textContent =
         `${t.chats_remaining} / ${t.chat_limit} voice practice sessions remaining`;
+      const scenariosEl = document.getElementById('trialScenariosLine');
+      if (scenariosEl && t.scenarios_remaining !== undefined) {
+        scenariosEl.textContent = `${t.scenarios_remaining} / ${t.scenario_limit || 1} scenario simulation remaining`;
+      }
       document.getElementById('trialReportsLine').textContent =
         `${t.reports_remaining} / ${t.report_limit} analysis reports + quizzes remaining`;
 
@@ -415,11 +423,16 @@ async function refreshPlanState(forceFresh = false) {
       trialBadge.style.display = '';
 
       const reasonParam = new URLSearchParams(window.location.search).get('reason');
-      if (t.active && t.chats_remaining > 0 && t.reports_remaining > 0 && !reasonParam) {
+      const hasCredits = t.chats_remaining > 0 || (t.scenarios_remaining !== undefined ? t.scenarios_remaining > 0 : false) || t.reports_remaining > 0;
+
+      if (t.active && !reasonParam && hasCredits) {
         trialMsg.textContent = `${t.days_left} day${t.days_left !== 1 ? 's' : ''} remaining in your free trial.`;
         trialMsg.className = 'status-msg ok';
       } else if (reasonParam === 'chat_limit' || t.chats_remaining <= 0) {
         trialMsg.textContent = 'Free practice sessions use ho chuke hain — choose a plan below to continue.';
+        trialMsg.className = 'status-msg err';
+      } else if (reasonParam === 'scenario_limit' || (t.scenarios_remaining !== undefined && t.scenarios_remaining <= 0)) {
+        trialMsg.textContent = 'Free scenario simulation use ho chuka hai — choose a plan below to continue.';
         trialMsg.className = 'status-msg err';
       } else if (reasonParam === 'report_limit' || t.reports_remaining <= 0) {
         trialMsg.textContent = 'Free analysis reports use ho chuke hain — choose a plan below to continue.';

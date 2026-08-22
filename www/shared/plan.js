@@ -59,33 +59,50 @@ export async function requireActivePlan(kind = 'chat') {
     return status;
   }
 
-  // Trial users: verify specific permission for chat vs report
-  const canPerform = (kind === 'report') ? status.can_report : status.can_chat;
+  // Trial users: verify specific permission for chat vs scenario vs report
+  const canPerform = (kind === 'report')
+    ? status.can_report
+    : (kind === 'scenario' ? status.can_scenario : status.can_chat);
+
   const allowed = (canPerform !== undefined)
     ? canPerform
     : Boolean(status.active && status.trial && (
-        kind === 'report' ? status.trial.reports_remaining > 0 : status.trial.chats_remaining > 0
+        kind === 'report'
+          ? status.trial.reports_remaining > 0
+          : (kind === 'scenario'
+              ? (status.trial.scenarios_remaining !== undefined ? status.trial.scenarios_remaining > 0 : true)
+              : status.trial.chats_remaining > 0)
       ));
 
   if (!allowed) {
     const reason = (!status.active || (status.trial && !status.trial.active))
       ? 'trial_expired'
-      : (kind === 'report' ? 'report_limit' : 'chat_limit');
+      : (kind === 'report' ? 'report_limit' : (kind === 'scenario' ? 'scenario_limit' : 'chat_limit'));
     window.location.href = 'pricing.html?reason=' + encodeURIComponent(reason);
     return null;
   }
   return status;
 }
 
-// Short Hinglish banner text for "X chats / Y reports left" during an
+// Short Hinglish banner text for "X chats / Y scenarios / Z reports left" during an
 // active trial, or null if there's nothing worth showing (paid plan, or
 // status unavailable). Pages like chat.html/pricing.html can drop this
 // straight into a banner element.
 export function trialBannerText(status) {
   if (!status || !status.trial || !status.trial.active) return null;
-  const { chats_remaining, reports_remaining, days_left } = status.trial;
-  if (chats_remaining <= 0 && reports_remaining <= 0) {
+  const { chats_remaining, reports_remaining, scenarios_remaining, days_left } = status.trial;
+  const scenariosLeft = scenarios_remaining !== undefined ? scenarios_remaining : 0;
+
+  if (chats_remaining <= 0 && reports_remaining <= 0 && scenariosLeft <= 0) {
     return 'Free trial limits reached — Upgrade to continue practicing.';
   }
-  return `Free trial: ${chats_remaining} chat${chats_remaining !== 1 ? 's' : ''} and ${reports_remaining} report${reports_remaining !== 1 ? 's' : ''} remaining (${formatTrialTimeLeft(days_left)}).`;
+
+  const parts = [];
+  parts.push(`${chats_remaining} chat${chats_remaining !== 1 ? 's' : ''}`);
+  if (scenarios_remaining !== undefined) {
+    parts.push(`${scenarios_remaining} scenario${scenarios_remaining !== 1 ? 's' : ''}`);
+  }
+  parts.push(`${reports_remaining} report${reports_remaining !== 1 ? 's' : ''}`);
+
+  return `Free trial: ${parts.join(', ')} remaining (${formatTrialTimeLeft(days_left)}).`;
 }
