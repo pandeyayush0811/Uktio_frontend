@@ -911,6 +911,11 @@ async function finalizeAndSyncSession(){
     const syncedSessionId = await syncPendingChatSession();
     if (syncedSessionId){
       activeSessionId = syncedSessionId;
+      if (!window.location.search.includes('resume=')) {
+        try {
+          window.history.replaceState({}, '', 'chat.html?resume=' + encodeURIComponent(syncedSessionId));
+        } catch (e) { /* ignore */ }
+      }
       // Just-finished turns synced successfully — check if this session now
       // crosses the report threshold, and if so surface the pill immediately
       // instead of making the user go find it in History.
