@@ -765,6 +765,23 @@ const voiceSession = createVoiceSession({
         setStatus(`Scenario pause ho gaya (${timeStr} bacha hai). Continue karne ke liye mic dabayein.`, null);
       }
     },
+    onInactivityTimeout: (info) => {
+      sessionAttemptInFlight = false;
+      micBtn.disabled = false;
+      updateMicUI(false);
+      stopPhaseTimer();
+      persistLocalSession();
+      if (phase === 'feedback') {
+        finalizeAndSyncSession();
+        lockChatForToday();
+      } else {
+        const min = Math.floor(phaseSecondsLeft / 60);
+        const sec = phaseSecondsLeft % 60;
+        const timeStr = `${min}:${sec < 10 ? '0' : ''}${sec}`;
+        const reasonText = info && info.reason === 'stagnant_turn' ? 'Inactivity' : '90s silence';
+        setStatus(`Scenario paused due to ${reasonText} (${timeStr} remaining). Tap mic to continue.`, null);
+      }
+    },
     onOpen: () => {
       sessionAttemptInFlight = false;
       micBtn.disabled = false;

@@ -21,11 +21,35 @@ import { DEFAULT_LIVE_MODEL } from './config.js';
 // Reads from window.UKTIO_CONFIG.LIVE_MODEL if present, with fallback to DEFAULT_LIVE_MODEL.
 export const LIVE_MODEL = (typeof window !== 'undefined' && window.UKTIO_CONFIG?.LIVE_MODEL) || DEFAULT_LIVE_MODEL;
 
+// Inactivity & silence thresholds:
+// 1. INACTIVITY_TIMEOUT_MS: 90 seconds of silence (neither user nor model speaking)
+// 2. STAGNANT_TURN_TIMEOUT_MS: 120 seconds of continuous room chatter / background noise without a completed AI turn
+// 3. RMS_SPEECH_THRESHOLD: 0.015 RMS normalized energy (filters out background fan / ambient quiet room noise)
+export const INACTIVITY_TIMEOUT_MS = 90 * 1000;
+export const STAGNANT_TURN_TIMEOUT_MS = 120 * 1000;
+export const RMS_SPEECH_THRESHOLD = 0.015;
+
 function base64ToInt16(base64) {
   const binary = atob(base64);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
   return new Int16Array(bytes.buffer);
+}
+
+export function calculatePcmRms(base64Data) {
+  if (!base64Data || typeof base64Data !== 'string') return 0;
+  try {
+    const samples = base64ToInt16(base64Data);
+    if (!samples.length) return 0;
+    let sumSquares = 0;
+    for (let i = 0; i < samples.length; i++) {
+      const normalized = samples[i] / 32768;
+      sumSquares += normalized * normalized;
+    }
+    return Math.sqrt(sumSquares / samples.length);
+  } catch (e) {
+    return 0;
+  }
 }
 
 export function describeMicError(err) {
@@ -208,6 +232,10 @@ async function stopKeepAlive() {
 //   onStatus(text, mode)              — mode: null | 'live' | 'err'
 //   onUserText(text)                  — incremental input transcription
 //   onModelText(text)                 — incremental output transcription
+// callbacks:
+//   onStatus(text, mode)              — mode: null | 'live' | 'err'
+//   onUserText(text)                  — incremental input transcription
+//   onModelText(text)                 — incremental output transcription
 //   onTurnComplete()                  — model finished a turn
 //   onOpen()                          — connection established
 //   onClose(closeEvent)               — connection ended (any reason)
@@ -221,19 +249,92 @@ async function stopKeepAlive() {
 //                                        page should mirror this in the
 //                                        UI rather than just guessing
 //                                        from turn boundaries.
-export function createVoiceSession({ getSystemInstruction, voiceName = 'Puck', callbacks = {} }) {
+//   onInactivityTimeout(info)         — triggered on 90s silence or 120s stagnant turn
+export function createVoiceSession({
+  getSystemInstruction,
+  voiceName = 'Puck',
+  inactivityTimeoutMs = INACTIVITY_TIMEOUT_MS,
+  stagnantTurnTimeoutMs = STAGNANT_TURN_TIMEOUT_MS,
+  callbacks = {}
+}) {
   let session = null;
   let audioPlayer = null;
   let micListenerHandle = null;
   let interruptionListenerHandle = null;
   let isBusy = false;
   let errorAlreadyShown = false;
+  let lastActiveTime = Date.now();
+  let lastTurnTime = Date.now();
+  let watchdogIntervalHandle = null;
+
+  function startWatchdog() {
+    stopWatchdog();
+    lastActiveTime = Date.now();
+    lastTurnTime = Date.now();
+    watchdogIntervalHandle = setInterval(() => {
+      if (!session) {
+        stopWatchdog();
+        return;
+      }
+      // If model is actively speaking or scheduled to speak, keep resetting silence timer
+      if (audioPlayer && audioPlayer.isModelSpeaking()) {
+        lastActiveTime = Date.now();
+        return;
+      }
+      const now = Date.now();
+      const silenceElapsed = now - lastActiveTime;
+      const turnElapsed = now - lastTurnTime;
+
+      if (silenceElapsed >= inactivityTimeoutMs) {
+        console.warn(`[voice-session] Inactivity timeout reached (${silenceElapsed}ms silence). Stopping session.`);
+        triggerInactivityTeardown('silence');
+      } else if (turnElapsed >= stagnantTurnTimeoutMs) {
+        console.warn(`[voice-session] Stagnant turn timeout reached (${turnElapsed}ms without turn completion). Stopping session.`);
+        triggerInactivityTeardown('stagnant_turn');
+      }
+    }, 1000);
+  }
+
+  function stopWatchdog() {
+    if (watchdogIntervalHandle) {
+      clearInterval(watchdogIntervalHandle);
+      watchdogIntervalHandle = null;
+    }
+  }
+
+  function recordUserActivity() {
+    lastActiveTime = Date.now();
+  }
+
+  function recordTurnActivity() {
+    lastActiveTime = Date.now();
+    lastTurnTime = Date.now();
+  }
+
+  function triggerInactivityTeardown(reason) {
+    stopWatchdog();
+    stop(false);
+    const message = reason === 'stagnant_turn'
+      ? 'Session paused due to extended inactivity. Tap mic to continue.'
+      : 'Session closed due to 90 seconds of inactivity. Tap mic to resume.';
+    callbacks.onStatus && callbacks.onStatus(message, null);
+    if (callbacks.onInactivityTimeout) {
+      callbacks.onInactivityTimeout({ reason, silenceElapsed: Date.now() - lastActiveTime });
+    }
+  }
 
   async function startNativeMic() {
     const MicCapture = getMicCapturePlugin();
     micListenerHandle = await MicCapture.addListener('audioChunk', (data) => {
       if (!session || !data || !data.audio) return;
       if (audioPlayer && audioPlayer.isModelSpeaking()) return;
+
+      // Filter out low-energy ambient room noise (RMS < RMS_SPEECH_THRESHOLD)
+      const rms = calculatePcmRms(data.audio);
+      if (rms >= RMS_SPEECH_THRESHOLD) {
+        recordUserActivity();
+      }
+
       try {
         session.sendRealtimeInput({ audio: { data: data.audio, mimeType: 'audio/pcm;rate=16000' } });
       } catch (err) {
@@ -276,12 +377,15 @@ export function createVoiceSession({ getSystemInstruction, voiceName = 'Puck', c
       if (content.interrupted && audioPlayer) audioPlayer.stop();
 
       if (content.inputTranscription && content.inputTranscription.text) {
+        recordUserActivity();
         callbacks.onUserText && callbacks.onUserText(content.inputTranscription.text);
       }
       if (content.outputTranscription && content.outputTranscription.text) {
+        recordUserActivity();
         callbacks.onModelText && callbacks.onModelText(content.outputTranscription.text);
       }
       if (content.modelTurn && content.modelTurn.parts) {
+        recordUserActivity();
         for (const part of content.modelTurn.parts) {
           if (part.inlineData && part.inlineData.data && audioPlayer) {
             audioPlayer.playChunk(part.inlineData.data);
@@ -289,6 +393,7 @@ export function createVoiceSession({ getSystemInstruction, voiceName = 'Puck', c
         }
       }
       if (content.turnComplete) {
+        recordTurnActivity();
         callbacks.onTurnComplete && callbacks.onTurnComplete();
       }
     } catch (err) {
@@ -369,6 +474,7 @@ export function createVoiceSession({ getSystemInstruction, voiceName = 'Puck', c
           onopen: () => {
             callbacks.onStatus && callbacks.onStatus('Connected — mic on, bolna shuru karo', 'live');
             isBusy = false;
+            startWatchdog();
             callbacks.onOpen && callbacks.onOpen();
           },
           onmessage: (msg) => handleMessage(msg),
@@ -380,6 +486,7 @@ export function createVoiceSession({ getSystemInstruction, voiceName = 'Puck', c
             stop(true);
           },
           onclose: (e) => {
+            stopWatchdog();
             if (!errorAlreadyShown) {
               const msg = describeCloseEvent(e);
               callbacks.onStatus && callbacks.onStatus(msg || 'Session band ho gaya.', msg ? 'err' : null);
@@ -408,6 +515,7 @@ export function createVoiceSession({ getSystemInstruction, voiceName = 'Puck', c
     } catch (err) {
       console.error('connect error', err);
       isBusy = false;
+      stopWatchdog();
       stopKeepAlive(); // connect itself failed — no session was ever created, so stop() below never runs to release this
       if (audioPlayer) { audioPlayer.close(); audioPlayer = null; }
       return { ok: false, reason: 'connect_failed', message: describeConnectError(err) };
@@ -425,6 +533,7 @@ export function createVoiceSession({ getSystemInstruction, voiceName = 'Puck', c
   // boundary and responds right away instead of waiting for more input.
   function sendTextTurn(text) {
     if (!session) return false;
+    recordTurnActivity();
     try {
       session.sendClientContent({ turns: [{ role: 'user', parts: [{ text }] }], turnComplete: true });
       return true;
@@ -436,6 +545,7 @@ export function createVoiceSession({ getSystemInstruction, voiceName = 'Puck', c
   }
 
   function stop(silent) {
+    stopWatchdog();
     stopKeepAlive();
     stopNativeMic().catch((e) => console.error('stopNativeMic error', e));
     if (audioPlayer) { audioPlayer.close(); audioPlayer = null; }

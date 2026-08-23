@@ -833,6 +833,15 @@ const voiceSession = createVoiceSession({
       finalizeAndSyncSession();
       setStatus('Call aane ki wajah se session pause ho gaya. Baat jari rakhne ke liye mic dabayein.', null);
     },
+    onInactivityTimeout: (info) => {
+      micBtn.disabled = false;
+      isBusy = false;
+      finalizeAndSyncSession();
+      const msg = info && info.reason === 'stagnant_turn'
+        ? 'Session paused due to extended inactivity. Tap mic to continue.'
+        : 'Session closed due to 90 seconds of inactivity. Tap mic to resume.';
+      setStatus(msg, null);
+    },
     onOpen: () => {
       micBtn.disabled = false;
       isBusy = false;
