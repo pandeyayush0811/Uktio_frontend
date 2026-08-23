@@ -47,4 +47,11 @@ describe('getPhaseBadgeState', () => {
     const state = getPhaseBadgeState('roleplay', 0);
     expect(state.value).toBe('0:00');
   });
+
+  it('correctly handles mid-session resume remaining time (e.g. 100s = 1:40)', () => {
+    const state = getPhaseBadgeState('roleplay', 100);
+    expect(state.value).toBe('1:40');
+    expect(state.cssClass).toBe('live');
+  });
 });
+

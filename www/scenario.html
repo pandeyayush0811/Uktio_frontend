@@ -328,13 +328,13 @@ function toneHintForAge(age) {
   return '';
 }
 
-function buildPhase1Instruction(scenario, profile) {
+function buildPhase1Instruction(scenario, profile, pastTurns = []) {
   const userName = (profile.name && profile.name.trim()) || null;
   const nameNote = userName
     ? `User ka naam "${userName}" hai — agar scene mein naturally naam poochna/use karna banta ho to karo, force mat karo.`
     : `User ka naam pata nahi hai is scene ke character ko — agar zaroorat pade to naturally poochh sakte ho.`;
 
-  return `ROLE — TUM EK CHARACTER HO, AI NAHI:
+  let instruction = `ROLE — TUM EK CHARACTER HO, AI NAHI:
 Tum "Utkio" ke ek roleplay character ho jo user ke saath EK REAL-LIFE SCENARIO simulate kar raha hai, taaki wo English speaking practice kar sake. Tum teacher ya app nahi ho — tum ek GENUINE INSAAN ki tarah act karoge, poori tarah in-character, jab tak isi message mein tumhe explicitly bola na jaaye character chhodne ko.
 
 CHARACTER BRIEF:
@@ -372,6 +372,18 @@ Judge karne wala kabhi mat bano. Agar scene "fail" ho jaaye (user baar-baar conf
 
 CHARACTER LOCK:
 Jab tak agla message tumhe explicitly na kahe "character chhodo", tum HAMESHA is character mein raho — kabhi khud se AI/tutor mode mein switch mat karo.`;
+
+  const meaningfulPast = (pastTurns || []).filter(t => t.content && t.content.trim() && t.phase === 'roleplay');
+  if (meaningfulPast.length > 0) {
+    const dialogueText = meaningfulPast.map(t => (t.role === 'user' ? 'User' : 'You (Character)') + ': ' + t.content).join('\n');
+    instruction += `\n\nPREVIOUS CONVERSATION IN THIS SCENE (ALREADY HAPPENED BEFORE INTERRUPTION):
+${dialogueText}
+
+CONTINUATION INSTRUCTION:
+The roleplay was interrupted and is now resuming. The previous conversation above has ALREADY taken place. DO NOT repeat your opening line or start the scene over. Directly and naturally continue the conversation from the last exchange in-character.`;
+  }
+
+  return instruction;
 }
 
 function buildPhase2Instruction(profile) {
@@ -575,15 +587,14 @@ function updatePhaseRing(){
 }
 
 function startPhaseTimer(){
-  // Wall-clock based, not a decrementing counter. setInterval ticks get
-  // throttled/paused by the OS when the tab/app is backgrounded (screen
-  // off, app-switch), so a plain "-1 per tick" counter silently drifts —
-  // by the time it hits zero, real elapsed time can be well past 3:00.
-  // Anchoring to a fixed end-timestamp and recomputing the remainder each
-  // tick self-corrects regardless of how many ticks were missed.
-  const phaseEndAt = Date.now() + PHASE_1_DURATION_SECONDS * 1000;
-  phaseSecondsLeft = PHASE_1_DURATION_SECONDS;
+  // Wall-clock based, anchoring to remaining seconds rather than hardcoded 180.
+  if (phaseSecondsLeft <= 0) {
+    switchToFeedbackPhase();
+    return;
+  }
+  const phaseEndAt = Date.now() + phaseSecondsLeft * 1000;
   updatePhaseRing();
+  stopPhaseTimer();
   phaseTimerHandle = setInterval(() => {
     phaseSecondsLeft = Math.max(0, Math.ceil((phaseEndAt - Date.now()) / 1000));
     updatePhaseRing();
@@ -645,7 +656,7 @@ function updateMicUI(isSpeaking){
 // ─────────────────────────────────────────────────────────────
 
 const voiceSession = createVoiceSession({
-  getSystemInstruction: () => buildPhase1Instruction(todaysScenario, window.__UKTIO_PROFILE || {}),
+  getSystemInstruction: () => buildPhase1Instruction(todaysScenario, window.__UKTIO_PROFILE || {}, sessionTurns),
   callbacks: {
     onStatus: (text, mode) => setStatus(text, mode),
     onUserText: (text) => {
@@ -676,7 +687,19 @@ const voiceSession = createVoiceSession({
       updateMicUI(false);
       stopPhaseTimer();
       persistLocalSession();
-      setStatus('Call aane ki wajah se scenario pause ho gaya. Continue karne ke liye mic dabayein.', null);
+
+      if (phase === 'feedback') {
+        // Feedback phase was reached — scenario is complete for today.
+        finalizeAndSyncSession();
+        lockChatForToday();
+        setStatus("Aaj ka scenario complete! Kal ek naya scenario milega.", null);
+      } else {
+        // Phase 1 (roleplay) paused: preserve remaining time and turns for tap-to-resume
+        const min = Math.floor(phaseSecondsLeft / 60);
+        const sec = phaseSecondsLeft % 60;
+        const timeStr = `${min}:${sec < 10 ? '0' : ''}${sec}`;
+        setStatus(`Scenario pause ho gaya (${timeStr} bacha hai). Continue karne ke liye mic dabayein.`, null);
+      }
     },
     onOpen: () => {
       sessionAttemptInFlight = false;
@@ -689,22 +712,19 @@ const voiceSession = createVoiceSession({
       updateMicUI(false);
       stopPhaseTimer();
 
-      const completedProperly = explicitStop || (phase === 'feedback' && feedbackResponseReceived);
-
-      if (!completedProperly) {
-        // Unexpected drop (network blip, server-side error close, etc.)
-        // mid-roleplay or before any feedback text arrived. Do NOT lock
-        // the day or mark the scenario complete — persist what we have
-        // locally so nothing is lost, but let the user reconnect into
-        // the same scenario instead of silently burning today's attempt.
-        persistLocalSession();
-        setStatus('Connection toot gaya. Dobara try karo — aaj ka scenario abhi bhi available hai.', 'err');
-        micBtn.disabled = false;
-        phase = 'idle';
+      if (phase === 'feedback') {
+        // Feedback phase was reached — scenario is complete for today.
+        finalizeAndSyncSession();
+        lockChatForToday();
         return;
       }
 
-      finalizeAndSyncSession();
+      // Mid-roleplay pause or drop:
+      persistLocalSession();
+      const min = Math.floor(phaseSecondsLeft / 60);
+      const sec = phaseSecondsLeft % 60;
+      const timeStr = `${min}:${sec < 10 ? '0' : ''}${sec}`;
+      setStatus(`Scenario pause ho gaya (${timeStr} bacha hai). Continue karne ke liye mic dabayein.`, null);
     }
   }
 });
@@ -723,8 +743,13 @@ let sessionAttemptInFlight = false;
 async function startSession(){
   if (voiceSession.isActive() || !todaysScenario) return;
 
+  if (phase === 'feedback' || lockedBanner.classList.contains('show')) {
+    setStatus("Aaj ka scenario already complete hai.", null);
+    return;
+  }
+
   sessionAttemptInFlight = true;
-  sessionStartedAt = new Date().toISOString();
+  if (!sessionStartedAt) sessionStartedAt = new Date().toISOString();
   phase = 'roleplay';
   explicitStop = false;
   feedbackResponseReceived = false;
