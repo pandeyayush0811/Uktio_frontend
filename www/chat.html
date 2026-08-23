@@ -594,7 +594,7 @@ let isLocked = false; // true once this resumed session already has a report —
 let knownTurnCount = 0; // running count for THIS session, seeded from resume data below, incremented locally as turns sync — avoids an extra network round-trip just to re-check the report-eligibility threshold after every save
 
 function showReportPill(sessionId, hasReport){
-  reportPill.textContent = hasReport ? '📊 Report dekho' : '📊 Report banao';
+  reportPill.textContent = hasReport ? '📊 View report' : '📊 Generate report';
   reportPill.onclick = () => {
     // Disable immediately so a fast double-tap can't fire this twice —
     // the actual duplicate-request protection is server-side (see the
@@ -675,7 +675,7 @@ function addLine(role){
   div.className = 'line ' + role;
   const tag = document.createElement('span');
   tag.className = 'tag';
-  tag.textContent = role === 'user' ? 'Tum' : 'Bolo';
+  tag.textContent = role === 'user' ? 'You' : 'Bolo';
   const text = document.createElement('span');
   text.className = 'text';
   div.appendChild(tag);
@@ -725,7 +725,7 @@ function addHistoricalLine(role, content){
   div.className = 'line ' + (isUser ? 'user' : 'model');
   const tag = document.createElement('span');
   tag.className = 'tag';
-  tag.textContent = isUser ? 'Tum' : 'Bolo';
+  tag.textContent = isUser ? 'You' : 'Bolo';
   const text = document.createElement('span');
   text.className = 'text';
   text.textContent = content;
@@ -831,7 +831,7 @@ const voiceSession = createVoiceSession({
       micBtn.disabled = false;
       isBusy = false;
       finalizeAndSyncSession();
-      setStatus('Call aane ki wajah se session pause ho gaya. Baat jari rakhne ke liye mic dabayein.', null);
+      setStatus('Call received — session paused. Tap mic to continue.', null);
     },
     onInactivityTimeout: (info) => {
       micBtn.disabled = false;
@@ -882,7 +882,7 @@ async function startSession(){
     console.error('startSession failed:', err);
     isBusy = false;
     micBtn.disabled = false;
-    setStatus('Mic start karte waqt error aaya — dobara try karo.', 'err');
+    setStatus('Could not start microphone — please try again.', 'err');
   }
 }
 
@@ -994,7 +994,7 @@ window.addEventListener('utkio:resume', () => {
 
 registerBackHandler(() => {
   if (voiceSession && voiceSession.isActive()) {
-    const leave = window.confirm('Active chat chal raha hai. Kya aap is conversation ko chhodkar jaana chahte hain?');
+    const leave = window.confirm('You have an active chat session. Are you sure you want to leave?');
     if (leave) {
       voiceSession.stop();
       return false;
@@ -1008,7 +1008,7 @@ if (topbarSettings) {
   topbarSettings.addEventListener('click', (e) => {
     if (voiceSession && voiceSession.isActive()) {
       e.preventDefault();
-      const leave = window.confirm('Active chat chal raha hai. Kya aap is conversation ko chhodkar jaana chahte hain?');
+      const leave = window.confirm('You have an active chat session. Are you sure you want to leave?');
       if (leave) {
         voiceSession.stop();
         window.location.href = topbarSettings.href;

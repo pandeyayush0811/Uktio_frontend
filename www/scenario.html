@@ -608,7 +608,7 @@ function restoreScenarioState() {
       const min = Math.floor(phaseSecondsLeft / 60);
       const sec = phaseSecondsLeft % 60;
       const timeStr = `${min}:${sec < 10 ? '0' : ''}${sec}`;
-      setStatus(`Scenario in progress (${timeStr} bacha hai) — Tap mic to continue`, null);
+      setStatus(`Scenario in progress (${timeStr} remaining) — Tap mic to continue`, null);
     }
   } catch (e) {
     console.warn('restoreScenarioState failed:', e);
@@ -708,7 +708,7 @@ function updateMicUI(isSpeaking){
     micCaptionSub.textContent = 'Mic is off right now';
   } else if (phase === 'feedback') {
     micCaptionTitle.textContent = 'Your turn';
-    micCaptionSub.textContent = 'Doubt ho to poochho';
+    micCaptionSub.textContent = 'Ask any questions or clarifications';
   } else {
     micCaptionTitle.textContent = 'Tap to speak';
     micCaptionSub.textContent = 'Speak clearly and naturally';
@@ -756,13 +756,13 @@ const voiceSession = createVoiceSession({
         // Feedback phase was reached — scenario is complete for today.
         finalizeAndSyncSession();
         lockChatForToday();
-        setStatus("Aaj ka scenario complete! Kal ek naya scenario milega.", null);
+        setStatus("Today's scenario complete! A new scenario will be available tomorrow.", null);
       } else {
         // Phase 1 (roleplay) paused: preserve remaining time and turns for tap-to-resume
         const min = Math.floor(phaseSecondsLeft / 60);
         const sec = phaseSecondsLeft % 60;
         const timeStr = `${min}:${sec < 10 ? '0' : ''}${sec}`;
-        setStatus(`Scenario pause ho gaya (${timeStr} bacha hai). Continue karne ke liye mic dabayein.`, null);
+        setStatus(`Scenario paused (${timeStr} remaining). Tap mic to continue.`, null);
       }
     },
     onInactivityTimeout: (info) => {
@@ -805,7 +805,7 @@ const voiceSession = createVoiceSession({
       const min = Math.floor(phaseSecondsLeft / 60);
       const sec = phaseSecondsLeft % 60;
       const timeStr = `${min}:${sec < 10 ? '0' : ''}${sec}`;
-      setStatus(`Scenario pause ho gaya (${timeStr} bacha hai). Continue karne ke liye mic dabayein.`, null);
+      setStatus(`Scenario paused (${timeStr} remaining). Tap mic to continue.`, null);
     }
   }
 });
@@ -825,7 +825,7 @@ async function startSession(){
   if (voiceSession.isActive() || !todaysScenario) return;
 
   if (phase === 'feedback' || lockedBanner.classList.contains('show')) {
-    setStatus("Aaj ka scenario already complete hai.", null);
+    setStatus("Today's scenario is already complete.", null);
     return;
   }
 
@@ -844,10 +844,10 @@ async function startSession(){
     sessionAttemptInFlight = false;
     micBtn.disabled = false;
     if (result.reason === 'no_api_key'){
-      setStatus('Add your Gemini API key in Settings first.', 'err');
+      setStatus('Please add your AI Access Key in Settings.', 'err');
       setTimeout(() => { window.location.href = 'settings.html?needsKey=missing'; }, 1200);
     } else if (result.reason === 'invalid_api_key'){
-      setStatus((result.message || 'Invalid API key') + ' — go to Settings to fix this.', 'err');
+      setStatus((result.message || 'Invalid AI Key') + ' — go to Settings to fix this.', 'err');
       setTimeout(() => { window.location.href = 'settings.html?needsKey=invalid'; }, 1600);
     } else {
       setStatus(result.message || 'Could not connect.', 'err');
@@ -921,7 +921,7 @@ window.addEventListener('utkio:resume', () => {
 
 registerBackHandler(() => {
   if (voiceSession.isActive()) {
-    const leave = window.confirm('Active scenario chal raha hai. Kya aap is session ko chhodkar jaana chahte hain?');
+    const leave = window.confirm('You have an active scenario session. Are you sure you want to leave?');
     if (leave) {
       voiceSession.stop();
       return false;
@@ -935,7 +935,7 @@ if (topbarSettings) {
   topbarSettings.addEventListener('click', (e) => {
     if (voiceSession.isActive()) {
       e.preventDefault();
-      const leave = window.confirm('Active scenario chal raha hai. Kya aap is session ko chhodkar jaana chahte hain?');
+      const leave = window.confirm('You have an active scenario session. Are you sure you want to leave?');
       if (leave) {
         voiceSession.stop();
         window.location.href = topbarSettings.href;

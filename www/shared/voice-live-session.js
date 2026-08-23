@@ -57,14 +57,14 @@ export function describeMicError(err) {
   if (name === 'NotAllowedError' || name === 'PermissionDeniedError')
     return 'Microphone access was denied. Tap the mic icon in your address bar and select Allow.';
   if (name === 'NotFoundError' || name === 'DevicesNotFoundError')
-    return 'Mic nahi mila: is device/browser mein koi microphone connected nahi hai.';
+    return 'Microphone not found: no microphone is connected to this device.';
   if (name === 'NotReadableError' || name === 'TrackStartError')
     return 'Could not open the microphone (already retried). If another app is using it, close that app and try again.';
   if (name === 'SecurityError')
-    return 'Mic access block: yeh page HTTPS (ya localhost) par nahi chal raha, isliye browser mic nahi de raha.';
+    return 'Microphone access blocked: this page must be served over HTTPS to access the microphone.';
   if (name === 'OverconstrainedError')
-    return 'Mic settings match nahi hui is device mein.';
-  return 'Mic access mein error: ' + (err && err.message ? err.message : 'wajah pata nahi chali (' + err + ')');
+    return 'Microphone settings could not be matched on this device.';
+  return 'Microphone access error: ' + (err && err.message ? err.message : 'unknown reason (' + err + ')');
 }
 
 export function describeConnectError(err) {
@@ -83,10 +83,10 @@ export function describeConnectError(err) {
 }
 
 export function describeCloseEvent(e) {
-  if (!e) return 'Session band ho gaya (koi close-details nahi mile).';
+  if (!e) return 'Session closed (no details provided).';
   if (e.code === 1000) return null;
-  const reason = e.reason ? (' — ' + e.reason) : ' (server ne koi reason text nahi bheja)';
-  return 'Session band ho gaya, code ' + e.code + reason + '. Ye us API key/model access ki taraf se koi dikkat ho sakti hai.';
+  const reason = e.reason ? (' — ' + e.reason) : ' (server provided no reason)';
+  return 'Session closed, code ' + e.code + reason + '.';
 }
 
 // Wraps the "audio currently playing" state + WebAudio scheduling queue
@@ -339,7 +339,7 @@ export function createVoiceSession({
         session.sendRealtimeInput({ audio: { data: data.audio, mimeType: 'audio/pcm;rate=16000' } });
       } catch (err) {
         console.error('mic send error', err);
-        callbacks.onStatus && callbacks.onStatus('Audio bhejte waqt error: ' + err.message, 'err');
+        callbacks.onStatus && callbacks.onStatus('Error sending audio: ' + err.message, 'err');
       }
     });
 
@@ -358,7 +358,7 @@ export function createVoiceSession({
     try {
       const MicCapture = getMicCapturePlugin();
       await MicCapture.stop();
-    } catch (e) { /* plugin already gone ya nahi mila, ignore */ }
+    } catch (e) { /* plugin already gone or missing, ignore */ }
     if (micListenerHandle) {
       try { await micListenerHandle.remove(); } catch (e) { /* ignore */ }
       micListenerHandle = null;
@@ -398,7 +398,7 @@ export function createVoiceSession({
       }
     } catch (err) {
       console.error('message handling error', err, msg);
-      callbacks.onStatus && callbacks.onStatus('Ek message process karte waqt error aaya: ' + err.message, 'err');
+      callbacks.onStatus && callbacks.onStatus('Error processing message: ' + err.message, 'err');
     }
   }
 
@@ -443,7 +443,7 @@ export function createVoiceSession({
     if (!(await isOnline())) {
       isBusy = false;
       if (audioPlayer) { audioPlayer.close(); audioPlayer = null; }
-      return { ok: false, reason: 'offline', message: 'Internet connection nahi hai — check karke phir try karo.' };
+      return { ok: false, reason: 'offline', message: 'No internet connection — please check and try again.' };
     }
 
     callbacks.onStatus && callbacks.onStatus('Checking AI key...', null);
@@ -472,7 +472,7 @@ export function createVoiceSession({
         },
         callbacks: {
           onopen: () => {
-            callbacks.onStatus && callbacks.onStatus('Connected — mic on, bolna shuru karo', 'live');
+            callbacks.onStatus && callbacks.onStatus('Connected — microphone on, start speaking', 'live');
             isBusy = false;
             startWatchdog();
             callbacks.onOpen && callbacks.onOpen();
@@ -480,7 +480,7 @@ export function createVoiceSession({
           onmessage: (msg) => handleMessage(msg),
           onerror: (e) => {
             console.error('live session error', e);
-            const detail = (e && e.message) ? e.message : 'connection ne error event bheja, exact wajah server ne nahi batayi';
+            const detail = (e && e.message) ? e.message : 'connection error event received from server';
             callbacks.onStatus && callbacks.onStatus('Connection error — ' + detail, 'err');
             errorAlreadyShown = true;
             stop(true);
@@ -489,7 +489,7 @@ export function createVoiceSession({
             stopWatchdog();
             if (!errorAlreadyShown) {
               const msg = describeCloseEvent(e);
-              callbacks.onStatus && callbacks.onStatus(msg || 'Session band ho gaya.', msg ? 'err' : null);
+              callbacks.onStatus && callbacks.onStatus(msg || 'Session closed.', msg ? 'err' : null);
             }
             errorAlreadyShown = false;
             session = null;
@@ -499,13 +499,13 @@ export function createVoiceSession({
         }
       });
 
-      callbacks.onStatus && callbacks.onStatus('Mic (native) shuru ho raha hai...', null);
+      callbacks.onStatus && callbacks.onStatus('Starting native microphone...', null);
       try {
         await startNativeMic();
-        callbacks.onStatus && callbacks.onStatus('Connected — mic on, bolna shuru karo', 'live');
+        callbacks.onStatus && callbacks.onStatus('Connected — microphone on, start speaking', 'live');
       } catch (err) {
         console.error('native mic error', err);
-        callbacks.onStatus && callbacks.onStatus('Native mic start nahi ho paya: ' + (err && err.message ? err.message : err), 'err');
+        callbacks.onStatus && callbacks.onStatus('Could not start native microphone: ' + (err && err.message ? err.message : err), 'err');
         errorAlreadyShown = true;
         stop(true);
         return { ok: false, reason: 'mic_start_failed', message: err && err.message };
@@ -539,7 +539,7 @@ export function createVoiceSession({
       return true;
     } catch (err) {
       console.error('sendTextTurn error', err);
-      callbacks.onStatus && callbacks.onStatus('Instruction bhejte waqt error: ' + err.message, 'err');
+      callbacks.onStatus && callbacks.onStatus('Error sending instruction: ' + err.message, 'err');
       return false;
     }
   }
@@ -551,7 +551,7 @@ export function createVoiceSession({
     if (audioPlayer) { audioPlayer.close(); audioPlayer = null; }
     if (session) { try { session.close(); } catch (e) { console.error('session close error', e); } session = null; }
     isBusy = false;
-    if (!silent) callbacks.onStatus && callbacks.onStatus('Ruk gaya.', null);
+    if (!silent) callbacks.onStatus && callbacks.onStatus('Stopped.', null);
   }
 
   function isActive() { return !!session; }
