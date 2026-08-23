@@ -47,12 +47,18 @@ import './shared/config.js';
 import { requireAuthOrRedirect, apiFetch } from './shared/auth.js';
 import { initBackNav } from './shared/back-nav.js';
 import { escapeHtml } from './shared/sanitize.js';
+import { cachedFetch } from './shared/api-cache.js';
 
 await requireAuthOrRedirect();
 initBackNav('history.html');
 
 const params = new URLSearchParams(window.location.search);
 const sessionId = params.get('session');
+
+async function fetchSessionReport(id) {
+  const { value } = await cachedFetch('session_report_' + id, () => apiFetch('/chat/sessions/' + id + '/report'), 24 * 60 * 60 * 1000);
+  return value;
+}
 const shouldAutoGenerate = params.get('generate') === '1';
 const content = document.getElementById('content');
 
@@ -167,7 +173,7 @@ async function init(){
     return;
   }
   try {
-    const data = await apiFetch('/chat/sessions/' + sessionId + '/report');
+    const data = await fetchSessionReport(sessionId);
     renderReport(data.report);
   } catch (err) {
     if (err.status === 404){

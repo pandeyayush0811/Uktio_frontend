@@ -305,6 +305,7 @@ import { PENDING_CHAT_SESSION_KEY, syncPendingChatSession, apiFetch } from './sh
 import { createVoiceSession } from './shared/voice-live-session.js';
 import { formatCountdown } from './shared/scenario-phase.js';
 import { registerBackHandler } from './shared/back-nav.js';
+import { cachedFetch, invalidateCache } from './shared/api-cache.js';
 
 // Same 3-minute roleplay window the feature spec calls for. A constant
 // (not scenario-config-driven) since every scenario shares the same
@@ -877,6 +878,7 @@ function lockChatForToday(sessionId){
   if (key) {
     try { localStorage.removeItem(key); } catch (e) { /* ignore */ }
   }
+  invalidateCache('scenario_today_' + getTodayIstDateString());
   lockedBanner.classList.add('show');
   micBtn.disabled = true;
 }
@@ -935,7 +937,9 @@ micBtn.addEventListener('click', () => {
 // ─────────────────────────────────────────────────────────────
 async function loadTodaysScenario(){
   try {
-    const data = await apiFetch('/chat/scenario/today');
+    const cacheKey = 'scenario_today_' + getTodayIstDateString();
+    const { value: data } = await cachedFetch(cacheKey, () => apiFetch('/chat/scenario/today'), 60 * 60 * 1000);
+    if (!data || !data.scenario) return;
     todaysScenario = data.scenario;
 
     scenarioCard.style.display = 'flex';

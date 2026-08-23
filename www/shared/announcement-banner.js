@@ -1,5 +1,6 @@
 import { apiFetch } from './auth.js';
 import { escapeHtml } from './sanitize.js';
+import { cachedFetch } from './api-cache.js';
 
 // Announcement banner — home.html only.
 // Fetches dynamic active announcements from backend GET /announcements.
@@ -26,7 +27,7 @@ function markDismissed(id) {
 
 export async function fetchAnnouncements() {
   try {
-    const data = await apiFetch('/announcements');
+    const { value: data } = await cachedFetch('announcements', () => apiFetch('/announcements'), 5 * 60 * 1000);
     return (data && Array.isArray(data.announcements)) ? data.announcements : [];
   } catch {
     return []; // fail-open

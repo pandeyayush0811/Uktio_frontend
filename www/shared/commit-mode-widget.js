@@ -1,4 +1,5 @@
 import { apiFetch } from './auth.js';
+import { cachedFetch } from './api-cache.js';
 
 // Fetches today's (IST) Commit Mode progress. Returns null on any error
 // (network, not on Commit Mode, etc.) — callers should treat null as
@@ -7,7 +8,8 @@ import { apiFetch } from './auth.js';
 // philosophy as requireActivePlan() in shared/plan.js).
 export async function getCommitModeProgress() {
   try {
-    return await apiFetch('/chat/commit-mode/today');
+    const { value: data } = await cachedFetch('commit_mode_today', () => apiFetch('/chat/commit-mode/today'), 30 * 1000);
+    return data || null;
   } catch (e) {
     return null;
   }

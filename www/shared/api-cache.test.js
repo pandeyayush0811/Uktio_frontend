@@ -145,3 +145,55 @@ describe('invalidateCache / invalidateAllCache', () => {
     expect(fetcherB).toHaveBeenCalledTimes(2);
   });
 });
+
+describe('Performance Cluster Caching Integrations', () => {
+  it('deduplicates concurrent calls from page and drawer into 1 network call', async () => {
+    let callCount = 0;
+    const fetcher = vi.fn().mockImplementation(async () => {
+      callCount++;
+      await new Promise(r => setTimeout(r, 10));
+      return { profile: { name: 'Priya' } };
+    });
+
+    const [p1, p2] = await Promise.all([
+      cachedFetch('profile_me', fetcher, 60000),
+      cachedFetch('profile_me', fetcher, 60000)
+    ]);
+
+    expect(p1.value.profile.name).toBe('Priya');
+    expect(p2.value.profile.name).toBe('Priya');
+    expect(callCount).toBe(1);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  it('caches commit mode progress for 30 seconds and invalidates on session sync', async () => {
+    const fetcher = vi.fn().mockResolvedValue({ chat_requirement_met: false, chat_seconds_done: 120 });
+    const r1 = await cachedFetch('commit_mode_today', fetcher, 30000);
+    expect(r1.value.chat_seconds_done).toBe(120);
+
+    const r2 = await cachedFetch('commit_mode_today', fetcher, 30000);
+    expect(r2.fromCache).toBe(true);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+
+    // Chat ends and syncs -> cache invalidates
+    invalidateCache('commit_mode_today');
+    fetcher.mockResolvedValueOnce({ chat_requirement_met: true, chat_seconds_done: 300 });
+
+    const r3 = await cachedFetch('commit_mode_today', fetcher, 30000);
+    expect(r3.fromCache).toBe(false);
+    expect(r3.value.chat_requirement_met).toBe(true);
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+
+  it('caches immutable session reports across page views', async () => {
+    const reportData = { report: { grammar_score: 85, fluency_score: 90 } };
+    const fetcher = vi.fn().mockResolvedValue(reportData);
+
+    const r1 = await cachedFetch('session_report_session-123', fetcher, 24 * 60 * 60 * 1000);
+    expect(r1.value.report.grammar_score).toBe(85);
+
+    const r2 = await cachedFetch('session_report_session-123', fetcher, 24 * 60 * 60 * 1000);
+    expect(r2.fromCache).toBe(true);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+});

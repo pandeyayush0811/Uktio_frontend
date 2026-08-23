@@ -1,5 +1,6 @@
 import { apiFetch, getCachedProfileBasic, setCachedProfileBasic, getRecentChatSessions } from './auth.js';
 import { registerBackHandler } from './back-nav.js';
+import { cachedFetch } from './api-cache.js';
 
 // Same formatting as history.html's formatDuration() — kept as a small
 // local copy rather than a shared import so drawer.js (loaded on every
@@ -100,11 +101,13 @@ export async function mountDrawer(triggerEl, activePage){
 
   // Fill in user + recent chats lazily, after the drawer is already visible/openable.
   try {
-    const me = await apiFetch('/users/me');
-    const name = (me.profile && me.profile.name) || me.email || 'User';
-    overlay.querySelector('#drawerUserName').textContent = name;
-    overlay.querySelector('#drawerUserEmail').textContent = me.email || '';
-    setCachedProfileBasic({ name, email: me.email || '' }); // update cache for next time
+    const { value: me } = await cachedFetch('profile_me', () => apiFetch('/users/me'), 60 * 1000);
+    if (me) {
+      const name = (me.profile && me.profile.name) || me.email || 'User';
+      overlay.querySelector('#drawerUserName').textContent = name;
+      overlay.querySelector('#drawerUserEmail').textContent = me.email || '';
+      setCachedProfileBasic({ name, email: me.email || '' }); // update cache for next time
+    }
   } catch (e) { /* silent — cache (if any) already covered this, drawer still works without it */ }
 
   try {
