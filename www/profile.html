@@ -218,7 +218,7 @@
 
 <script type="module">
 import './shared/config.js';
-import { requireAuthOrRedirect, apiFetch, getCachedProfileBasic, setCachedProfileBasic } from './shared/auth.js';
+import { requireAuthOrRedirect, apiFetch, getCachedProfileBasic, setCachedProfileBasic, getCachedFullProfile, setCachedFullProfile } from './shared/auth.js';
 import { initBackNav } from './shared/back-nav.js';
 
 await requireAuthOrRedirect();
@@ -426,13 +426,18 @@ function showEditMode(){
   pageTitle.textContent = 'Edit Profile';
 }
 
-// Cache-first: if we have a cached name/email from a previous visit,
-// show the header instantly instead of a blank "Loading..." screen.
-// The rest of the fields (age, goal, etc.) still wait for the real
-// fetch below — only name/email are cached, that's all the drawer
-// and this header actually need to feel instant.
-const cachedBasic = getCachedProfileBasic();
-if (cachedBasic) {
+// Cache-first: render full profile instantly on frame 0 (0ms delay, no dashes)
+const cachedFull = getCachedFullProfile();
+const cachedBasic = cachedFull ? null : getCachedProfileBasic();
+
+if (cachedFull && cachedFull.profile) {
+  profile = cachedFull.profile;
+  email = cachedFull.email || '';
+  loadingMsg.style.display = 'none';
+  viewMode.classList.remove('hidden');
+  renderView();
+  document.getElementById('bottomBar').style.visibility = 'visible';
+} else if (cachedBasic) {
   loadingMsg.style.display = 'none';
   viewMode.classList.remove('hidden');
   document.getElementById('vName').textContent = cachedBasic.name || '—';
@@ -450,9 +455,9 @@ if (cachedBasic) {
     viewMode.classList.remove('hidden');
     renderView();
     document.getElementById('bottomBar').style.visibility = 'visible';
-    setCachedProfileBasic({ name: profile.name || '', email }); // keep cache fresh for next time
+    setCachedFullProfile({ profile, email });
   } catch (err) {
-    if (!cachedBasic) { // only show a hard error if we had nothing to fall back on
+    if (!cachedFull && !cachedBasic) {
       loadingMsg.innerHTML =
         `<span class="status-msg err" style="text-align:center;">Could not load profile: ${err.message}</span>`;
     }

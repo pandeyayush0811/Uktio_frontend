@@ -137,29 +137,6 @@ export async function requireAuthOrRedirect() {
 // Callers (fetchProfileWithRetry, every form handler) key off err.status
 // to decide what to show/do — 0 always means "never reached the server".
 export async function apiFetch(path, options = {}) {
-  // Proactive check: fail fast (0ms) instead of waiting on a fetch that's
-  // going to time out anyway. This is a best-effort signal, not a
-  // guarantee — see shared/network-status.js for why (navigator.onLine
-  // fallback can be wrong in the "connected to Wi-Fi with no upstream"
-  // case). We deliberately do NOT skip the fetch attempt when this check
-  // itself fails to load/throws — that would risk turning a working
-  // request into a false "offline" error. It only short-circuits when we
-  // get a *confident* "not connected" answer.
-  try {
-    const { isOnline } = await import('./network-status.js');
-    if (!(await isOnline())) {
-      const err = new Error('No internet connection. Please check your network and try again.');
-      err.status = 0; // same convention the catch block below uses — callers already handle this
-      err.offlineDetected = true; // lets a caller distinguish "we knew before trying" from "fetch failed", if it cares
-      throw err;
-    }
-  } catch (preflightErr) {
-    // Re-throw only if it's the offline error we just constructed above;
-    // any other failure here (e.g. dynamic import glitch) should NOT
-    // block the actual request — fall through to the real fetch attempt.
-    if (preflightErr && preflightErr.offlineDetected) throw preflightErr;
-  }
-
   const token = await getValidAccessToken();
 
   let res;
@@ -241,7 +218,10 @@ export async function fetchProfileWithRetry(onStatus, graceOnUnauthorized = fals
     }
     try {
       const data = await apiFetch('/users/me');
-      return { ok: true, profile: data.profile || null };
+      if (data.profile) {
+        setCachedFullProfile({ profile: data.profile, email: data.email || '' });
+      }
+      return { ok: true, profile: data.profile || null, email: data.email || '' };
     } catch (err) {
       if (err.status === 401 || err.status === 403) {
         if (graceOnUnauthorized && !grantedGraceRetry) {
@@ -276,6 +256,29 @@ export function showConnectionError() {
         <button class="primary" onclick="location.reload()">Dobara try karo</button>
       </div>
     </div>`;
+}
+
+// Full profile SWR cache for instant 0ms rendering of profile.html
+const FULL_PROFILE_CACHE_KEY = 'utkio_full_profile_cache';
+
+export function getCachedFullProfile() {
+  try {
+    const raw = localStorage.getItem(FULL_PROFILE_CACHE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) { return null; }
+}
+
+export function setCachedFullProfile({ profile, email }) {
+  try {
+    localStorage.setItem(FULL_PROFILE_CACHE_KEY, JSON.stringify({ profile, email, cachedAt: Date.now() }));
+    if (profile && profile.name) {
+      setCachedProfileBasic({ name: profile.name, email });
+    }
+  } catch (e) { /* ignore */ }
+}
+
+export function clearCachedFullProfile() {
+  try { localStorage.removeItem(FULL_PROFILE_CACHE_KEY); } catch (e) { /* ignore */ }
 }
 
 // Cache-first profile display (stale-while-revalidate): only the small,
@@ -335,6 +338,9 @@ export const CHAT_SESSIONS_CACHE_KEY = 'chat_sessions';
 const CHAT_SESSIONS_CACHE_TTL_MS = 30 * 1000;
 
 export async function getRecentChatSessions(opts) {
+  // Always drain any pending unsaved chat session first so newly spoken turns
+  // appear in the list immediately even if the user navigated away abruptly.
+  try { await syncPendingChatSession(); } catch (e) { /* ignore */ }
   const { value } = await cachedFetch(CHAT_SESSIONS_CACHE_KEY, () => apiFetch('/chat/sessions'), CHAT_SESSIONS_CACHE_TTL_MS, opts);
   return value;
 }
@@ -358,7 +364,7 @@ export const PENDING_CHAT_SESSION_KEY = 'utkio_pending_chat_session';
 // navigation — pure best-effort background sync of whatever chat session
 // got stranded on-device. Returns the backend session_id on success (so
 // chat.html can keep appending to the same session), or null otherwise.
-export async function syncPendingChatSession() {
+export async function syncPendingChatSession(fetchOpts = {}) {
   let raw;
   try { raw = localStorage.getItem(PENDING_CHAT_SESSION_KEY); } catch (e) { return null; }
   if (!raw) return null;
@@ -374,7 +380,11 @@ export async function syncPendingChatSession() {
   }
 
   try {
-    const result = await apiFetch('/chat/sessions', { method: 'POST', body: JSON.stringify(payload) });
+    const result = await apiFetch('/chat/sessions', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      ...fetchOpts
+    });
     try { localStorage.removeItem(PENDING_CHAT_SESSION_KEY); } catch (_) { /* ignore */ }
     invalidateChatSessionsCache(); // this session is now real — don't let a cached list hide it
     invalidateCache('plan_status'); // trial credits just decremented — invalidate cache
@@ -399,6 +409,7 @@ export async function syncPendingChatSession() {
 export async function logout() {
   await clearSession();
   clearCachedProfileBasic();
+  clearCachedFullProfile();
   invalidateAllCache(); // wipe plan/profile/sessions caches — next login must never show the previous account's cached data
 
   // Delegates to mic-helpers.js's removeApiKey(), which is the single

@@ -549,8 +549,74 @@ function addLine(role){
 // overwritten. This mirrors an existing edge case in the app rather than
 // introducing a new one, and is safe in practice because both pages sync
 // aggressively (every turn boundary) rather than only at the very end.
+function getTodayIstDateString() {
+  const now = new Date();
+  const istOffsetMs = (5 * 60 + 30) * 60 * 1000;
+  const ist = new Date(now.getTime() + istOffsetMs + now.getTimezoneOffset() * 60 * 1000);
+  return ist.toISOString().slice(0, 10);
+}
+
+function getScenarioStorageKey() {
+  if (!todaysScenario || !todaysScenario.key) return null;
+  return `utkio_scenario_state_${todaysScenario.key}_${getTodayIstDateString()}`;
+}
+
+function saveScenarioState() {
+  const key = getScenarioStorageKey();
+  if (!key) return;
+  try {
+    if (phase === 'feedback' || lockedBanner.classList.contains('show')) {
+      localStorage.removeItem(key);
+      return;
+    }
+    const state = {
+      phaseSecondsLeft,
+      sessionStartedAt,
+      sessionTurns: sessionTurns.filter(t => t.content && t.content.trim())
+    };
+    localStorage.setItem(key, JSON.stringify(state));
+  } catch (e) {
+    console.warn('saveScenarioState failed:', e);
+  }
+}
+
+function restoreScenarioState() {
+  const key = getScenarioStorageKey();
+  if (!key) return;
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return;
+    const state = JSON.parse(raw);
+    if (state && typeof state.phaseSecondsLeft === 'number' && state.phaseSecondsLeft > 0) {
+      phaseSecondsLeft = state.phaseSecondsLeft;
+      sessionStartedAt = state.sessionStartedAt || sessionStartedAt;
+      sessionTurns = Array.isArray(state.sessionTurns) ? state.sessionTurns : [];
+
+      transcriptEl.innerHTML = '';
+      sessionTurns.forEach(t => {
+        if (t.role === 'user') {
+          const line = addLine('user');
+          line.textContent = t.content;
+        } else {
+          const line = addLine('model');
+          line.textContent = t.content;
+        }
+      });
+
+      updatePhaseRing();
+      const min = Math.floor(phaseSecondsLeft / 60);
+      const sec = phaseSecondsLeft % 60;
+      const timeStr = `${min}:${sec < 10 ? '0' : ''}${sec}`;
+      setStatus(`Scenario in progress (${timeStr} bacha hai) — Tap mic to continue`, null);
+    }
+  } catch (e) {
+    console.warn('restoreScenarioState failed:', e);
+  }
+}
+
 function persistLocalSession(){
   try {
+    saveScenarioState();
     const meaningful = sessionTurns.filter(t => t.content && t.content.trim());
     if (!meaningful.length) { localStorage.removeItem(PENDING_CHAT_SESSION_KEY); return; }
     localStorage.setItem(PENDING_CHAT_SESSION_KEY, JSON.stringify({
@@ -559,11 +625,6 @@ function persistLocalSession(){
       ended_at: new Date().toISOString(),
       session_type: 'scenario',
       scenario_key: todaysScenario ? todaysScenario.key : null,
-      // Backend's messages schema only knows role/content — the local
-      // `phase` tag is UI-only (drives the feedback-card vs chat-bubble
-      // rendering) and intentionally dropped here rather than sent,
-      // since chatRoutes.js's validateMessages() would reject an
-      // unexpected field.
       messages: meaningful.map(t => ({ role: t.role, content: t.content }))
     }));
   } catch(e){ console.warn('persistLocalSession failed', e); }
@@ -599,6 +660,7 @@ function startPhaseTimer(){
   phaseTimerHandle = setInterval(() => {
     phaseSecondsLeft = Math.max(0, Math.ceil((phaseEndAt - Date.now()) / 1000));
     updatePhaseRing();
+    saveScenarioState();
     if (phaseSecondsLeft <= 0) switchToFeedbackPhase();
   }, 1000);
 }
@@ -811,13 +873,24 @@ function lockChatForToday(sessionId){
     document.getElementById('lockedSub').textContent = 'Kal ek naya scenario milega. Tab tak apni purani chats dekh sakte ho.';
     label.textContent = 'Chat history dekho';
   }
+  const key = getScenarioStorageKey();
+  if (key) {
+    try { localStorage.removeItem(key); } catch (e) { /* ignore */ }
+  }
   lockedBanner.classList.add('show');
   micBtn.disabled = true;
 }
 
-window.addEventListener('beforeunload', () => {
-  if (voiceSession.isActive()) voiceSession.stop();
-});
+function handleScenarioExit() {
+  if (voiceSession && voiceSession.isActive()) voiceSession.stop();
+  if (sessionTurns.length) {
+    persistLocalSession();
+    syncPendingChatSession({ keepalive: true }).catch(() => {});
+  }
+}
+
+window.addEventListener('beforeunload', handleScenarioExit);
+window.addEventListener('pagehide', handleScenarioExit);
 window.addEventListener('error', (e) => console.error('uncaught error', e.error || e.message));
 window.addEventListener('unhandledrejection', (e) => console.error('unhandled promise rejection', e.reason));
 
@@ -874,7 +947,10 @@ async function loadTodaysScenario(){
       lockChatForToday();
       setStatus("Today's scenario is already complete.", null);
     } else {
-      setStatus('Tap the mic to start today\'s scenario.', null);
+      restoreScenarioState();
+      if (phaseSecondsLeft === PHASE_1_DURATION_SECONDS && !sessionTurns.length) {
+        setStatus('Tap the mic to start today\'s scenario.', null);
+      }
       micBtn.disabled = false;
     }
   } catch (err) {

@@ -117,7 +117,51 @@ function formatDateTime(iso){
     ' · ' + d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
 }
 
+const transcriptCache = new Map();
+
+function renderTranscript(msgs, container, sessionType, sessionId) {
+  container.innerHTML = '';
+  if (!msgs.length){
+    // Edge case: a session can exist with zero persisted messages
+    // (e.g. connection dropped before the first turn synced).
+    // Leaving the panel blank above the resume button looked like
+    // a rendering glitch — make the empty state explicit instead.
+    const note = document.createElement('div');
+    note.className = 't-line-empty';
+    note.textContent = 'No messages recorded for this chat.';
+    container.appendChild(note);
+  }
+  msgs.forEach(m => {
+    const line = document.createElement('div');
+    line.className = 't-line ' + (m.role === 'user' ? 'user' : 'model');
+    line.innerHTML = `<span class="t-tag">${m.role === 'user' ? 'You:' : 'Uktio:'}</span>`;
+    line.appendChild(document.createTextNode(m.content));
+    container.appendChild(line);
+  });
+  // Resume only makes sense for freeform sessions — chat.html's resume
+  // flow builds a freeform system prompt, which would silently (and
+  // confusingly) drop the scenario's character/context if pointed at a
+  // scenario session. scenario.html itself has no resume flow (a
+  // scenario is a single continuous 3-min-roleplay-plus-feedback take,
+  // not a multi-visit conversation), so there's nowhere correct to
+  // send a "resume" tap for these — omit the button entirely.
+  if (sessionType !== 'scenario') {
+    const actionsRow = container.closest('.chat-card')?.querySelector('.chat-card-actions');
+    if (actionsRow && !actionsRow.querySelector('.resume-btn')) {
+      const resumeBtn = document.createElement('button');
+      resumeBtn.className = 'resume-btn';
+      resumeBtn.innerHTML = ICON_RESUME + '<span>Resume this chat</span>';
+      resumeBtn.addEventListener('click', (e) => { e.stopPropagation(); window.location.href = 'chat.html?resume=' + sessionId; });
+      actionsRow.appendChild(resumeBtn);
+    }
+  }
+}
+
 async function loadTranscript(sessionId, container, sessionType){
+  if (transcriptCache.has(sessionId)) {
+    renderTranscript(transcriptCache.get(sessionId), container, sessionType, sessionId);
+    return;
+  }
   container.innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;padding:12px 0;">
       <div class="loader-ring" style="width:20px;height:20px;border-width:2px;"></div>
@@ -126,44 +170,8 @@ async function loadTranscript(sessionId, container, sessionType){
   try {
     const data = await apiFetch('/chat/sessions/' + sessionId);
     const msgs = data.messages || [];
-    container.innerHTML = '';
-    if (!msgs.length){
-      // Edge case: a session can exist with zero persisted messages
-      // (e.g. connection dropped before the first turn synced).
-      // Leaving the panel blank above the resume button looked like
-      // a rendering glitch — make the empty state explicit instead.
-      const note = document.createElement('div');
-      note.className = 't-line-empty';
-      note.textContent = 'No messages recorded for this chat.';
-      container.appendChild(note);
-    }
-    msgs.forEach(m => {
-      const line = document.createElement('div');
-      line.className = 't-line ' + (m.role === 'user' ? 'user' : 'model');
-      line.innerHTML = `<span class="t-tag">${m.role === 'user' ? 'You:' : 'Uktio:'}</span>`;
-      line.appendChild(document.createTextNode(m.content));
-      container.appendChild(line);
-    });
-    // Resume only makes sense for freeform sessions — chat.html's resume
-    // flow builds a freeform system prompt, which would silently (and
-    // confusingly) drop the scenario's character/context if pointed at a
-    // scenario session. scenario.html itself has no resume flow (a
-    // scenario is a single continuous 3-min-roleplay-plus-feedback take,
-    // not a multi-visit conversation), so there's nowhere correct to
-    // send a "resume" tap for these — omit the button entirely.
-    if (sessionType !== 'scenario') {
-      const resumeBtn = document.createElement('button');
-      resumeBtn.className = 'resume-btn';
-      resumeBtn.innerHTML = ICON_RESUME + '<span>Resume this chat</span>';
-      resumeBtn.addEventListener('click', (e) => { e.stopPropagation(); window.location.href = 'chat.html?resume=' + sessionId; });
-      // Always append into the card's .chat-card-actions row (built
-      // upfront in buildCard, present on every card regardless of
-      // whether a report button was added) — never falls back to
-      // appending inside the transcript container itself. This is
-      // the structural fix for the icon-sizing bug: every resume-btn
-      // now always shares the exact same sized flex parent.
-      container.closest('.chat-card').querySelector('.chat-card-actions').appendChild(resumeBtn);
-    }
+    transcriptCache.set(sessionId, msgs);
+    renderTranscript(msgs, container, sessionType, sessionId);
   } catch (err) {
     container.innerHTML = `<div class="status-msg err">Failed to load transcript. Please try again: ${escapeHtml(err.message)}</div>`;
   }

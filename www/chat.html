@@ -952,9 +952,18 @@ async function finalizeAndSyncSession(){
   }
 }
 
-window.addEventListener('beforeunload', () => {
-  if (voiceSession && voiceSession.isActive()) stopSession(true);
-});
+function handlePageExit() {
+  if (voiceSession && voiceSession.isActive()) {
+    voiceSession.stop(true);
+  }
+  if (sessionTurns.length) {
+    persistLocalSession();
+    syncPendingChatSession({ keepalive: true }).catch(() => {});
+  }
+}
+
+window.addEventListener('beforeunload', handlePageExit);
+window.addEventListener('pagehide', handlePageExit);
 
 window.addEventListener('error', (e) => {
   console.error('uncaught error', e.error || e.message);

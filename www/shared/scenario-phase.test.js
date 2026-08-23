@@ -1,5 +1,19 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { formatCountdown, getPhaseBadgeState } from './scenario-phase.js';
+
+function makeLocalStorageMock() {
+  const store = {};
+  return {
+    getItem: (key) => (key in store ? store[key] : null),
+    setItem: (key, val) => { store[key] = String(val); },
+    removeItem: (key) => { delete store[key]; },
+    clear: () => { Object.keys(store).forEach(k => delete store[k]); }
+  };
+}
+
+beforeEach(() => {
+  globalThis.localStorage = makeLocalStorageMock();
+});
 
 describe('formatCountdown', () => {
   it('formats a full 3-minute start correctly', () => {
@@ -137,6 +151,70 @@ describe('back-nav manager', () => {
 
       handleBackPress();
       expect(step).toBe(1);
+    });
+  });
+
+  describe('Full Profile SWR Caching', () => {
+    it('sets, retrieves, and clears full profile in local storage', async () => {
+      const { setCachedFullProfile, getCachedFullProfile, clearCachedFullProfile, getCachedProfileBasic } = await import('./auth.js');
+      
+      const mockProfile = {
+        name: 'Rahul Sharma',
+        age: 24,
+        occupation_type: 'working_professional',
+        occupation_detail: 'Software Engineer',
+        learning_goal: 'interview',
+        english_level: 'intermediate',
+        practice_time_minutes: 15,
+        speaking_sample: 'Hello this is my speaking sample.'
+      };
+
+      setCachedFullProfile({ profile: mockProfile, email: 'rahul@example.com' });
+
+      const cached = getCachedFullProfile();
+      expect(cached).not.toBeNull();
+      expect(cached.profile.name).toBe('Rahul Sharma');
+      expect(cached.profile.english_level).toBe('intermediate');
+      expect(cached.email).toBe('rahul@example.com');
+
+      // Also updates basic profile cache automatically for drawer
+      const basic = getCachedProfileBasic();
+      expect(basic.name).toBe('Rahul Sharma');
+      expect(basic.email).toBe('rahul@example.com');
+
+      clearCachedFullProfile();
+      expect(getCachedFullProfile()).toBeNull();
+    });
+  });
+
+  describe('Scenario State Persistence across page reloads', () => {
+    it('persists remaining seconds and previous turns correctly', () => {
+      const key = 'utkio_scenario_state_test-scenario_2026-08-23';
+      const state = {
+        phaseSecondsLeft: 20,
+        sessionStartedAt: '2026-08-23T12:00:00.000Z',
+        sessionTurns: [
+          { role: 'model', content: 'Good morning! How can I help you today?' },
+          { role: 'user', content: 'I need to check into my flight.' }
+        ]
+      };
+
+      localStorage.setItem(key, JSON.stringify(state));
+
+      const restored = JSON.parse(localStorage.getItem(key));
+      expect(restored.phaseSecondsLeft).toBe(20);
+      expect(restored.sessionTurns.length).toBe(2);
+      expect(restored.sessionTurns[1].content).toBe('I need to check into my flight.');
+
+      localStorage.removeItem(key);
+      expect(localStorage.getItem(key)).toBeNull();
+    });
+  });
+
+  describe('Shared Configuration Constants', () => {
+    it('exports MIN_TURNS_FOR_ANALYSIS as 10', async () => {
+      const { MIN_TURNS_FOR_ANALYSIS } = await import('./config.js');
+      expect(MIN_TURNS_FOR_ANALYSIS).toBe(10);
     });
   });
 });
