@@ -19,39 +19,15 @@
   position:absolute; width:1px; height:1px; padding:0; margin:-1px;
   overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
 }
-html, body{
-  height: 100%;
-  margin: 0;
-  background: var(--bg);
-  color: var(--ink);
-  font-family: var(--font-body);
-  display: flex;
-  justify-content: center;
-  overscroll-behavior: none;
+html, body{ height:100%; overflow:hidden; overscroll-behavior:none; }
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:var(--font-body); display:flex; justify-content:center;
 }
 .wrap{
-  width: 100%;
-  max-width: 480px;
-  min-height: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-  overflow-x: hidden;
-  box-sizing: border-box;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: contain;
-  padding: calc(20px + env(safe-area-inset-top, 0px)) 20px calc(24px + env(safe-area-inset-bottom, 0px));
-}
-
-/* Fixed full-screen viewports for live voice coaching (chat & scenario) */
-.wrap.chat-wrap,
-.wrap.scenario-wrap{
-  height: 100vh;
-  height: 100dvh;
-  min-height: 100dvh;
-  overflow: hidden;
-  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  width:100%; max-width:480px; height:100vh; height:100dvh;
+  display:flex; flex-direction:column; overflow:hidden;
+  padding:calc(20px + env(safe-area-inset-top, 0px)) 20px 16px;
 }
 
 /* ---- Top bar (used on chat/profile/settings) ---- */
@@ -76,10 +52,7 @@ html, body{
    system block below) so this matches home.html's brand language
    instead of the old generic-purple template look. ==== */
 .auth-wrap{
-  min-height: 100%;
-  justify-content: center;
-  position: relative;
-  overflow-y: auto;
+  justify-content:center; position:relative; overflow:hidden;
 }
 /* Soft ambient glow behind the logo — quiet, not a hero image */
 .auth-glow{
