@@ -11,10 +11,12 @@ import android.webkit.WebView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import com.getcapacitor.BridgeActivity;
+import java.util.ArrayList;
+import java.util.List;
 
 public class MainActivity extends BridgeActivity {
   private static final int MIC_PERMISSION_CODE = 1001;
-  private static final int NOTIF_PERMISSION_CODE = 1002;
+  private static final int COMBINED_PERMISSIONS_CODE = 1003;
   private PermissionRequest pendingWebRequest;
 
   @Override
@@ -25,30 +27,33 @@ public class MainActivity extends BridgeActivity {
 
     super.onCreate(savedInstanceState);
 
-        // DEBUG: chrome://inspect se is WebView ko dekhne ke liye.
+    // DEBUG: chrome://inspect se is WebView ko dekhne ke liye.
     // Sirf debug builds mein — release build mein remote debugging
     // off rehni chahiye (security hardening, koi feature isse touch nahi hota).
     if (BuildConfig.DEBUG && Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
       WebView.setWebContentsDebuggingEnabled(true);
     }
 
-    // Yeh purana WebView-based mic permission flow ab sirf fallback ke
-    // roop mein rakha hai — asli mic capture ab MicCapturePlugin se hoga.
+    // Atomic permission request: Collect all required missing permissions and request
+    // them in a single call. Requesting permissions separately in sequence causes the
+    // second system dialog to cancel/dismiss the first dialog on Android (refs ISSUE #20).
+    List<String> neededPermissions = new ArrayList<>();
     if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
             != PackageManager.PERMISSION_GRANTED) {
-      ActivityCompat.requestPermissions(this,
-              new String[]{Manifest.permission.RECORD_AUDIO}, MIC_PERMISSION_CODE);
+      neededPermissions.add(Manifest.permission.RECORD_AUDIO);
     }
 
     // Screen-off voice fix: VoiceKeepAliveService's persistent notification
-    // needs this on Android 13+, or the OS silently shows nothing (the
-    // foreground service itself still runs fine either way — this is only
-    // about the notification being visible to the user).
+    // needs this on Android 13+, or the OS silently shows nothing.
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
             && ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
             != PackageManager.PERMISSION_GRANTED) {
+      neededPermissions.add(Manifest.permission.POST_NOTIFICATIONS);
+    }
+
+    if (!neededPermissions.isEmpty()) {
       ActivityCompat.requestPermissions(this,
-              new String[]{Manifest.permission.POST_NOTIFICATIONS}, NOTIF_PERMISSION_CODE);
+              neededPermissions.toArray(new String[0]), COMBINED_PERMISSIONS_CODE);
     }
 
     this.bridge.getWebView().setWebChromeClient(new android.webkit.WebChromeClient() {
@@ -78,8 +83,16 @@ public class MainActivity extends BridgeActivity {
   @Override
   public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
     super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-    if (requestCode == MIC_PERMISSION_CODE && pendingWebRequest != null) {
-      if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+    if (pendingWebRequest != null) {
+      boolean audioGranted = false;
+      for (int i = 0; i < permissions.length; i++) {
+        if (Manifest.permission.RECORD_AUDIO.equals(permissions[i]) &&
+            grantResults.length > i && grantResults[i] == PackageManager.PERMISSION_GRANTED) {
+          audioGranted = true;
+          break;
+        }
+      }
+      if (audioGranted) {
         pendingWebRequest.grant(pendingWebRequest.getResources());
       } else {
         pendingWebRequest.deny();
