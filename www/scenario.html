@@ -304,8 +304,9 @@
 import { PENDING_CHAT_SESSION_KEY, syncPendingChatSession, apiFetch } from './shared/auth.js';
 import { createVoiceSession } from './shared/voice-live-session.js';
 import { formatCountdown } from './shared/scenario-phase.js';
-import { registerBackHandler } from './shared/back-nav.js';
+import { registerBackHandler, navigateBack } from './shared/back-nav.js';
 import { cachedFetch, invalidateCache } from './shared/api-cache.js';
+import { showConfirmDialog } from './shared/confirm-dialog.js';
 
 // Same 3-minute roleplay window the feature spec calls for. A constant
 // (not scenario-config-driven) since every scenario shares the same
@@ -921,21 +922,34 @@ window.addEventListener('utkio:resume', () => {
 
 registerBackHandler(() => {
   if (voiceSession.isActive()) {
-    const leave = window.confirm('You have an active scenario session. Are you sure you want to leave?');
-    if (leave) {
-      voiceSession.stop();
-      return false;
-    }
+    showConfirmDialog({
+      title: 'Leave active scenario?',
+      message: 'You have an active scenario simulation in progress. Leaving will end the session.',
+      confirmText: 'Leave scenario',
+      cancelText: 'Stay in scenario',
+      destructive: true
+    }).then((leave) => {
+      if (leave) {
+        voiceSession.stop();
+        navigateBack('home.html');
+      }
+    });
     return true;
   }
 });
 
 const topbarSettings = document.getElementById('topbarSettings');
 if (topbarSettings) {
-  topbarSettings.addEventListener('click', (e) => {
+  topbarSettings.addEventListener('click', async (e) => {
     if (voiceSession.isActive()) {
       e.preventDefault();
-      const leave = window.confirm('You have an active scenario session. Are you sure you want to leave?');
+      const leave = await showConfirmDialog({
+        title: 'Leave active scenario?',
+        message: 'You have an active scenario simulation in progress. Leaving will end the session.',
+        confirmText: 'Leave scenario',
+        cancelText: 'Stay in scenario',
+        destructive: true
+      });
       if (leave) {
         voiceSession.stop();
         window.location.href = topbarSettings.href;

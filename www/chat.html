@@ -201,7 +201,8 @@ import { getPlanStatus } from './shared/plan.js';
 import { renderCommitModeBanner } from './shared/commit-mode-widget.js';
 import { maybeShowPostSessionUpsell } from './shared/upsell.js';
 import { invalidateCache } from './shared/api-cache.js';
-import { registerBackHandler } from './shared/back-nav.js';
+import { registerBackHandler, navigateBack } from './shared/back-nav.js';
+import { showConfirmDialog } from './shared/confirm-dialog.js';
 
 function buildBaseInstruction(userName){
   return `ROLE:
@@ -994,21 +995,34 @@ window.addEventListener('utkio:resume', () => {
 
 registerBackHandler(() => {
   if (voiceSession && voiceSession.isActive()) {
-    const leave = window.confirm('You have an active chat session. Are you sure you want to leave?');
-    if (leave) {
-      voiceSession.stop();
-      return false;
-    }
+    showConfirmDialog({
+      title: 'Leave active chat?',
+      message: 'You have an active voice session in progress. Leaving will end the conversation.',
+      confirmText: 'Leave chat',
+      cancelText: 'Stay in chat',
+      destructive: true
+    }).then((leave) => {
+      if (leave) {
+        voiceSession.stop();
+        navigateBack('home.html');
+      }
+    });
     return true;
   }
 });
 
 const topbarSettings = document.getElementById('topbarSettings');
 if (topbarSettings) {
-  topbarSettings.addEventListener('click', (e) => {
+  topbarSettings.addEventListener('click', async (e) => {
     if (voiceSession && voiceSession.isActive()) {
       e.preventDefault();
-      const leave = window.confirm('You have an active chat session. Are you sure you want to leave?');
+      const leave = await showConfirmDialog({
+        title: 'Leave active chat?',
+        message: 'You have an active voice session in progress. Leaving will end the conversation.',
+        confirmText: 'Leave chat',
+        cancelText: 'Stay in chat',
+        destructive: true
+      });
       if (leave) {
         voiceSession.stop();
         window.location.href = topbarSettings.href;

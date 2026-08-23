@@ -217,6 +217,7 @@ import { getPlanStatus } from './shared/plan.js';
 import { initBackNav } from './shared/back-nav.js';
 import { checkGeminiApiKey } from './shared/gemini-key-check.js';
 import { getApiKey, setApiKey, removeApiKey } from './shared/mic-helpers.js';
+import { showConfirmDialog } from './shared/confirm-dialog.js';
 
 await requireAuthOrRedirect();
 initBackNav('home.html');
@@ -441,9 +442,13 @@ let loggingOut = false;
 logoutBtn.addEventListener('click', async () => {
   if (loggingOut) return;
 
-  const confirmed = window.confirm(
-    'Log out of Utkio? Your saved AI Access Key will be removed from this device.'
-  );
+  const confirmed = await showConfirmDialog({
+    title: 'Log out of Utkio?',
+    message: 'Your saved AI Access Key will be removed from this device. You will need to enter it again the next time you log in.',
+    confirmText: 'Log out',
+    cancelText: 'Cancel',
+    destructive: true
+  });
   if (!confirmed) return;
 
   loggingOut = true;
