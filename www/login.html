@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self'; font-src 'self'; connect-src 'self' https://utkio-backend.onrender.com http://10.215.18.30:3999 https://pwdglktwuquoswqoyely.supabase.co https://generativelanguage.googleapis.com wss://generativelanguage.googleapis.com https://*.sentry.io https://*.ingest.sentry.io; media-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self'; font-src 'self'; connect-src 'self' https://utkio-backend.onrender.com https://pwdglktwuquoswqoyely.supabase.co https://generativelanguage.googleapis.com wss://generativelanguage.googleapis.com https://*.sentry.io https://*.ingest.sentry.io; media-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';">
 <title>Utkio — Login</title>
 <link rel="stylesheet" href="shared/style.css">
 </head>
@@ -153,8 +153,9 @@
 </div>
 
 <script type="module">
-import './shared/config.js';
+import { GOOGLE_WEB_CLIENT_ID } from './shared/config.js';
 import { apiFetch, saveSession, getSession, goToPostAuthDestination } from './shared/auth.js';
+import { looksLikeIndianMobile } from './shared/formatters.js';
 
 // Already logged in? skip straight to chat/onboarding (whichever applies).
 if ((await getSession())?.access_token) {
@@ -259,13 +260,6 @@ function setAuthBusy(busy) {
   isAuthBusy = busy;
   allBusyToggles().forEach(btn => { btn.disabled = busy; });
   document.getElementById('googleBtn').classList.toggle('btn-loading', busy);
-}
-
-// Fast client-side sanity check mirroring the backend's normalizeIndianPhone
-// — just UX, the backend re-validates independently regardless.
-function looksLikeIndianMobile(raw) {
-  const digits = (raw || '').trim().replace(/[\s-]/g, '');
-  return /^[6-9]\d{9}$/.test(digits);
 }
 
 // ── LOGIN ────────────────────────────────────────────────────────────
@@ -486,14 +480,12 @@ function startResendCooldown(linkId) {
   }, 1000);
 }
 
-// PASTE your Google Cloud Console WEB Client ID here (same one used for
-// the Supabase redirect URI setup) — NOT the Android client ID.
-const GOOGLE_WEB_CLIENT_ID = '131563191455-5u8fec15l0bfei6pfp4h3befj20b70c1.apps.googleusercontent.com';
 let googleInitialized = false;
 
 async function ensureGoogleInitialized(){
   if (googleInitialized) return;
-  await window.Capacitor.Plugins.GoogleSignIn.initialize({ clientId: GOOGLE_WEB_CLIENT_ID });
+  const clientId = (typeof window !== 'undefined' && window.UTKIO_CONFIG?.GOOGLE_WEB_CLIENT_ID) || GOOGLE_WEB_CLIENT_ID;
+  await window.Capacitor.Plugins.GoogleSignIn.initialize({ clientId });
   googleInitialized = true;
 }
 

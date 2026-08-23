@@ -61,7 +61,9 @@ export function registerDefaultResumeHandling() {
   window.addEventListener('utkio:resume', async () => {
     try {
       const { invalidateChatSessionsCache, getValidAccessToken } = await import('./auth.js');
+      const { invalidatePlanCache } = await import('./plan.js');
       invalidateChatSessionsCache();
+      invalidatePlanCache();
       await getValidAccessToken(); // refreshes in the background if the session is near/past expiry; no-op otherwise
     } catch (e) {
       console.warn('app-lifecycle: default resume handling failed', e);

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self'; font-src 'self'; connect-src 'self' https://utkio-backend.onrender.com http://10.215.18.30:3999 https://pwdglktwuquoswqoyely.supabase.co https://generativelanguage.googleapis.com wss://generativelanguage.googleapis.com https://*.sentry.io https://*.ingest.sentry.io; media-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self'; font-src 'self'; connect-src 'self' https://utkio-backend.onrender.com https://pwdglktwuquoswqoyely.supabase.co https://generativelanguage.googleapis.com wss://generativelanguage.googleapis.com https://*.sentry.io https://*.ingest.sentry.io; media-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';">
 <title>Utkio — Chats</title>
 <link rel="stylesheet" href="shared/style.css">
 <style>
@@ -81,6 +81,7 @@ import { mountDrawer } from './shared/drawer.js';
 import { initBackNav } from './shared/back-nav.js';
 import { escapeHtml } from './shared/sanitize.js';
 import { groupSessionsByDate } from './shared/history-grouping.js';
+import { formatDuration } from './shared/formatters.js';
 
 await requireAuthOrRedirect();
 mountDrawer(document.getElementById('drawerTrigger'), 'chats');
@@ -106,11 +107,6 @@ const ICON_CHEVRON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
 const ICON_CHART = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>';
 const ICON_RESUME = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>';
 
-function formatDuration(startedAt, endedAt){
-  const totalSec = Math.max(0, Math.round((new Date(endedAt) - new Date(startedAt)) / 1000));
-  const min = Math.floor(totalSec / 60), sec = totalSec % 60;
-  return min > 0 ? `${min} min ${sec} sec` : `${sec} sec`;
-}
 function formatDateTime(iso){
   const d = new Date(iso);
   return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) +
@@ -134,7 +130,7 @@ function renderTranscript(msgs, container, sessionType, sessionId) {
   msgs.forEach(m => {
     const line = document.createElement('div');
     line.className = 't-line ' + (m.role === 'user' ? 'user' : 'model');
-    line.innerHTML = `<span class="t-tag">${m.role === 'user' ? 'You:' : 'Uktio:'}</span>`;
+    line.innerHTML = `<span class="t-tag">${m.role === 'user' ? 'You:' : 'Utkio:'}</span>`;
     line.appendChild(document.createTextNode(m.content));
     container.appendChild(line);
   });

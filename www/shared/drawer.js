@@ -1,16 +1,7 @@
 import { apiFetch, getCachedProfileBasic, setCachedProfileBasic, getRecentChatSessions } from './auth.js';
 import { registerBackHandler } from './back-nav.js';
 import { cachedFetch } from './api-cache.js';
-
-// Same formatting as history.html's formatDuration() — kept as a small
-// local copy rather than a shared import so drawer.js (loaded on every
-// page) doesn't pick up a dependency on history.html's module for one
-// pure formatting function.
-function formatDuration(startedAt, endedAt){
-  const totalSec = Math.max(0, Math.round((new Date(endedAt) - new Date(startedAt)) / 1000));
-  const min = Math.floor(totalSec / 60), sec = totalSec % 60;
-  return min > 0 ? `${min} min ${sec} sec` : `${sec} sec`;
-}
+import { formatDuration } from './formatters.js';
 
 // Mounts the hamburger drawer into the page and wires it to `triggerEl`.
 // activePage: 'home' | 'profile' | 'chats' | 'scenario' | null — highlights the matching nav item.

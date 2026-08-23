@@ -19,14 +19,14 @@
   position:absolute; width:1px; height:1px; padding:0; margin:-1px;
   overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
 }
-html, body{ height:100%; overflow:hidden; overscroll-behavior:none; }
+html, body{ min-height:100%; overflow-x:hidden; overscroll-behavior:none; }
 body{
   margin:0; background:var(--bg); color:var(--ink);
   font-family:var(--font-body); display:flex; justify-content:center;
 }
 .wrap{
-  width:100%; max-width:480px; height:100vh; height:100dvh;
-  display:flex; flex-direction:column; overflow:hidden;
+  width:100%; max-width:480px; min-height:100vh; min-height:100dvh;
+  display:flex; flex-direction:column; overflow-x:hidden; box-sizing:border-box;
   padding:calc(20px + env(safe-area-inset-top, 0px)) 20px 16px;
 }
 
