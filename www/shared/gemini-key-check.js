@@ -24,19 +24,19 @@ export async function checkGeminiApiKey(key) {
       { method: 'GET' }
     );
 
-    if (res.ok) return { status: 'valid', message: 'Key valid hai ✅' };
+    if (res.ok) return { status: 'valid', message: 'AI Key is valid ✅' };
 
     const data = await res.json().catch(() => ({}));
     const reason = (data && data.error && data.error.status) || '';
 
     if (res.status === 429) {
-      return { status: 'quota_exceeded', message: 'Is key ka quota/limit khatam ho gaya hai ⚠️' };
+      return { status: 'quota_exceeded', message: 'AI Key quota or rate limit exceeded ⚠️' };
     }
     if (res.status === 400 || res.status === 401 || res.status === 403 || reason === 'INVALID_ARGUMENT' || reason === 'PERMISSION_DENIED' || reason === 'UNAUTHENTICATED') {
-      return { status: 'invalid', message: 'Ye API key invalid hai ❌' };
+      return { status: 'invalid', message: 'Invalid AI Key ❌' };
     }
-    return { status: 'unknown', message: 'Key check nahi ho paya (status ' + res.status + ')' };
+    return { status: 'unknown', message: 'Could not verify AI Key (status ' + res.status + ')' };
   } catch (e) {
-    return { status: 'network_error', message: 'Internet check karo — key verify nahi ho payi' };
+    return { status: 'network_error', message: 'Please check your internet connection' };
   }
 }

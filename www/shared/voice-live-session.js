@@ -70,16 +70,16 @@ export function describeMicError(err) {
 export function describeConnectError(err) {
   const msg = (err && err.message) ? err.message : String(err);
   if (/api key not valid|api_key_invalid|invalid api key/i.test(msg))
-    return 'Invalid API key — go to Settings and paste a valid key from Google AI Studio.';
+    return 'Invalid AI key — please check your AI Key in Settings.';
   if (/quota|resource_exhausted|rate limit/i.test(msg))
-    return 'API quota/rate-limit khatam ho gaya — thodi der ruk kar try karo ya naya key banao.';
+    return 'AI usage limit reached — please try again later or check your AI Key in Settings.';
   if (/permission_denied|not authorized/i.test(msg))
-    return `This API key cannot use Live API (${LIVE_MODEL}) — check the key's permissions in Google AI Studio.`;
+    return 'This AI key is not authorized for voice sessions — please check your AI Key in Settings.';
   if (/failed to fetch|network|timeout|ENOTFOUND/i.test(msg))
-    return 'Could not connect to Google — please check your internet connection.';
+    return 'Could not connect to voice service — please check your internet connection.';
   if (/model not found|not_found/i.test(msg))
-    return 'Model available nahi hai is region/account ke liye.';
-  return 'Connect nahi ho paya, wajah: ' + msg;
+    return 'Voice model is not available for this account/region.';
+  return 'Could not connect to voice service: ' + msg;
 }
 
 export function describeCloseEvent(e) {
@@ -446,7 +446,7 @@ export function createVoiceSession({
       return { ok: false, reason: 'offline', message: 'Internet connection nahi hai — check karke phir try karo.' };
     }
 
-    callbacks.onStatus && callbacks.onStatus('Key check ho rahi hai...', null);
+    callbacks.onStatus && callbacks.onStatus('Checking AI key...', null);
     const keyCheck = await checkGeminiApiKey(apiKey);
     if (keyCheck.status !== 'valid') {
       isBusy = false;
@@ -456,7 +456,7 @@ export function createVoiceSession({
 
     await startKeepAlive();
 
-    callbacks.onStatus && callbacks.onStatus('Gemini se connect ho raha hai...', null);
+    callbacks.onStatus && callbacks.onStatus('Connecting to AI...', null);
     try {
       const { GoogleGenAI, Modality } = imports;
       const ai = new GoogleGenAI({ apiKey, apiVersion: 'v1alpha' });

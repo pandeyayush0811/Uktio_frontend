@@ -869,10 +869,10 @@ async function startSession(){
       isBusy = false;
       micBtn.disabled = false;
       if (result.reason === 'no_api_key') {
-        setStatus('Pehle Settings mein apni Gemini API key daalo.', 'err');
+        setStatus('Please add your AI Access Key in Settings.', 'err');
         window.location.href = 'settings.html?needsKey=missing';
       } else if (result.reason === 'invalid_api_key') {
-        setStatus((result.message || 'Invalid API key') + ' — go to Settings to fix this.', 'err');
+        setStatus((result.message || 'Invalid AI Key') + ' — go to Settings to fix this.', 'err');
         setTimeout(() => { window.location.href = 'settings.html?needsKey=invalid'; }, 1600);
       } else if (result.message) {
         setStatus(result.message, 'err');

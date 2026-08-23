@@ -70,6 +70,8 @@ import {
   createAudioPlayer,
   createVoiceSession,
   calculatePcmRms,
+  describeConnectError,
+  describeMicError,
   INACTIVITY_TIMEOUT_MS,
   STAGNANT_TURN_TIMEOUT_MS,
   RMS_SPEECH_THRESHOLD
@@ -441,4 +443,28 @@ describe('createVoiceSession Inactivity & Stagnant Turn Watchdog', () => {
     expect(onInactivityTimeoutMock).not.toHaveBeenCalled();
   });
 });
+
+describe('describeConnectError provider brand sanitization', () => {
+  it('does not leak "Gemini" or "Google AI Studio" in API key error messages', () => {
+    const invalidKeyMsg = describeConnectError(new Error('api_key_invalid'));
+    expect(invalidKeyMsg).toBe('Invalid AI key — please check your AI Key in Settings.');
+    expect(invalidKeyMsg).not.toContain('Google');
+    expect(invalidKeyMsg).not.toContain('Gemini');
+
+    const permMsg = describeConnectError(new Error('permission_denied'));
+    expect(permMsg).toBe('This AI key is not authorized for voice sessions — please check your AI Key in Settings.');
+    expect(permMsg).not.toContain('Google');
+    expect(permMsg).not.toContain('Gemini');
+
+    const quotaMsg = describeConnectError(new Error('resource_exhausted'));
+    expect(quotaMsg).toBe('AI usage limit reached — please try again later or check your AI Key in Settings.');
+    expect(quotaMsg).not.toContain('Google');
+    expect(quotaMsg).not.toContain('Gemini');
+
+    const networkMsg = describeConnectError(new Error('failed to fetch'));
+    expect(networkMsg).toBe('Could not connect to voice service — please check your internet connection.');
+    expect(networkMsg).not.toContain('Google');
+  });
+});
+
 

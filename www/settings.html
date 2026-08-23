@@ -135,10 +135,10 @@
     <div class="settings-section-label">AI Setup</div>
     <div class="needs-key-banner" id="needsKeyBanner">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="13"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-      <span id="needsKeyText">Chat shuru karne ke liye pehle yahan apni Gemini API key daalo 👇</span>
+      <span id="needsKeyText">Please enter your AI Access Key below to start practicing 👇</span>
     </div>
     <div class="card" id="apiKeyCard">
-      <label for="apiKey">Google Gemini API key</label>
+      <label for="apiKey">AI Access Key</label>
       <input type="password" id="apiKey" placeholder="AIza..." autocomplete="off">
       <div class="status-msg" id="keyCheckMsg" style="min-height:1.2em;margin-top:2px;"></div>
 
@@ -152,9 +152,9 @@
       <div class="collapsible-panel" id="keyDetails" aria-hidden="true">
         <p class="hint" style="margin-top:12px;">
           The key is stored only on your device — it is never sent to our servers.
-          It is sent directly to Google only when you start a voice session.
-          You can get a free API key (no credit card required) from
-          <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a>.
+          It is sent directly to the AI service only when you start a voice session.
+          You can get a free AI key (no credit card required) from
+          <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">AI Key Portal</a>.
           <br><br>
           <strong>For your security:</strong> when you log out, the key is automatically deleted from your device. You will need to enter it again the next time you log in.
         </p>
@@ -348,8 +348,8 @@ try {
 const redirectReason = new URLSearchParams(window.location.search).get('needsKey');
 if (redirectReason === 'missing' || redirectReason === 'invalid') {
   needsKeyText.textContent = redirectReason === 'invalid'
-    ? 'Wo API key kaam nahi kar rahi — neeche naya/sahi key daalo 👇'
-    : 'Chat shuru karne ke liye pehle yahan apni Gemini API key daalo 👇';
+    ? 'That AI Key did not work — please enter a valid key below 👇'
+    : 'Please enter your AI Access Key below to start practicing 👇';
   needsKeyBanner.classList.add('show');
   apiKeyCard.classList.add('needs-attention');
   // Scroll the card into view first (page can be long — Plan card above
@@ -442,8 +442,7 @@ logoutBtn.addEventListener('click', async () => {
   if (loggingOut) return;
 
   const confirmed = window.confirm(
-    'Log out karna hai? Aapki Gemini API key is device se delete ho jaayegi — ' +
-    'dobara login karne par aapko wo phir se daalni hogi.'
+    'Log out of Utkio? Your saved AI Access Key will be removed from this device.'
   );
   if (!confirmed) return;
 
