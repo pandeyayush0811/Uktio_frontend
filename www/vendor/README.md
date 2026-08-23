@@ -39,3 +39,6 @@ Then re-test the voice chat and quiz "speak" question flows before
 shipping — this bundle is what `chat.html` and `quiz.html` import
 `GoogleGenAI`/`Modality` from (see their `<script type="module">`
 imports of `./vendor/google-genai.bundle.mjs`).
+
+
+everything is good at this level - GOAT 1.1.1
