@@ -195,7 +195,7 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
     <h1 class="app-title" id="scenarioHeaderTitle">Today's Scenario</h1>
-    <a class="icon-btn" href="settings.html" aria-label="Settings">
+    <a class="icon-btn" href="settings.html?from=scenario.html" aria-label="Settings" id="topbarSettings">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
     </a>
   </header>
@@ -304,6 +304,7 @@
 import { PENDING_CHAT_SESSION_KEY, syncPendingChatSession, apiFetch } from './shared/auth.js';
 import { createVoiceSession } from './shared/voice-live-session.js';
 import { formatCountdown } from './shared/scenario-phase.js';
+import { registerBackHandler } from './shared/back-nav.js';
 
 // Same 3-minute roleplay window the feature spec calls for. A constant
 // (not scenario-config-driven) since every scenario shares the same
@@ -825,6 +826,31 @@ window.addEventListener('unhandledrejection', (e) => console.error('unhandled pr
 window.addEventListener('utkio:resume', () => {
   console.info('[lifecycle] app resumed on scenario.html — session active:', voiceSession.isActive());
 });
+
+registerBackHandler(() => {
+  if (voiceSession.isActive()) {
+    const leave = window.confirm('Active scenario chal raha hai. Kya aap is session ko chhodkar jaana chahte hain?');
+    if (leave) {
+      voiceSession.stop();
+      return false;
+    }
+    return true;
+  }
+});
+
+const topbarSettings = document.getElementById('topbarSettings');
+if (topbarSettings) {
+  topbarSettings.addEventListener('click', (e) => {
+    if (voiceSession.isActive()) {
+      e.preventDefault();
+      const leave = window.confirm('Active scenario chal raha hai. Kya aap is session ko chhodkar jaana chahte hain?');
+      if (leave) {
+        voiceSession.stop();
+        window.location.href = topbarSettings.href;
+      }
+    }
+  });
+}
 
 micBtn.addEventListener('click', () => {
   if (voiceSession.isActive()) stopSession(); else startSession();

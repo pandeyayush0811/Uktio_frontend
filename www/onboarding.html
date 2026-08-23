@@ -32,7 +32,16 @@ import { initBackNav } from './shared/back-nav.js';
 // Just needs a logged-in session — this page itself doesn't require
 // onboarding to already be complete (that would be circular).
 await requireAuthOrRedirect();
-initBackNav(null, true); // mandatory — back button is disabled here
+initBackNav(null, {
+  onBack: () => {
+    if (current > 0) {
+      current--;
+      renderStep();
+      return true;
+    }
+    return false; // on step 0, swallow so mandatory onboarding cannot be bypassed
+  }
+});
 
 const answers = {
   name: '', age: '', occupation_type: '', class_grade: '', profession: '', city: '',

@@ -55,3 +55,90 @@ describe('getPhaseBadgeState', () => {
   });
 });
 
+import { resolveReturnUrl, registerBackHandler, handleBackPress, initBackNav } from './back-nav.js';
+
+describe('back-nav manager', () => {
+  describe('resolveReturnUrl', () => {
+    it('returns defaultParent when no from or returnTo query param exists', () => {
+      expect(resolveReturnUrl('home.html', '')).toBe('home.html');
+      expect(resolveReturnUrl(null, '')).toBeNull();
+    });
+
+    it('resolves valid ?from=chat.html parameter', () => {
+      expect(resolveReturnUrl('home.html', '?from=chat.html')).toBe('chat.html');
+    });
+
+    it('resolves valid ?returnTo=history.html parameter', () => {
+      expect(resolveReturnUrl('settings.html', '?returnTo=history.html')).toBe('history.html');
+    });
+
+    it('accepts safe internal pages with query params (?from=chat.html?resume=123)', () => {
+      expect(resolveReturnUrl('history.html', '?session=abc&from=chat.html?resume=123')).toBe('chat.html?resume=123');
+    });
+
+    it('rejects external/unsafe URLs to prevent open redirects and falls back to defaultParent', () => {
+      expect(resolveReturnUrl('home.html', '?from=https://evil.com')).toBe('home.html');
+      expect(resolveReturnUrl('home.html', '?from=//evil.com')).toBe('home.html');
+      expect(resolveReturnUrl('home.html', '?from=javascript:alert(1)')).toBe('home.html');
+    });
+  });
+
+  describe('registerBackHandler (interceptor stack)', () => {
+    it('executes registered handlers in LIFO order (last registered runs first)', () => {
+      const order = [];
+      const unreg1 = registerBackHandler(() => { order.push('h1'); return false; });
+      const unreg2 = registerBackHandler(() => { order.push('h2'); return false; });
+
+      handleBackPress();
+
+      expect(order).toEqual(['h2', 'h1']);
+      unreg1();
+      unreg2();
+    });
+
+    it('stops propagation when an interceptor returns true (e.g. drawer closes)', () => {
+      const order = [];
+      const unreg1 = registerBackHandler(() => { order.push('page'); return false; });
+      const unreg2 = registerBackHandler(() => { order.push('drawer'); return true; });
+
+      handleBackPress();
+
+      expect(order).toEqual(['drawer']);
+      unreg1();
+      unreg2();
+    });
+
+    it('unregisters cleanly when unregister function is invoked', () => {
+      const order = [];
+      const unreg = registerBackHandler(() => { order.push('modal'); return true; });
+
+      unreg();
+      handleBackPress();
+
+      expect(order).toEqual([]);
+    });
+  });
+
+  describe('initBackNav integration', () => {
+    it('executes custom onBack handler for multi-step forms (e.g. onboarding, auth)', () => {
+      let step = 3;
+      initBackNav(null, {
+        onBack: () => {
+          if (step > 1) {
+            step--;
+            return true;
+          }
+          return false;
+        }
+      });
+
+      handleBackPress();
+      expect(step).toBe(2);
+
+      handleBackPress();
+      expect(step).toBe(1);
+    });
+  });
+});
+
+

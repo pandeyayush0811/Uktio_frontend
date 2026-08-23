@@ -105,7 +105,7 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
     <h1 class="app-title" style="font-family:var(--font-serif);">Utkio</h1>
-    <a class="icon-btn" href="settings.html" aria-label="Settings">
+    <a class="icon-btn" href="settings.html?from=chat.html" aria-label="Settings" id="topbarSettings">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
     </a>
   </header>
@@ -201,6 +201,7 @@ import { getPlanStatus } from './shared/plan.js';
 import { renderCommitModeBanner } from './shared/commit-mode-widget.js';
 import { maybeShowPostSessionUpsell } from './shared/upsell.js';
 import { invalidateCache } from './shared/api-cache.js';
+import { registerBackHandler } from './shared/back-nav.js';
 
 function buildBaseInstruction(userName){
   return `ROLE:
@@ -601,7 +602,7 @@ function showReportPill(sessionId, hasReport){
     // itself never looks/feels double-clickable while we navigate away.
     reportPill.disabled = true;
     if (!hasReport) reportPill.textContent = '📊 Generating…';
-    window.location.href = 'report.html?session=' + sessionId + (hasReport ? '' : '&generate=1');
+    window.location.href = 'report.html?session=' + sessionId + (hasReport ? '' : '&generate=1') + '&from=chat.html';
   };
   reportPill.classList.add('show');
 }
@@ -609,7 +610,7 @@ function showReportPill(sessionId, hasReport){
 function lockChatForReport(sessionId){
   isLocked = true;
   lockedBanner.classList.add('show');
-  document.getElementById('lockedSeeReport').onclick = () => { window.location.href = 'report.html?session=' + sessionId; };
+  document.getElementById('lockedSeeReport').onclick = () => { window.location.href = 'report.html?session=' + sessionId + '&from=chat.html'; };
   document.getElementById('lockedNewChat').onclick = () => { window.location.href = 'chat.html'; };
   micBtn.disabled = true;
   setStatus('This chat already has a report.', null);
@@ -972,6 +973,31 @@ window.addEventListener('unhandledrejection', (e) => {
 window.addEventListener('utkio:resume', () => {
   console.info('[lifecycle] app resumed on chat.html — session active:', !!voiceSession && voiceSession.isActive());
 });
+
+registerBackHandler(() => {
+  if (voiceSession && voiceSession.isActive()) {
+    const leave = window.confirm('Active chat chal raha hai. Kya aap is conversation ko chhodkar jaana chahte hain?');
+    if (leave) {
+      voiceSession.stop();
+      return false;
+    }
+    return true;
+  }
+});
+
+const topbarSettings = document.getElementById('topbarSettings');
+if (topbarSettings) {
+  topbarSettings.addEventListener('click', (e) => {
+    if (voiceSession && voiceSession.isActive()) {
+      e.preventDefault();
+      const leave = window.confirm('Active chat chal raha hai. Kya aap is conversation ko chhodkar jaana chahte hain?');
+      if (leave) {
+        voiceSession.stop();
+        window.location.href = topbarSettings.href;
+      }
+    }
+  });
+}
 
 micBtn.addEventListener('click', () => {
   if (voiceSession && voiceSession.isActive()) stopSession();

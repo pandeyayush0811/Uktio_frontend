@@ -1,4 +1,5 @@
 import { apiFetch, getCachedProfileBasic, setCachedProfileBasic, getRecentChatSessions } from './auth.js';
+import { registerBackHandler } from './back-nav.js';
 
 // Same formatting as history.html's formatDuration() — kept as a small
 // local copy rather than a shared import so drawer.js (loaded on every
@@ -64,8 +65,23 @@ export async function mountDrawer(triggerEl, activePage){
     </div>`;
   document.body.appendChild(overlay);
 
-  const open = () => overlay.classList.add('open');
-  const close = () => overlay.classList.remove('open');
+  let unregisterBack = null;
+  const open = () => {
+    overlay.classList.add('open');
+    if (!unregisterBack) {
+      unregisterBack = registerBackHandler(() => {
+        close();
+        return true;
+      });
+    }
+  };
+  const close = () => {
+    overlay.classList.remove('open');
+    if (unregisterBack) {
+      unregisterBack();
+      unregisterBack = null;
+    }
+  };
   triggerEl.addEventListener('click', open);
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
   overlay.querySelector('.drawer-close').addEventListener('click', close);
