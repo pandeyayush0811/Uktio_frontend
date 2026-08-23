@@ -75,7 +75,7 @@ public class VoiceKeepAliveService extends Service {
         Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle("Utkio")
                 .setContentText("Voice session chal rahi hai...")
-                .setSmallIcon(android.R.drawable.ic_btn_speak_now)
+                .setSmallIcon(R.mipmap.ic_launcher)
                 .setContentIntent(contentIntent)
                 .setOngoing(true)
                 .setPriority(NotificationCompat.PRIORITY_LOW) // mirrors IMPORTANCE_LOW channel on O+
