@@ -35,6 +35,7 @@ if (ACTIVE_BACKEND === 'local') {
 
 export const DEFAULT_LIVE_MODEL = 'gemini-3.1-flash-live-preview';
 export const MIN_TURNS_FOR_ANALYSIS = 10;
+export const MIN_SCENARIO_TURNS_FOR_ANALYSIS = 2;
 export const GOOGLE_WEB_CLIENT_ID = '131563191455-5u8fec15l0bfei6pfp4h3befj20b70c1.apps.googleusercontent.com';
 
 const root = typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : global);
@@ -45,6 +46,7 @@ root.UKTIO_CONFIG = {
   BACKEND_URL: BACKENDS[ACTIVE_BACKEND], // no trailing slash
 
   MIN_TURNS_FOR_ANALYSIS: 10,
+  MIN_SCENARIO_TURNS_FOR_ANALYSIS: 2,
   GOOGLE_WEB_CLIENT_ID,
 
   // ── Gemini Live Voice Model ──────────────────────────────────────────────

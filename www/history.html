@@ -174,6 +174,7 @@ async function loadTranscript(sessionId, container, sessionType){
 }
 
 const MIN_TURNS_FOR_ANALYSIS = 10;
+const MIN_SCENARIO_TURNS_FOR_ANALYSIS = 2;
 
 function buildCard(s, animDelayMs){
   const card = document.createElement('div');
@@ -187,6 +188,7 @@ function buildCard(s, animDelayMs){
   card.setAttribute('aria-expanded', 'false');
 
   const isScenario = s.session_type === 'scenario';
+  const minRequiredTurns = isScenario ? MIN_SCENARIO_TURNS_FOR_ANALYSIS : MIN_TURNS_FOR_ANALYSIS;
   card.innerHTML = `
     <div class="chat-card-head">
       <div class="chat-card-icon" aria-label="${isScenario ? 'Scenario roleplay' : 'Freeform chat'}">${isScenario ? ICON_USERS : ICON_MIC}</div>
@@ -200,13 +202,14 @@ function buildCard(s, animDelayMs){
     <div class="chat-card-actions"></div>`;
 
   // Report button (primary — the valuable analysis/upsell path) only
-  // shown once the chat is long enough to meaningfully analyze.
+  // shown once the chat is long enough to meaningfully analyze or if
+  // a report has already been generated.
   // "Generate" vs "See report" depends on whether one already exists
   // (has_report, from GET /chat/sessions). Always appended into the
   // pre-built .chat-card-actions row (see buildCard's innerHTML above)
   // so Resume — added later, once the transcript loads — lands in the
   // same consistently-sized flex row every time.
-  if (s.turn_count >= MIN_TURNS_FOR_ANALYSIS){
+  if (s.has_report || s.turn_count >= minRequiredTurns){
     const reportBtn = document.createElement('button');
     reportBtn.className = 'report-btn';
     reportBtn.setAttribute('aria-live', 'polite');

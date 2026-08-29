@@ -439,6 +439,8 @@ let phaseTimerHandle = null;
 let phaseSecondsLeft = PHASE_1_DURATION_SECONDS;
 
 let sessionStartedAt = null;
+let activeSessionId = null;
+let syncedTurnCount = 0;
 let sessionTurns = []; // { role: 'user'|'assistant', content, phase: 'roleplay'|'feedback' }
 let currentTurnIndex = -1;
 let currentUserLine = null;
@@ -574,7 +576,9 @@ function saveScenarioState() {
     const state = {
       phaseSecondsLeft,
       sessionStartedAt,
-      sessionTurns: sessionTurns.filter(t => t.content && t.content.trim())
+      sessionTurns: sessionTurns.filter(t => t.content && t.content.trim()),
+      activeSessionId,
+      syncedTurnCount
     };
     localStorage.setItem(key, JSON.stringify(state));
   } catch (e) {
@@ -592,16 +596,21 @@ function restoreScenarioState() {
     if (state && typeof state.phaseSecondsLeft === 'number' && state.phaseSecondsLeft > 0) {
       phaseSecondsLeft = state.phaseSecondsLeft;
       sessionStartedAt = state.sessionStartedAt || sessionStartedAt;
-      sessionTurns = Array.isArray(state.sessionTurns) ? state.sessionTurns : [];
+      activeSessionId = state.activeSessionId || null;
+      syncedTurnCount = typeof state.syncedTurnCount === 'number' ? state.syncedTurnCount : 0;
+      const restoredTurns = Array.isArray(state.sessionTurns) ? state.sessionTurns : [];
 
       transcriptEl.innerHTML = '';
-      sessionTurns.forEach(t => {
+      sessionTurns = [];
+      restoredTurns.forEach(t => {
         if (t.role === 'user') {
           const line = addLine('user');
           line.textContent = t.content;
+          if (sessionTurns.length) sessionTurns[sessionTurns.length - 1].content = t.content;
         } else {
           const line = addLine('model');
           line.textContent = t.content;
+          if (sessionTurns.length) sessionTurns[sessionTurns.length - 1].content = t.content;
         }
       });
 
@@ -621,14 +630,31 @@ function persistLocalSession(){
     saveScenarioState();
     const meaningful = sessionTurns.filter(t => t.content && t.content.trim());
     if (!meaningful.length) { localStorage.removeItem(PENDING_CHAT_SESSION_KEY); return; }
-    localStorage.setItem(PENDING_CHAT_SESSION_KEY, JSON.stringify({
-      session_id: null, // scenario sessions never resume — see startSession() below
-      started_at: sessionStartedAt,
-      ended_at: new Date().toISOString(),
-      session_type: 'scenario',
-      scenario_key: todaysScenario ? todaysScenario.key : null,
-      messages: meaningful.map(t => ({ role: t.role, content: t.content }))
-    }));
+
+    if (activeSessionId) {
+      const deltaMessages = meaningful.slice(syncedTurnCount);
+      if (!deltaMessages.length) {
+        localStorage.removeItem(PENDING_CHAT_SESSION_KEY);
+        return;
+      }
+      localStorage.setItem(PENDING_CHAT_SESSION_KEY, JSON.stringify({
+        session_id: activeSessionId,
+        started_at: sessionStartedAt,
+        ended_at: new Date().toISOString(),
+        session_type: 'scenario',
+        scenario_key: todaysScenario ? todaysScenario.key : null,
+        messages: deltaMessages.map(t => ({ role: t.role, content: t.content }))
+      }));
+    } else {
+      localStorage.setItem(PENDING_CHAT_SESSION_KEY, JSON.stringify({
+        session_id: null,
+        started_at: sessionStartedAt,
+        ended_at: new Date().toISOString(),
+        session_type: 'scenario',
+        scenario_key: todaysScenario ? todaysScenario.key : null,
+        messages: meaningful.map(t => ({ role: t.role, content: t.content }))
+      }));
+    }
   } catch(e){ console.warn('persistLocalSession failed', e); }
 }
 
@@ -881,12 +907,17 @@ async function finalizeAndSyncSession(){
     persistLocalSession();
     const syncedSessionId = await syncPendingChatSession();
     if (syncedSessionId){
+      activeSessionId = syncedSessionId;
+      syncedTurnCount = sessionTurns.length;
+      saveScenarioState();
       setStatus('Session saved. New scenario tomorrow.', null);
       lockChatForToday(syncedSessionId);
     }
     sessionTurns = [];
     currentTurnIndex = -1;
     sessionStartedAt = null;
+    activeSessionId = null;
+    syncedTurnCount = 0;
   } finally {
     finalizeInFlight = false;
   }
@@ -915,7 +946,13 @@ function handleScenarioExit() {
   if (voiceSession && voiceSession.isActive()) voiceSession.stop();
   if (sessionTurns.length) {
     persistLocalSession();
-    syncPendingChatSession({ keepalive: true }).catch(() => {});
+    syncPendingChatSession({ keepalive: true }).then((syncedId) => {
+      if (syncedId) {
+        activeSessionId = syncedId;
+        syncedTurnCount = sessionTurns.length;
+        saveScenarioState();
+      }
+    }).catch(() => {});
   }
 }
 
@@ -989,7 +1026,7 @@ async function loadTodaysScenario(){
     phaseValue.textContent = formatCountdown(PHASE_1_DURATION_SECONDS);
 
     if (data.already_completed_today){
-      lockChatForToday();
+      lockChatForToday(data.completed_session_id || null);
       setStatus("Today's scenario is already complete.", null);
     } else {
       restoreScenarioState();

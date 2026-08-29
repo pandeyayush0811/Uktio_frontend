@@ -1,48 +1,179 @@
-﻿import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 
 describe('Scenario Lifecycle & Resumption Payload Tests', () => {
-  it('creates an in-progress payload with is_completed=false for intermediate pause/refresh sync', () => {
-    const sessionTurns = [
-      { role: 'user', content: 'Where is the metro station?', phase: 'roleplay' },
-      { role: 'assistant', content: 'Go straight and take the first right.', phase: 'roleplay' }
-    ];
-    const isCompleted = false;
+  let localStorageMock;
 
-    const payload = {
-      session_id: 'session-temp-123',
-      started_at: '2026-08-27T10:00:00.000Z',
-      ended_at: '2026-08-27T10:01:30.000Z',
-      session_type: 'scenario',
-      scenario_key: 'directions_stranger',
-      is_completed: isCompleted,
-      messages: sessionTurns.map(t => ({ role: t.role, content: t.content }))
+  beforeEach(() => {
+    let store = {};
+    localStorageMock = {
+      getItem: (key) => store[key] || null,
+      setItem: (key, val) => { store[key] = String(val); },
+      removeItem: (key) => { delete store[key]; },
+      clear: () => { store = {}; }
     };
-
-    expect(payload.is_completed).toBe(false);
-    expect(payload.session_type).toBe('scenario');
-    expect(payload.messages.length).toBe(2);
   });
 
-  it('creates a finalized payload with is_completed=true only when scenario completes', () => {
-    const sessionTurns = [
-      { role: 'user', content: 'Where is the metro station?', phase: 'roleplay' },
-      { role: 'assistant', content: 'Go straight and take the first right.', phase: 'roleplay' },
-      { role: 'assistant', content: 'Here is your feedback: you spoke clearly.', phase: 'feedback' }
-    ];
-    const isCompleted = true;
+  function buildScenarioSyncPayload({
+    activeSessionId,
+    syncedTurnCount,
+    sessionTurns,
+    sessionStartedAt,
+    scenarioKey
+  }) {
+    const meaningful = sessionTurns.filter(t => t.content && t.content.trim());
+    if (!meaningful.length) return null;
 
-    const payload = {
-      session_id: 'session-temp-123',
-      started_at: '2026-08-27T10:00:00.000Z',
-      ended_at: '2026-08-27T10:04:00.000Z',
+    if (activeSessionId) {
+      const deltaMessages = meaningful.slice(syncedTurnCount);
+      if (!deltaMessages.length) return null;
+      return {
+        session_id: activeSessionId,
+        started_at: sessionStartedAt,
+        ended_at: new Date().toISOString(),
+        session_type: 'scenario',
+        scenario_key: scenarioKey || null,
+        messages: deltaMessages.map(t => ({ role: t.role, content: t.content }))
+      };
+    }
+
+    return {
+      session_id: null,
+      started_at: sessionStartedAt,
+      ended_at: new Date().toISOString(),
       session_type: 'scenario',
-      scenario_key: 'directions_stranger',
-      is_completed: isCompleted,
-      messages: sessionTurns.map(t => ({ role: t.role, content: t.content }))
+      scenario_key: scenarioKey || null,
+      messages: meaningful.map(t => ({ role: t.role, content: t.content }))
     };
+  }
 
-    expect(payload.is_completed).toBe(true);
-    expect(payload.messages.length).toBe(3);
+  function serializeScenarioState({
+    phaseSecondsLeft,
+    sessionStartedAt,
+    sessionTurns,
+    activeSessionId,
+    syncedTurnCount
+  }) {
+    return JSON.stringify({
+      phaseSecondsLeft,
+      sessionStartedAt,
+      sessionTurns: sessionTurns.filter(t => t.content && t.content.trim()),
+      activeSessionId: activeSessionId || null,
+      syncedTurnCount: typeof syncedTurnCount === 'number' ? syncedTurnCount : 0
+    });
+  }
+
+  function deserializeScenarioState(raw) {
+    if (!raw) return null;
+    const state = JSON.parse(raw);
+    return {
+      phaseSecondsLeft: state.phaseSecondsLeft,
+      sessionStartedAt: state.sessionStartedAt,
+      sessionTurns: Array.isArray(state.sessionTurns) ? state.sessionTurns : [],
+      activeSessionId: state.activeSessionId || null,
+      syncedTurnCount: typeof state.syncedTurnCount === 'number' ? state.syncedTurnCount : 0
+    };
+  }
+
+  it('creates full initial payload with session_id: null when activeSessionId is not set', () => {
+    const turns = [
+      { role: 'user', content: 'Hello' },
+      { role: 'assistant', content: 'Hi there' }
+    ];
+    const payload = buildScenarioSyncPayload({
+      activeSessionId: null,
+      syncedTurnCount: 0,
+      sessionTurns: turns,
+      sessionStartedAt: '2026-08-29T10:00:00.000Z',
+      scenarioKey: 'restaurant_order'
+    });
+
+    expect(payload).not.toBeNull();
+    expect(payload.session_id).toBeNull();
+    expect(payload.session_type).toBe('scenario');
+    expect(payload.scenario_key).toBe('restaurant_order');
+    expect(payload.messages.length).toBe(2);
+    expect(payload.messages[0].content).toBe('Hello');
+  });
+
+  it('creates delta payload with existing session_id when activeSessionId is set and turns have progressed', () => {
+    const turns = [
+      { role: 'user', content: 'Turn 1' },
+      { role: 'assistant', content: 'Turn 2' },
+      { role: 'user', content: 'Turn 3' },
+      { role: 'assistant', content: 'Turn 4' },
+      { role: 'user', content: 'Turn 5' }
+    ];
+
+    const payload = buildScenarioSyncPayload({
+      activeSessionId: 'session-uuid-existing',
+      syncedTurnCount: 2,
+      sessionTurns: turns,
+      sessionStartedAt: '2026-08-29T10:00:00.000Z',
+      scenarioKey: 'restaurant_order'
+    });
+
+    expect(payload).not.toBeNull();
+    expect(payload.session_id).toBe('session-uuid-existing');
+    expect(payload.messages.length).toBe(3); // turns 3, 4, 5
+    expect(payload.messages[0].content).toBe('Turn 3');
+    expect(payload.messages[2].content).toBe('Turn 5');
+  });
+
+  it('returns null if all turns have already been synced and no new delta exists', () => {
+    const turns = [
+      { role: 'user', content: 'Turn 1' },
+      { role: 'assistant', content: 'Turn 2' }
+    ];
+
+    const payload = buildScenarioSyncPayload({
+      activeSessionId: 'session-uuid-existing',
+      syncedTurnCount: 2,
+      sessionTurns: turns,
+      sessionStartedAt: '2026-08-29T10:00:00.000Z',
+      scenarioKey: 'restaurant_order'
+    });
+
+    expect(payload).toBeNull();
+  });
+
+  it('filters empty or whitespace-only turns from payload', () => {
+    const turns = [
+      { role: 'user', content: '   ' },
+      { role: 'assistant', content: '' },
+      { role: 'user', content: 'Real text' }
+    ];
+
+    const payload = buildScenarioSyncPayload({
+      activeSessionId: null,
+      syncedTurnCount: 0,
+      sessionTurns: turns,
+      sessionStartedAt: '2026-08-29T10:00:00.000Z',
+      scenarioKey: 'restaurant_order'
+    });
+
+    expect(payload).not.toBeNull();
+    expect(payload.messages.length).toBe(1);
+    expect(payload.messages[0].content).toBe('Real text');
+  });
+
+  it('persists and restores activeSessionId and syncedTurnCount in scenario state', () => {
+    const serialized = serializeScenarioState({
+      phaseSecondsLeft: 120,
+      sessionStartedAt: '2026-08-29T10:00:00.000Z',
+      sessionTurns: [{ role: 'user', content: 'Hello' }],
+      activeSessionId: 'session-persisted-xyz',
+      syncedTurnCount: 1
+    });
+
+    localStorageMock.setItem('utkio_scenario_state_test', serialized);
+
+    const raw = localStorageMock.getItem('utkio_scenario_state_test');
+    const restored = deserializeScenarioState(raw);
+
+    expect(restored.activeSessionId).toBe('session-persisted-xyz');
+    expect(restored.syncedTurnCount).toBe(1);
+    expect(restored.phaseSecondsLeft).toBe(120);
+    expect(restored.sessionTurns.length).toBe(1);
   });
 
   it('evaluates mic UI highlight accurately: only highlights when session is live', () => {
