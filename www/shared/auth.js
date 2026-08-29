@@ -407,6 +407,14 @@ export async function syncPendingChatSession(fetchOpts = {}) {
 }
 
 export async function logout() {
+  try {
+    await apiFetch('/auth/logout', { method: 'POST' });
+  } catch (err) {
+    // Remote revocation failure (offline, timeout, or already-invalid token)
+    // must NEVER prevent local logout or leave the user trapped in the app.
+    console.warn('logout: remote signOut failed (non-fatal):', err);
+  }
+
   await clearSession();
   clearCachedProfileBasic();
   clearCachedFullProfile();
@@ -419,7 +427,9 @@ export async function logout() {
   // succeeding — see mic-helpers.js).
   await removeApiKey();
 
-  window.location.href = 'login.html';
+  if (typeof window !== 'undefined' && window.location) {
+    window.location.href = 'login.html';
+  }
 }
 
 // Call right after a successful login/signup/google-auth to send the user

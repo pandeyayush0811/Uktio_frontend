@@ -869,6 +869,7 @@ async function startSession(){
     if (!result.ok) {
       isBusy = false;
       micBtn.disabled = false;
+      sessionStartedAt = null;
       if (result.reason === 'no_api_key') {
         setStatus('Please add your AI Access Key in Settings.', 'err');
         window.location.href = 'settings.html?needsKey=missing';
@@ -883,6 +884,7 @@ async function startSession(){
     console.error('startSession failed:', err);
     isBusy = false;
     micBtn.disabled = false;
+    sessionStartedAt = null;
     setStatus('Could not start microphone — please try again.', 'err');
   }
 }
@@ -955,8 +957,7 @@ async function finalizeAndSyncSession(){
 
     sessionTurns = [];
     currentTurnIndex = -1;
-    // sessionStartedAt is deliberately NOT reset — if the mic gets tapped
-    // again in this same page view, it's still the same overall session.
+    sessionStartedAt = null;
   } finally {
     finalizeInFlight = false;
   }

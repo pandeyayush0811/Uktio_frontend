@@ -838,21 +838,30 @@ async function startSession(){
   updatePhaseRing();
   micBtn.disabled = true;
 
-  const { GoogleGenAI, Modality } = await import('./vendor/google-genai.bundle.mjs');
-  const result = await voiceSession.start({ GoogleGenAI, Modality });
+  try {
+    const { GoogleGenAI, Modality } = await import('./vendor/google-genai.bundle.mjs');
+    const result = await voiceSession.start({ GoogleGenAI, Modality });
 
-  if (!result.ok){
+    if (!result.ok){
+      sessionAttemptInFlight = false;
+      micBtn.disabled = false;
+      sessionStartedAt = null;
+      if (result.reason === 'no_api_key'){
+        setStatus('Please add your AI Access Key in Settings.', 'err');
+        setTimeout(() => { window.location.href = 'settings.html?needsKey=missing'; }, 1200);
+      } else if (result.reason === 'invalid_api_key'){
+        setStatus((result.message || 'Invalid AI Key') + ' — go to Settings to fix this.', 'err');
+        setTimeout(() => { window.location.href = 'settings.html?needsKey=invalid'; }, 1600);
+      } else {
+        setStatus(result.message || 'Could not connect.', 'err');
+      }
+    }
+  } catch (err) {
+    console.error('startSession failed:', err);
     sessionAttemptInFlight = false;
     micBtn.disabled = false;
-    if (result.reason === 'no_api_key'){
-      setStatus('Please add your AI Access Key in Settings.', 'err');
-      setTimeout(() => { window.location.href = 'settings.html?needsKey=missing'; }, 1200);
-    } else if (result.reason === 'invalid_api_key'){
-      setStatus((result.message || 'Invalid AI Key') + ' — go to Settings to fix this.', 'err');
-      setTimeout(() => { window.location.href = 'settings.html?needsKey=invalid'; }, 1600);
-    } else {
-      setStatus(result.message || 'Could not connect.', 'err');
-    }
+    sessionStartedAt = null;
+    setStatus('Could not start microphone — please try again.', 'err');
   }
 }
 
@@ -877,6 +886,7 @@ async function finalizeAndSyncSession(){
     }
     sessionTurns = [];
     currentTurnIndex = -1;
+    sessionStartedAt = null;
   } finally {
     finalizeInFlight = false;
   }
