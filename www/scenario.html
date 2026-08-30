@@ -631,9 +631,14 @@ function persistLocalSession(){
     const meaningful = sessionTurns.filter(t => t.content && t.content.trim());
     if (!meaningful.length) { localStorage.removeItem(PENDING_CHAT_SESSION_KEY); return; }
 
+    const options = arguments[0] || {};
+    const isCompleted = typeof options === 'boolean'
+      ? options
+      : (typeof options.isCompleted === 'boolean' ? options.isCompleted : (phase === 'feedback'));
+
     if (activeSessionId) {
       const deltaMessages = meaningful.slice(syncedTurnCount);
-      if (!deltaMessages.length) {
+      if (!deltaMessages.length && !isCompleted) {
         localStorage.removeItem(PENDING_CHAT_SESSION_KEY);
         return;
       }
@@ -643,6 +648,7 @@ function persistLocalSession(){
         ended_at: new Date().toISOString(),
         session_type: 'scenario',
         scenario_key: todaysScenario ? todaysScenario.key : null,
+        is_completed: isCompleted,
         messages: deltaMessages.map(t => ({ role: t.role, content: t.content }))
       }));
     } else {
@@ -652,6 +658,7 @@ function persistLocalSession(){
         ended_at: new Date().toISOString(),
         session_type: 'scenario',
         scenario_key: todaysScenario ? todaysScenario.key : null,
+        is_completed: isCompleted,
         messages: meaningful.map(t => ({ role: t.role, content: t.content }))
       }));
     }
@@ -916,7 +923,7 @@ async function finalizeAndSyncSession(){
   if (!sessionTurns.length || finalizeInFlight) return;
   finalizeInFlight = true;
   try {
-    persistLocalSession();
+    persistLocalSession({ isCompleted: true });
     const syncedSessionId = await syncPendingChatSession();
     if (syncedSessionId){
       activeSessionId = syncedSessionId;

@@ -747,6 +747,10 @@ async function loadResumeContextIfAny(){
   try{
     setStatus('Loading previous conversation…', null);
     const data = await apiFetch('/chat/sessions/' + activeSessionId);
+    if (data.session && data.session.session_type === 'scenario') {
+      window.location.href = 'scenario.html';
+      return;
+    }
     const msgs = data.messages || [];
 
     if (msgs.length){

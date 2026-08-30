@@ -18,20 +18,22 @@ describe('Scenario Lifecycle & Resumption Payload Tests', () => {
     syncedTurnCount,
     sessionTurns,
     sessionStartedAt,
-    scenarioKey
+    scenarioKey,
+    isCompleted = false
   }) {
     const meaningful = sessionTurns.filter(t => t.content && t.content.trim());
     if (!meaningful.length) return null;
 
     if (activeSessionId) {
       const deltaMessages = meaningful.slice(syncedTurnCount);
-      if (!deltaMessages.length) return null;
+      if (!deltaMessages.length && !isCompleted) return null;
       return {
         session_id: activeSessionId,
         started_at: sessionStartedAt,
         ended_at: new Date().toISOString(),
         session_type: 'scenario',
         scenario_key: scenarioKey || null,
+        is_completed: isCompleted,
         messages: deltaMessages.map(t => ({ role: t.role, content: t.content }))
       };
     }
@@ -42,6 +44,7 @@ describe('Scenario Lifecycle & Resumption Payload Tests', () => {
       ended_at: new Date().toISOString(),
       session_type: 'scenario',
       scenario_key: scenarioKey || null,
+      is_completed: isCompleted,
       messages: meaningful.map(t => ({ role: t.role, content: t.content }))
     };
   }
@@ -204,5 +207,68 @@ describe('Scenario Lifecycle & Resumption Payload Tests', () => {
     expect(aiSpeakingState.isMicCaptionHighlighted).toBe(false);
     expect(aiSpeakingState.isAiCaptionHighlighted).toBe(true);
     expect(aiSpeakingState.micCaptionTitle).toBe('Listening mode');
+  });
+
+  it('AUD-031: buildScenarioSyncPayload correctly sets is_completed: false during in-flight turns', () => {
+    const payload = buildScenarioSyncPayload({
+      activeSessionId: null,
+      syncedTurnCount: 0,
+      sessionTurns: [
+        { role: 'user', content: 'Where is the gate?' },
+        { role: 'assistant', content: 'Turn right.' }
+      ],
+      sessionStartedAt: '2026-08-29T10:00:00.000Z',
+      scenarioKey: 'airport_directions',
+      isCompleted: false
+    });
+
+    expect(payload).not.toBeNull();
+    expect(payload.is_completed).toBe(false);
+    expect(payload.session_type).toBe('scenario');
+  });
+
+  it('AUD-031: buildScenarioSyncPayload correctly sets is_completed: true on finalized sync', () => {
+    const payload = buildScenarioSyncPayload({
+      activeSessionId: 'scen-session-123',
+      syncedTurnCount: 2,
+      sessionTurns: [
+        { role: 'user', content: 'Where is the gate?' },
+        { role: 'assistant', content: 'Turn right.' },
+        { role: 'assistant', content: 'Feedback: Great job!' }
+      ],
+      sessionStartedAt: '2026-08-29T10:00:00.000Z',
+      scenarioKey: 'airport_directions',
+      isCompleted: true
+    });
+
+    expect(payload).not.toBeNull();
+    expect(payload.is_completed).toBe(true);
+    expect(payload.session_type).toBe('scenario');
+  });
+
+  it('AUD-031: chat.html resume guard contract redirects scenario session to scenario.html', () => {
+    function processResumeResponse(sessionData, redirectFn) {
+      if (sessionData && sessionData.session_type === 'scenario') {
+        redirectFn('scenario.html');
+        return { redirected: true };
+      }
+      return { redirected: false };
+    }
+
+    let redirectedUrl = null;
+    const result = processResumeResponse({ id: 'scen-999', session_type: 'scenario' }, (url) => {
+      redirectedUrl = url;
+    });
+
+    expect(result.redirected).toBe(true);
+    expect(redirectedUrl).toBe('scenario.html');
+
+    // Freeform chat continues normally without redirection
+    let ffRedirect = null;
+    const ffResult = processResumeResponse({ id: 'ff-999', session_type: 'freeform' }, (url) => {
+      ffRedirect = url;
+    });
+    expect(ffResult.redirected).toBe(false);
+    expect(ffRedirect).toBeNull();
   });
 });

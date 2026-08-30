@@ -15,6 +15,10 @@ export function isReportButtonEligible(session) {
   if (session.has_report === true) return true;
 
   const isScenario = session.session_type === 'scenario';
+  if (isScenario && session.is_completed === false) {
+    return false;
+  }
+
   const minRequiredTurns = isScenario
     ? (MIN_SCENARIO_TURNS_FOR_ANALYSIS ?? 2)
     : (MIN_TURNS_FOR_ANALYSIS ?? 10);
@@ -155,7 +159,13 @@ function buildHistoryCard(s, animDelayMs = 0) {
     <div class="expanded-transcript"></div>
     <div class="chat-card-actions"></div>`;
 
-  if (s.has_report || s.turn_count >= minRequiredTurns) {
+  const isEligibleForReport = s.has_report || (
+    isScenario
+      ? (s.is_completed !== false && s.turn_count >= minRequiredTurns)
+      : (s.turn_count >= minRequiredTurns)
+  );
+
+  if (isEligibleForReport) {
     const reportBtn = new MockDOMElement('button');
     reportBtn.className = 'report-btn';
     reportBtn.setAttribute('aria-live', 'polite');
@@ -168,6 +178,16 @@ function buildHistoryCard(s, animDelayMs = 0) {
     });
     const actions = card.querySelector('.chat-card-actions');
     if (actions) actions.appendChild(reportBtn);
+  } else if (isScenario && s.is_completed === false && !s.has_report) {
+    const resumeBtn = new MockDOMElement('button');
+    resumeBtn.className = 'resume-btn';
+    resumeBtn.innerHTML = `ICON_RESUME<span>Resume scenario</span>`;
+    resumeBtn.addEventListener('click', (e) => {
+      if (e && e.stopPropagation) e.stopPropagation();
+      globalThis.window.location.href = 'scenario.html';
+    });
+    const actions = card.querySelector('.chat-card-actions');
+    if (actions) actions.appendChild(resumeBtn);
   }
 
   let loaded = false;
@@ -234,6 +254,19 @@ describe('Frontend Adversarial Test Suite — Issue #4 (AUD-023: Scenario Report
       // Why this matters: An aborted scenario simulation with < 2 turns has no dialogue content to analyze.
       expect(isReportButtonEligible({ id: 'scen-0', session_type: 'scenario', turn_count: 0, has_report: false })).toBe(false);
       expect(isReportButtonEligible({ id: 'scen-1', session_type: 'scenario', turn_count: 1, has_report: false })).toBe(false);
+    });
+
+    it('test_scenario_disallows_report_when_is_completed_is_false_even_with_turns', () => {
+      // Why this matters: AUD-031 — in-flight / incomplete scenario runs must NOT show Generate Report button.
+      expect(isReportButtonEligible({ id: 'scen-in-flight-2', session_type: 'scenario', turn_count: 2, is_completed: false, has_report: false })).toBe(false);
+      expect(isReportButtonEligible({ id: 'scen-in-flight-4', session_type: 'scenario', turn_count: 4, is_completed: false, has_report: false })).toBe(false);
+      expect(isReportButtonEligible({ id: 'scen-in-flight-8', session_type: 'scenario', turn_count: 8, is_completed: false, has_report: false })).toBe(false);
+    });
+
+    it('test_scenario_allows_report_when_is_completed_is_true_and_turns_met', () => {
+      // Why this matters: Completed scenario runs with >= 2 turns are eligible for report generation.
+      expect(isReportButtonEligible({ id: 'scen-comp-2', session_type: 'scenario', turn_count: 2, is_completed: true, has_report: false })).toBe(true);
+      expect(isReportButtonEligible({ id: 'scen-comp-4', session_type: 'scenario', turn_count: 4, is_completed: true, has_report: false })).toBe(true);
     });
 
     it('test_freeform_requires_strict_10_turns_and_rejects_sub_10_turns', () => {
@@ -341,6 +374,35 @@ describe('Frontend Adversarial Test Suite — Issue #4 (AUD-023: Scenario Report
       const reportBtn = actions.querySelector('button');
       expect(reportBtn).not.toBeNull();
       expect(reportBtn.innerHTML).toContain('Generate report');
+    });
+
+    it('test_renders_resume_scenario_button_on_incomplete_scenario_card', () => {
+      // Why this matters: AUD-031 — in-progress scenario card renders Resume Scenario CTA
+      const session = { id: 'uuid-scen-in-progress', session_type: 'scenario', turn_count: 3, is_completed: false, has_report: false, started_at: '2026-08-29T10:00:00.000Z' };
+      const card = buildHistoryCard(session);
+
+      const actions = card.querySelector('.chat-card-actions');
+      const resumeBtn = actions.querySelector('button');
+      expect(resumeBtn).not.toBeNull();
+      expect(resumeBtn.className).toBe('resume-btn');
+      expect(resumeBtn.innerHTML).toContain('Resume scenario');
+    });
+
+    it('test_resume_scenario_click_redirects_to_scenario_html', () => {
+      // Why this matters: Clicking Resume scenario leads user directly back into the scenario simulator
+      const session = { id: 'uuid-scen-in-progress', session_type: 'scenario', turn_count: 3, is_completed: false, has_report: false, started_at: '2026-08-29T10:00:00.000Z' };
+      const card = buildHistoryCard(session);
+      const resumeBtn = card.querySelector('.chat-card-actions').querySelector('button');
+
+      let stopPropagationCalled = false;
+      const mockEvent = {
+        type: 'click',
+        stopPropagation: () => { stopPropagationCalled = true; }
+      };
+
+      resumeBtn.dispatchEvent(mockEvent);
+      expect(stopPropagationCalled).toBe(true);
+      expect(globalThis.window.location.href).toBe('scenario.html');
     });
   });
 

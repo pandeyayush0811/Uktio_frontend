@@ -408,6 +408,7 @@ export function createVoiceSession({
   // starts a session doesn't pay for parsing it.
   async function start(imports) {
     if (session || isBusy) return { ok: false, reason: 'already_active' };
+    isBusy = true;
 
     // Create + resume the AudioContext FIRST, still inside the same call
     // stack as the user's mic-tap gesture — before any await touches the
@@ -421,14 +422,11 @@ export function createVoiceSession({
     await audioPlayer.open();
 
     const apiKey = await getApiKey();
-    if (!apiKey) { audioPlayer.close(); audioPlayer = null; return { ok: false, reason: 'no_api_key' }; }
-
-    // Lock as early as we safely can — right after the audio-gesture-
-    // linked open() above and the (local, non-network) getApiKey() read,
-    // and BEFORE any further await. Guards against a theoretical race
-    // where two overlapping start() calls both slip past the `session ||
-    // isBusy` check at the top before either sets isBusy.
-    isBusy = true;
+    if (!apiKey) {
+      isBusy = false;
+      if (audioPlayer) { audioPlayer.close(); audioPlayer = null; }
+      return { ok: false, reason: 'no_api_key' };
+    }
 
     // Proactive offline check FIRST — before checkGeminiApiKey(), which
     // itself makes a real network request to Google. Checking this
@@ -472,10 +470,8 @@ export function createVoiceSession({
         },
         callbacks: {
           onopen: () => {
-            callbacks.onStatus && callbacks.onStatus('Connected — microphone on, start speaking', 'live');
-            isBusy = false;
+            callbacks.onStatus && callbacks.onStatus('AI connected — starting audio...', null);
             startWatchdog();
-            callbacks.onOpen && callbacks.onOpen();
           },
           onmessage: (msg) => handleMessage(msg),
           onerror: (e) => {
@@ -502,7 +498,9 @@ export function createVoiceSession({
       callbacks.onStatus && callbacks.onStatus('Starting native microphone...', null);
       try {
         await startNativeMic();
+        isBusy = false;
         callbacks.onStatus && callbacks.onStatus('Connected — microphone on, start speaking', 'live');
+        callbacks.onOpen && callbacks.onOpen();
       } catch (err) {
         console.error('native mic error', err);
         callbacks.onStatus && callbacks.onStatus('Could not start native microphone: ' + (err && err.message ? err.message : err), 'err');
@@ -532,7 +530,10 @@ export function createVoiceSession({
   // reset. turnComplete:true so the model treats it as a real turn
   // boundary and responds right away instead of waiting for more input.
   function sendTextTurn(text) {
-    if (!session) return false;
+    if (!session) {
+      console.warn('[voice-session] sendTextTurn called while session is inactive or not yet connected');
+      return false;
+    }
     recordTurnActivity();
     try {
       session.sendClientContent({ turns: [{ role: 'user', parts: [{ text }] }], turnComplete: true });

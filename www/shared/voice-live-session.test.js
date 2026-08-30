@@ -467,4 +467,118 @@ describe('describeConnectError provider brand sanitization', () => {
   });
 });
 
+describe('createVoiceSession asynchronous initialization & onOpen timing (AUD-030)', () => {
+  beforeEach(() => {
+    globalThis.AudioContext = MockAudioContext;
+    globalThis.window = {
+      Capacitor: {
+        Plugins: {
+          MicCapture: mockMicPlugin
+        }
+      }
+    };
+    mockListeners = {};
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('guarantees session is active and sendTextTurn succeeds when called inside onOpen callback', async () => {
+    const mockSession = {
+      sendRealtimeInput: vi.fn(),
+      sendClientContent: vi.fn(),
+      close: vi.fn()
+    };
+
+    let onOpenRan = false;
+    let isActiveInsideOnOpen = null;
+    let sendTextTurnResultInsideOnOpen = null;
+
+    let voice;
+    voice = createVoiceSession({
+      getSystemInstruction: () => 'Test instruction',
+      callbacks: {
+        onOpen: () => {
+          onOpenRan = true;
+          isActiveInsideOnOpen = voice.isActive();
+          sendTextTurnResultInsideOnOpen = voice.sendTextTurn('[Session started. Greet the user warmly]');
+        }
+      }
+    });
+
+    class MockGoogleGenAI {
+      constructor() {
+        this.live = {
+          connect: vi.fn().mockImplementation(async (config) => {
+            // Emulate SDK calling onopen callback synchronously before returning session promise
+            if (config.callbacks && config.callbacks.onopen) {
+              config.callbacks.onopen();
+            }
+            return mockSession;
+          })
+        };
+      }
+    }
+
+    const result = await voice.start({
+      GoogleGenAI: MockGoogleGenAI,
+      Modality: { AUDIO: 'AUDIO' }
+    });
+
+    expect(result.ok).toBe(true);
+    expect(onOpenRan).toBe(true);
+    expect(isActiveInsideOnOpen).toBe(true);
+    expect(sendTextTurnResultInsideOnOpen).toBe(true);
+    expect(mockSession.sendClientContent).toHaveBeenCalledWith({
+      turns: [{ role: 'user', parts: [{ text: '[Session started. Greet the user warmly]' }] }],
+      turnComplete: true
+    });
+  });
+
+  it('prevents concurrent start() calls during connection handshake (mutex lock)', async () => {
+    const mockSession = {
+      sendRealtimeInput: vi.fn(),
+      sendClientContent: vi.fn(),
+      close: vi.fn()
+    };
+
+    class MockDelayedGoogleGenAI {
+      constructor() {
+        this.live = {
+          connect: vi.fn().mockImplementation(async (config) => {
+            if (config.callbacks && config.callbacks.onopen) {
+              config.callbacks.onopen();
+            }
+            await new Promise(r => setTimeout(r, 20));
+            return mockSession;
+          })
+        };
+      }
+    }
+
+    const voice = createVoiceSession({
+      getSystemInstruction: () => 'Test instruction'
+    });
+
+    const start1Promise = voice.start({
+      GoogleGenAI: MockDelayedGoogleGenAI,
+      Modality: { AUDIO: 'AUDIO' }
+    });
+
+    const start2Promise = voice.start({
+      GoogleGenAI: MockDelayedGoogleGenAI,
+      Modality: { AUDIO: 'AUDIO' }
+    });
+
+    const [res1, res2] = await Promise.all([start1Promise, start2Promise]);
+    expect(res1.ok).toBe(true);
+    expect(res2.ok).toBe(false);
+    expect(res2.reason).toBe('already_active');
+
+    voice.stop();
+  });
+});
+
+
 

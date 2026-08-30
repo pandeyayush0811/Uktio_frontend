@@ -205,11 +205,17 @@ function buildCard(s, animDelayMs){
   // shown once the chat is long enough to meaningfully analyze or if
   // a report has already been generated.
   // "Generate" vs "See report" depends on whether one already exists
-  // (has_report, from GET /chat/sessions). Always appended into the
-  // pre-built .chat-card-actions row (see buildCard's innerHTML above)
-  // so Resume — added later, once the transcript loads — lands in the
-  // same consistently-sized flex row every time.
-  if (s.has_report || s.turn_count >= minRequiredTurns){
+  // Report button gating (AUD-031):
+  // Shown if report already exists, OR:
+  // - for scenarios: requires is_completed !== false AND turn_count >= minRequiredTurns (2)
+  // - for freeform: requires turn_count >= minRequiredTurns (10)
+  const isEligibleForReport = s.has_report || (
+    isScenario
+      ? (s.is_completed !== false && s.turn_count >= minRequiredTurns)
+      : (s.turn_count >= minRequiredTurns)
+  );
+
+  if (isEligibleForReport){
     const reportBtn = document.createElement('button');
     reportBtn.className = 'report-btn';
     reportBtn.setAttribute('aria-live', 'polite');
@@ -225,6 +231,15 @@ function buildCard(s, animDelayMs){
       window.location.href = 'report.html?session=' + s.id + (s.has_report ? '' : '&generate=1');
     });
     card.querySelector('.chat-card-actions').appendChild(reportBtn);
+  } else if (isScenario && s.is_completed === false && !s.has_report) {
+    const resumeBtn = document.createElement('button');
+    resumeBtn.className = 'resume-btn';
+    resumeBtn.innerHTML = ICON_RESUME + '<span>Resume scenario</span>';
+    resumeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      window.location.href = 'scenario.html';
+    });
+    card.querySelector('.chat-card-actions').appendChild(resumeBtn);
   }
 
   let loaded = false;
