@@ -442,6 +442,59 @@ describe('createVoiceSession Inactivity & Stagnant Turn Watchdog', () => {
     vi.advanceTimersByTime(60000);
     expect(onInactivityTimeoutMock).not.toHaveBeenCalled();
   });
+
+  it('maintains watchdog active and triggers timeout when SDK connection handshake takes >= 1000ms (AUD-030)', async () => {
+    let capturedCallbacks = {};
+    const mockSession = {
+      sendRealtimeInput: vi.fn(),
+      sendClientContent: vi.fn(),
+      close: vi.fn()
+    };
+
+    class MockDelayedHandshakeGoogleGenAI {
+      constructor() {
+        this.live = {
+          connect: vi.fn().mockImplementation(async (config) => {
+            capturedCallbacks = config.callbacks || {};
+            // Emulate SDK calling onopen callback during WebSocket handshake
+            if (capturedCallbacks.onopen) capturedCallbacks.onopen();
+            // Simulate 1200ms connection resolution delay after onopen fired
+            await new Promise((resolve) => setTimeout(resolve, 1200));
+            return mockSession;
+          })
+        };
+      }
+    }
+
+    const onInactivityTimeoutMock = vi.fn();
+    const voice = createVoiceSession({
+      getSystemInstruction: () => 'Test prompt',
+      callbacks: {
+        onInactivityTimeout: onInactivityTimeoutMock
+      }
+    });
+
+    const startPromise = voice.start({
+      GoogleGenAI: MockDelayedHandshakeGoogleGenAI,
+      Modality: { AUDIO: 'AUDIO' }
+    });
+
+    // Advance 1200ms to allow connection handshake to complete
+    await vi.advanceTimersByTimeAsync(1200);
+    const startResult = await startPromise;
+
+    expect(startResult.ok).toBe(true);
+    expect(voice.isActive()).toBe(true);
+
+    // Advance past 90s of silence
+    await vi.advanceTimersByTimeAsync(91000);
+
+    // Watchdog should NOT have been killed at t=1000ms when session was null
+    expect(onInactivityTimeoutMock).toHaveBeenCalledWith(
+      expect.objectContaining({ reason: 'silence' })
+    );
+    expect(voice.isActive()).toBe(false);
+  });
 });
 
 describe('describeConnectError provider brand sanitization', () => {

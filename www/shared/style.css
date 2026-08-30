@@ -52,7 +52,19 @@ body{
    system block below) so this matches home.html's brand language
    instead of the old generic-purple template look. ==== */
 .auth-wrap{
-  justify-content:center; position:relative; overflow:hidden;
+  min-height:100vh;
+  min-height:100dvh;
+  height:100%;
+  overflow-y:auto;
+  overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior-y:contain;
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-start;
+  align-items:stretch;
+  position:relative;
+  padding:calc(20px + env(safe-area-inset-top, 0px)) 20px calc(28px + env(safe-area-inset-bottom, 0px));
 }
 /* Soft ambient glow behind the logo — quiet, not a hero image */
 .auth-glow{
@@ -60,7 +72,7 @@ body{
   width:340px; height:340px; border-radius:50%; pointer-events:none; z-index:0;
   background:radial-gradient(circle, rgba(217,105,75,0.22) 0%, rgba(217,105,75,0) 70%);
 }
-.auth-header{ position:relative; z-index:1; text-align:center; margin-bottom:22px; }
+.auth-header{ position:relative; z-index:1; text-align:center; margin-top:auto; margin-bottom:22px; }
 .auth-logo{
   width:52px; height:52px; border-radius:16px; margin:0 auto 14px;
   background:var(--accent-soft-orange); display:flex; align-items:center; justify-content:center;
@@ -77,6 +89,7 @@ body{
   position:relative; z-index:1; background:var(--card); border-radius:26px;
   padding:26px 22px; box-shadow:0 22px 44px -22px rgba(140,72,40,0.28);
   border:1px solid rgba(217,105,75,0.08);
+  margin-bottom:auto;
 }
 .auth-card label{ font-size:0.78rem; font-weight:600; color:var(--ink-dim); text-transform:uppercase; letter-spacing:0.03em; }
 .auth-card input[type=password], .auth-card input[type=text], .auth-card input[type=email], .auth-card input[type=tel]{

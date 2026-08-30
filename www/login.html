@@ -330,6 +330,12 @@ document.getElementById('signupStartForm').addEventListener('submit', async (e) 
     showScreen('signupVerify');
     startResendCooldown('signupResendOtp');
   } catch (err) {
+    if (err.status === 409 || err.data?.code === 'account_exists') {
+      const loginIdInput = document.getElementById('loginIdentifier');
+      if (loginIdInput) {
+        loginIdInput.value = email || phone;
+      }
+    }
     setStatus('signupStartStatus', err.message, 'err');
   } finally {
     setAuthBusy(false);

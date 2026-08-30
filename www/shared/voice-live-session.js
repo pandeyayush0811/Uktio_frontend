@@ -471,7 +471,6 @@ export function createVoiceSession({
         callbacks: {
           onopen: () => {
             callbacks.onStatus && callbacks.onStatus('AI connected — starting audio...', null);
-            startWatchdog();
           },
           onmessage: (msg) => handleMessage(msg),
           onerror: (e) => {
@@ -498,6 +497,7 @@ export function createVoiceSession({
       callbacks.onStatus && callbacks.onStatus('Starting native microphone...', null);
       try {
         await startNativeMic();
+        startWatchdog();
         isBusy = false;
         callbacks.onStatus && callbacks.onStatus('Connected — microphone on, start speaking', 'live');
         callbacks.onOpen && callbacks.onOpen();
