@@ -292,29 +292,35 @@ describe('Adversarial & Hardcore Test Suite — Phase 1: Splash & Authentication
     function createAuthButtonsHarness() {
       let isAuthBusy = false;
       const buttons = {
-        loginSubmitBtn: { disabled: false },
+        loginSubmitBtn: { disabled: false, classList: makeClassListMock() },
         googleBtn: { disabled: false, classList: makeClassListMock() },
-        signupStartSubmitBtn: { disabled: false },
-        signupVerifySubmitBtn: { disabled: false },
-        forgotStartSubmitBtn: { disabled: false },
-        forgotVerifySubmitBtn: { disabled: false }
+        signupStartSubmitBtn: { disabled: false, classList: makeClassListMock() },
+        signupVerifySubmitBtn: { disabled: false, classList: makeClassListMock() },
+        forgotStartSubmitBtn: { disabled: false, classList: makeClassListMock() },
+        forgotVerifySubmitBtn: { disabled: false, classList: makeClassListMock() }
       };
 
       function allBusyToggles() {
         return Object.values(buttons);
       }
 
-      function setAuthBusy(busy) {
+      function setAuthBusy(busy, activeBtn = null) {
         isAuthBusy = busy;
-        allBusyToggles().forEach(btn => { btn.disabled = busy; });
-        if (busy) buttons.googleBtn.classList.add('btn-loading');
-        else buttons.googleBtn.classList.remove('btn-loading');
+        allBusyToggles().forEach(btn => {
+          if (btn) {
+            btn.disabled = busy;
+            if (!busy && btn.classList) btn.classList.remove('btn-loading');
+          }
+        });
+        if (busy && activeBtn && activeBtn.classList) {
+          activeBtn.classList.add('btn-loading');
+        }
       }
 
       let activeCalls = 0;
       async function executeLogin(credentials) {
         if (isAuthBusy) return 'dropped';
-        setAuthBusy(true);
+        setAuthBusy(true, buttons.loginSubmitBtn);
         activeCalls++;
         try {
           const res = await globalThis.fetch('https://utkio-backend.onrender.com/auth/login', {
@@ -338,24 +344,26 @@ describe('Adversarial & Hardcore Test Suite — Phase 1: Splash & Authentication
       };
     }
 
-    it('test_setAuthBusy_disables_all_submit_buttons_and_sets_google_loading_indicator', () => {
+    it('test_setAuthBusy_disables_all_submit_buttons_and_sets_active_loading_indicator', () => {
       const harness = createAuthButtonsHarness();
       expect(harness.isBusy()).toBe(false);
 
-      harness.setAuthBusy(true);
+      const btns = harness.getButtons();
+      harness.setAuthBusy(true, btns.loginSubmitBtn);
       expect(harness.isBusy()).toBe(true);
 
-      const btns = harness.getButtons();
       expect(btns.loginSubmitBtn.disabled).toBe(true);
       expect(btns.googleBtn.disabled).toBe(true);
       expect(btns.signupStartSubmitBtn.disabled).toBe(true);
       expect(btns.signupVerifySubmitBtn.disabled).toBe(true);
       expect(btns.forgotStartSubmitBtn.disabled).toBe(true);
       expect(btns.forgotVerifySubmitBtn.disabled).toBe(true);
-      expect(btns.googleBtn.classList.has('btn-loading')).toBe(true);
+      expect(btns.loginSubmitBtn.classList.has('btn-loading')).toBe(true);
+      expect(btns.googleBtn.classList.has('btn-loading')).toBe(false);
 
       harness.setAuthBusy(false);
       expect(btns.loginSubmitBtn.disabled).toBe(false);
+      expect(btns.loginSubmitBtn.classList.has('btn-loading')).toBe(false);
       expect(btns.googleBtn.classList.has('btn-loading')).toBe(false);
     });
 

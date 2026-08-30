@@ -702,16 +702,20 @@ footer{margin-top:16px;color:var(--ink-dim);font-size:0.72rem;line-height:1.6;te
 /* ── Commit Mode: daily progress banner (chat.html) ─────────────────── */
 .commit-mode-banner{
   display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:center;
-  padding:8px 14px; margin:2px 12px 4px; border-radius:12px;
-  background:var(--accent-soft); font-size:0.76rem;
+  padding:10px 16px; margin:2px 12px 4px; border-radius:16px;
+  background:var(--panel-2); border:1px solid var(--line);
+  box-shadow:0 4px 14px -6px rgba(60,40,20,0.08); font-size:0.76rem;
 }
-.commit-mode-banner.commit-mode-done{ background:#e3f7ea; }
+.commit-mode-banner.commit-mode-done{ background:#EEF7EE; border:1px solid rgba(46, 125, 50, 0.22); }
 .commit-mode-chip{
-  padding:3px 9px; border-radius:999px; background:#fff; color:var(--ink-dim);
-  font-weight:700; border:1px solid var(--line);
+  padding:4px 10px; border-radius:999px; background:#FFFFFF; color:var(--ink-dim);
+  font-weight:700; font-size:0.75rem; border:1px solid var(--line);
 }
-.commit-mode-chip.done{ background:var(--accent); color:#fff; border-color:var(--accent); }
-.commit-mode-countdown{ color:var(--ink-dim); font-size:0.72rem; }
+.commit-mode-chip.done{
+  background:var(--accent-orange); color:#FFFFFF; border-color:var(--accent-orange);
+  box-shadow:0 2px 8px -2px rgba(217,105,75,0.4);
+}
+.commit-mode-countdown{ color:var(--ink-dim); font-size:0.74rem; font-weight:600; }
 
 /* ── Commit Mode: pre-purchase disclosure card (pricing.html) ───────── */
 .commit-mode-disclosure-overlay{

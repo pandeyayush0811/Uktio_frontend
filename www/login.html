@@ -256,10 +256,17 @@ function allBusyToggles() {
   ];
 }
 
-function setAuthBusy(busy) {
+function setAuthBusy(busy, activeBtn = null) {
   isAuthBusy = busy;
-  allBusyToggles().forEach(btn => { btn.disabled = busy; });
-  document.getElementById('googleBtn').classList.toggle('btn-loading', busy);
+  allBusyToggles().forEach(btn => {
+    if (btn) {
+      btn.disabled = busy;
+      if (!busy) btn.classList.remove('btn-loading');
+    }
+  });
+  if (busy && activeBtn) {
+    activeBtn.classList.add('btn-loading');
+  }
 }
 
 // ── LOGIN ────────────────────────────────────────────────────────────
@@ -270,7 +277,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
   const identifier = document.getElementById('loginIdentifier').value.trim();
   const password = document.getElementById('loginPassword').value;
 
-  setAuthBusy(true);
+  setAuthBusy(true, document.getElementById('loginSubmitBtn'));
   setStatus('loginStatus', 'Logging in...', null);
 
   try {
@@ -313,7 +320,7 @@ document.getElementById('signupStartForm').addEventListener('submit', async (e) 
     return;
   }
 
-  setAuthBusy(true);
+  setAuthBusy(true, document.getElementById('signupStartSubmitBtn'));
   setStatus('signupStartStatus', 'Sending OTP...', null);
 
   try {
@@ -350,7 +357,7 @@ document.getElementById('signupVerifyForm').addEventListener('submit', async (e)
   const token = document.getElementById('signupOtp').value.trim();
   const password = document.getElementById('signupPassword').value;
 
-  setAuthBusy(true);
+  setAuthBusy(true, document.getElementById('signupVerifySubmitBtn'));
   setStatus('signupVerifyStatus', 'Verifying...', null);
 
   try {
@@ -397,7 +404,7 @@ document.getElementById('forgotStartForm').addEventListener('submit', async (e) 
 
   const identifier = document.getElementById('forgotIdentifier').value.trim();
 
-  setAuthBusy(true);
+  setAuthBusy(true, document.getElementById('forgotStartSubmitBtn'));
   setStatus('forgotStartStatus', 'Sending OTP...', null);
 
   try {
@@ -425,7 +432,7 @@ document.getElementById('forgotVerifyForm').addEventListener('submit', async (e)
   const token = document.getElementById('forgotOtp').value.trim();
   const newPassword = document.getElementById('forgotNewPassword').value;
 
-  setAuthBusy(true);
+  setAuthBusy(true, document.getElementById('forgotVerifySubmitBtn'));
   setStatus('forgotVerifyStatus', 'Verifying...', null);
 
   try {
@@ -502,7 +509,7 @@ const GOOGLE_BTN_DEFAULT_LABEL = googleBtnLabel.textContent;
 googleBtn.addEventListener('click', async () => {
   if (isAuthBusy) return;
 
-  setAuthBusy(true);
+  setAuthBusy(true, googleBtn);
   googleBtnLabel.textContent = 'Signing in...';
   setStatus('loginStatus', 'Opening Google Sign-In...', null);
 

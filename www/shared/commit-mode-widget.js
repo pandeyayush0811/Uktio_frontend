@@ -16,12 +16,12 @@ export async function getCommitModeProgress() {
 }
 
 function formatCountdown(ms) {
-  if (ms <= 0) return 'resetting…';
+  if (ms <= 0) return 'Resets soon';
   const totalMinutes = Math.floor(ms / 60000);
   const h = Math.floor(totalMinutes / 60);
   const m = totalMinutes % 60;
-  if (h > 0) return `${h}h ${m}m tak`;
-  return `${m}m tak`;
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
 }
 
 // Renders (or hides) the Commit Mode progress banner into `el`.
@@ -55,13 +55,13 @@ export async function renderCommitModeBanner(el, planStatus) {
 
   const scenarioChip = document.createElement('span');
   scenarioChip.className = 'commit-mode-chip' + (scenarioDone ? ' done' : '');
-  scenarioChip.textContent = scenarioDone ? '✓ Scenario' : 'Scenario baaki';
+  scenarioChip.textContent = scenarioDone ? '✓ Scenario' : 'Scenario: Pending';
 
   const countdown = document.createElement('span');
   countdown.className = 'commit-mode-countdown';
   countdown.textContent = bothDone
     ? 'Aaj ka Commit Mode complete ✓'
-    : `Reset ${formatCountdown(progress.ms_until_reset)}`;
+    : (progress.ms_until_reset <= 0 ? 'Resets soon' : `Reset in ${formatCountdown(progress.ms_until_reset)}`);
 
   el.appendChild(chatChip);
   el.appendChild(scenarioChip);

@@ -142,8 +142,8 @@ describe('Frontend Adversarial Suite — Issue #5 (AUD-005: Commit Mode Banner &
     expect(containerEl.style.display).toBe('flex');
     expect(containerEl.className).toBe('commit-mode-banner');
     expect(containerEl.textContent).toContain('Chat 0/5 min');
-    expect(containerEl.textContent).toContain('Scenario baaki');
-    expect(containerEl.textContent).toContain('Reset 14h 0m tak');
+    expect(containerEl.textContent).toContain('Scenario: Pending');
+    expect(containerEl.textContent).toContain('Reset in 14h 0m');
   });
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -164,7 +164,7 @@ describe('Frontend Adversarial Suite — Issue #5 (AUD-005: Commit Mode Banner &
     expect(containerEl.style.display).toBe('flex');
     expect(containerEl.textContent).toContain('Chat 3/5 min');
     expect(containerEl.textContent).toContain('✓ Scenario');
-    expect(containerEl.textContent).toContain('Reset 2h 15m tak');
+    expect(containerEl.textContent).toContain('Reset in 2h 15m');
   });
 
   it('test_banner_renders_fully_completed_state_with_commit_mode_done_styling', async () => {
@@ -186,7 +186,7 @@ describe('Frontend Adversarial Suite — Issue #5 (AUD-005: Commit Mode Banner &
   });
 
   it('test_banner_countdown_edge_case_near_and_past_midnight', async () => {
-    // Why this matters: When ms_until_reset <= 0 (right at 12:00 AM IST), displays 'resetting…'.
+    // Why this matters: When ms_until_reset <= 0 (right at 12:00 AM IST), displays 'Resets soon'.
     vi.spyOn(authModule, 'apiFetch').mockResolvedValue({
       chat_seconds_done: 100,
       chat_seconds_required: 300,
@@ -196,6 +196,6 @@ describe('Frontend Adversarial Suite — Issue #5 (AUD-005: Commit Mode Banner &
     });
 
     await renderCommitModeBanner(containerEl, { plan: 'commit_mode' });
-    expect(containerEl.textContent).toContain('Reset resetting…');
+    expect(containerEl.textContent).toContain('Resets soon');
   });
 });

@@ -126,11 +126,11 @@ describe('Frontend Adversarial Suite — Issue #1 (AUD-020: Scenario Progress & 
     expect(chatChip.textContent).toBe('Chat 2/5 min');
     expect(chatChip.className).not.toContain('done');
 
-    expect(containerEl.textContent).toContain('Reset 5h 0m tak');
+    expect(containerEl.textContent).toContain('Reset in 5h 0m');
   });
 
-  it('test_scenario_pending_shows_scenario_baaki_warning', async () => {
-    // Why this matters: When scenario is not completed, chip MUST clearly state "Scenario baaki" without done class.
+  it('test_scenario_pending_shows_scenario_pending_status', async () => {
+    // Why this matters: When scenario is not completed, chip MUST clearly state "Scenario: Pending" without done class.
     vi.spyOn(authModule, 'apiFetch').mockResolvedValue({
       chat_seconds_done: 300,
       chat_seconds_required: 300,
@@ -145,7 +145,7 @@ describe('Frontend Adversarial Suite — Issue #1 (AUD-020: Scenario Progress & 
 
     const scenarioChip = containerEl.children.find(c => c.textContent.includes('Scenario'));
     expect(scenarioChip).toBeDefined();
-    expect(scenarioChip.textContent).toBe('Scenario baaki');
+    expect(scenarioChip.textContent).toBe('Scenario: Pending');
     expect(scenarioChip.className).not.toContain('done');
 
     const chatChip = containerEl.children.find(c => c.textContent.includes('Chat'));
