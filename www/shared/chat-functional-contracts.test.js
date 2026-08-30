@@ -35,16 +35,21 @@ describe('Voice Chat Page — Comprehensive Functional Sanity & Contract Verific
     expect(chatHtmlContent).toContain('showConfirmDialog');
   });
 
-  it('Functional Sanity Check: Status Row Visibility in chat.html', () => {
+  it('Functional Sanity Check: Status Row and Footer Visibility in chat.html', () => {
     // Check if .status-row in chat.html has visibility:hidden
     const statusRowCssMatch = chatHtmlContent.match(/\.status-row\s*\{([^}]+)\}/);
     expect(statusRowCssMatch).not.toBeNull();
     const statusRowCss = statusRowCssMatch ? statusRowCssMatch[1] : '';
 
-    const hasVisibilityHidden = /visibility\s*:\s*hidden/.test(statusRowCss);
+    const hasStatusRowHidden = /visibility\s*:\s*hidden/.test(statusRowCss);
+    expect(hasStatusRowHidden, '.status-row must NOT have visibility:hidden in chat.html CSS').toBe(false);
 
-    // This assertion documents the observed functional bug:
-    // When visibility:hidden is present in .status-row, statusText and statusDot are invisible to users!
-    expect(hasVisibilityHidden, 'OBSERVED DEFECT: .status-row has visibility:hidden in chat.html CSS, which hides the status dot and text from the user!').toBe(true);
+    // Check if footer in chat.html has visibility:hidden
+    const footerCssMatch = chatHtmlContent.match(/footer\s*\{([^}]+)\}/);
+    expect(footerCssMatch).not.toBeNull();
+    const footerCss = footerCssMatch ? footerCssMatch[1] : '';
+
+    const hasFooterHidden = /visibility\s*:\s*hidden/.test(footerCss);
+    expect(hasFooterHidden, 'footer must NOT have visibility:hidden in chat.html CSS').toBe(false);
   });
 });

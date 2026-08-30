@@ -9,7 +9,7 @@
 <style>
   .status-row{
     display:flex; align-items:center; justify-content:center; gap:8px;
-    margin:14px 0 18px; visibility:hidden;
+    margin:14px 0 18px;
   }
   .dot{width:8px;height:8px;border-radius:50%;background:var(--ink-dim);flex-shrink:0;transition:background 0.2s;}
   .dot.live{ background:var(--good); }
@@ -72,7 +72,7 @@
     box-shadow: 0 0 0 12px rgba(217,105,75,0.16), 0 0 24px 6px rgba(217,105,75,0.45);
   }
 
-  footer{margin-top:14px;color:var(--ink-dim);font-size:0.72rem;line-height:1.6;text-align:center;visibility:hidden;display:flex;align-items:center;justify-content:center;gap:5px;}
+  footer{margin-top:14px;color:var(--ink-dim);font-size:0.72rem;line-height:1.6;text-align:center;display:flex;align-items:center;justify-content:center;gap:5px;}
   footer svg{width:13px;height:13px;flex-shrink:0;}
 
   /* Report affordance directly on the chat page — see, generate, or (once
@@ -846,6 +846,18 @@ const voiceSession = createVoiceSession({
     onOpen: () => {
       micBtn.disabled = false;
       isBusy = false;
+
+      // AUD-030: Kick off Bolo greeting or resumed context continuation
+      const meaningfulTurns = sessionTurns.filter(t => t.content && t.content.trim());
+      const isResumed = meaningfulTurns.length > 0 || !!priorTranscriptText || !!activeSessionId;
+
+      if (!isResumed) {
+        // Fresh session start: greeting + challenge
+        voiceSession.sendTextTurn("[Session started. Greet the user warmly in Hinglish and ask today's opening practice question/challenge.]");
+      } else {
+        // Resumed session: recall previous context and continue naturally
+        voiceSession.sendTextTurn("[Session resumed. Continue our conversation naturally from where we left off, briefly referencing what we were discussing in Hinglish.]");
+      }
     },
     onClose: (closeEvent) => {
       micBtn.disabled = false;

@@ -370,7 +370,7 @@ async function refreshPlanState(forceFresh = false) {
       } else if (status.commit_mode_termination_reason === 'missed_daily_commitment') {
         commitModeBtn.style.display = '';
         commitModeBtn.textContent = 'Start Commit Mode again — ₹121';
-        commitModeMsg.textContent = 'Ek din ka commitment miss hone ki wajah se membership complete ho gayi thi — no refund, as disclosed. Dobara shuru kar sakte ho.';
+        commitModeMsg.textContent = 'Your Commit Mode membership ended because the daily practice commitment was missed. You can start a new plan anytime.';
         commitModeMsg.className = 'status-msg err';
       } else {
         commitModeBtn.style.display = '';
@@ -389,7 +389,7 @@ async function refreshPlanState(forceFresh = false) {
       // explanation on the Commit Mode card itself so it isn't just a
       // silent gap — this is the disclosed, expected outcome of missing
       // a day, not an error.
-      commitModeMsg.textContent = 'Pichli baar ek din ka commitment miss hone ki wajah se membership complete ho gayi thi — no refund, as disclosed. Dobara try kar sakte ho.';
+      commitModeMsg.textContent = 'Your previous Commit Mode membership ended because the daily practice commitment was missed. You can restart anytime.';
       commitModeMsg.className = 'status-msg err';
     }
 
@@ -429,13 +429,13 @@ async function refreshPlanState(forceFresh = false) {
         trialMsg.textContent = `${t.days_left} day${t.days_left !== 1 ? 's' : ''} remaining in your free trial.`;
         trialMsg.className = 'status-msg ok';
       } else if (reasonParam === 'chat_limit' || t.chats_remaining <= 0) {
-        trialMsg.textContent = 'Free practice sessions use ho chuke hain — choose a plan below to continue.';
+        trialMsg.textContent = 'You have used all free practice sessions in your trial — choose a plan below to continue.';
         trialMsg.className = 'status-msg err';
       } else if (reasonParam === 'scenario_limit' || (t.scenarios_remaining !== undefined && t.scenarios_remaining <= 0)) {
-        trialMsg.textContent = 'Free scenario simulation use ho chuka hai — choose a plan below to continue.';
+        trialMsg.textContent = 'You have used your free scenario simulation in your trial — choose a plan below to continue.';
         trialMsg.className = 'status-msg err';
       } else if (reasonParam === 'report_limit' || t.reports_remaining <= 0) {
-        trialMsg.textContent = 'Free analysis reports use ho chuke hain — choose a plan below to continue.';
+        trialMsg.textContent = 'You have used all free analysis reports in your trial — choose a plan below to continue.';
         trialMsg.className = 'status-msg err';
       } else {
         trialMsg.textContent = 'Your free trial has ended — choose a plan below to continue.';

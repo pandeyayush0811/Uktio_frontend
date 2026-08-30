@@ -162,8 +162,10 @@ export async function apiFetch(path, options = {}) {
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const err = new Error(data.error || ('Request failed (' + res.status + ')'));
+    const errorMessage = (data && (data.message || data.error)) || ('Request failed (' + res.status + ')');
+    const err = new Error(errorMessage);
     err.status = res.status; // callers use this to tell "bad token" apart from "server unreachable"
+    err.data = data;
     throw err;
   }
   return data;
@@ -213,7 +215,7 @@ export async function fetchProfileWithRetry(onStatus, graceOnUnauthorized = fals
 
   for (let attempt = 0; attempt < delaysMs.length; attempt++) {
     if (delaysMs[attempt] > 0) {
-      onStatus && onStatus(`Server se connect ho raha hai... (${attempt}/${delaysMs.length - 1})`);
+      onStatus && onStatus(`Connecting to server... (${attempt}/${delaysMs.length - 1})`);
       await new Promise(r => setTimeout(r, delaysMs[attempt]));
     }
     try {
@@ -251,9 +253,9 @@ export function showConnectionError() {
   document.body.innerHTML = `
     <div class="wrap" style="justify-content:center;">
       <div class="card">
-        <div class="step-title">Connect nahi ho pa raha 😕</div>
-        <div class="step-sub">Server abhi respond nahi kar raha (pehli baar thoda time lag sakta hai). Internet check karo ya thodi der baad try karo.</div>
-        <button class="primary" onclick="location.reload()">Dobara try karo</button>
+        <div class="step-title">Unable to Connect 😕</div>
+        <div class="step-sub">The server is not responding right now (first connection can take a few seconds). Please check your internet connection or try again in a moment.</div>
+        <button class="primary" onclick="location.reload()">Try Again</button>
       </div>
     </div>`;
 }
@@ -359,12 +361,9 @@ export function invalidateChatSessionsCache() {
 // syncPendingChatSession() picks it up next time the app opens.
 export const PENDING_CHAT_SESSION_KEY = 'utkio_pending_chat_session';
 
-// Called silently on every app open (from index.html's splash check), and
-// also by chat.html right after a session ends. No UI, no blocking
-// navigation — pure best-effort background sync of whatever chat session
-// got stranded on-device. Returns the backend session_id on success (so
-// chat.html can keep appending to the same session), or null otherwise.
-export async function syncPendingChatSession(fetchOpts = {}) {
+let syncInFlightPromise = null;
+
+async function doSyncPendingChatSession(fetchOpts) {
   let raw;
   try { raw = localStorage.getItem(PENDING_CHAT_SESSION_KEY); } catch (e) { return null; }
   if (!raw) return null;
@@ -404,6 +403,22 @@ export async function syncPendingChatSession(fetchOpts = {}) {
     console.warn('pending chat session sync failed, will retry later', err);
     return null;
   }
+}
+
+// Called silently on every app open (from index.html's splash check), and
+// also by chat.html right after a session ends. No UI, no blocking
+// navigation — pure best-effort background sync of whatever chat session
+// got stranded on-device. Returns the backend session_id on success (so
+// chat.html can keep appending to the same session), or null otherwise.
+export function syncPendingChatSession(fetchOpts = {}) {
+  if (syncInFlightPromise) {
+    return syncInFlightPromise;
+  }
+  syncInFlightPromise = doSyncPendingChatSession(fetchOpts).finally(() => {
+    syncInFlightPromise = null;
+  });
+
+  return syncInFlightPromise;
 }
 
 export async function logout() {

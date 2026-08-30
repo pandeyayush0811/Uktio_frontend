@@ -813,6 +813,18 @@ const voiceSession = createVoiceSession({
       sessionAttemptInFlight = false;
       micBtn.disabled = false;
       startPhaseTimer();
+
+      // AUD-030: Kick off AI speech for fresh starts or resumed roleplay
+      const meaningfulTurns = sessionTurns.filter(t => t.content && t.content.trim());
+      if (phase === 'roleplay') {
+        if (!meaningfulTurns.length) {
+          // Fresh roleplay start
+          voiceSession.sendTextTurn('[Scene starts now. Say your opening line in-character to begin the conversation.]');
+        } else {
+          // Resumed mid-roleplay
+          voiceSession.sendTextTurn('[Scene resumed after pause. Continue the conversation in-character naturally from where we left off.]');
+        }
+      }
     },
     onClose: () => {
       sessionAttemptInFlight = false;
@@ -927,11 +939,11 @@ function lockChatForToday(sessionId){
   lastCompletedSessionId = sessionId || null;
   const label = document.getElementById('lockedSeeHistoryLabel');
   if (lastCompletedSessionId){
-    document.getElementById('lockedSub').textContent = 'Feedback ready hai — neeche dekh sakte ho. Kal ek naya scenario milega.';
-    label.textContent = 'Apna feedback dekho';
+    document.getElementById('lockedSub').textContent = 'Your feedback is ready to view below. A new scenario will be available tomorrow.';
+    label.textContent = 'View feedback report';
   } else {
-    document.getElementById('lockedSub').textContent = 'Kal ek naya scenario milega. Tab tak apni purani chats dekh sakte ho.';
-    label.textContent = 'Chat history dekho';
+    document.getElementById('lockedSub').textContent = 'A new scenario will be available tomorrow. You can practice freeform chat or review past sessions in the meantime.';
+    label.textContent = 'View past sessions';
   }
   const key = getScenarioStorageKey();
   if (key) {
@@ -1066,7 +1078,7 @@ import('./shared/offline-banner.js').then(({ initOfflineBanner }) => {
     onOffline: () => {
       if (isScenarioIdle()){
         micBtn.disabled = true;
-        setStatus('Internet connection nahi hai — check karke phir try karo.', 'err');
+        setStatus('No internet connection — please check your network and try again.', 'err');
       }
     },
     onBackOnline: () => {
@@ -1074,7 +1086,7 @@ import('./shared/offline-banner.js').then(({ initOfflineBanner }) => {
         loadTodaysScenario();
       } else if (isScenarioIdle()){
         micBtn.disabled = false;
-        setStatus('Internet wapas aa gaya — mic dabao.', null);
+        setStatus('Internet connection restored — tap mic to continue.', null);
       }
     }
   });

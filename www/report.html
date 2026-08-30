@@ -113,7 +113,7 @@ let generateInFlight = false;
 async function generateReport(){
   if (generateInFlight) return;
   generateInFlight = true;
-  renderGenerateState('Report generate ho raha hai... isme 10-20 seconds lag sakte hain.', false);
+  renderGenerateState('Generating analysis report... this usually takes 10–20 seconds.', false);
   try {
     const data = await apiFetch('/chat/sessions/' + sessionId + '/analyze', { method: 'POST' });
     renderReport(data.report);
@@ -132,12 +132,12 @@ async function generateReport(){
         <div class="generate-state">
           <div style="font-size:2.2rem; margin-bottom:12px;" aria-hidden="true">📊</div>
           <h2 style="font-size:1.25rem; font-weight:700; margin-bottom:8px; color:var(--ink);">Report Limit Reached</h2>
-          <p style="margin-bottom:24px; color:var(--ink-dim);">${escapeHtml(err.message || 'Free trial ke reports use ho chuke hain — jaari rakhne ke liye plan lo.')}</p>
+          <p style="margin-bottom:24px; color:var(--ink-dim);">${escapeHtml(err.message || 'You have used all free trial reports — choose a plan to view in-depth analysis.')}</p>
           <a class="primary" href="pricing.html?reason=report_limit" style="display:inline-block; text-decoration:none; padding:12px 28px; border-radius:12px;">Upgrade Plan to View Analysis</a>
         </div>`;
       return;
     }
-    renderGenerateState('Report banane mein dikkat hui: ' + escapeHtml(err.message || 'Try again') + '.', true);
+    renderGenerateState('Could not generate report: ' + escapeHtml(err.message || 'Please try again') + '.', true);
   } finally {
     generateInFlight = false;
   }
@@ -152,7 +152,7 @@ async function pollForReport(attempt){
   const MAX_ATTEMPTS = 12; // ~40s total — generous vs. the normal ~10-20s generation time
   const DELAY_MS = 3000;
 
-  renderGenerateState('Report already generate ho raha hai — thoda ruko...', false);
+  renderGenerateState('Report is currently being generated — please wait a moment...', false);
   try {
     const data = await apiFetch('/chat/sessions/' + sessionId + '/report');
     renderReport(data.report);
@@ -160,7 +160,7 @@ async function pollForReport(attempt){
     if (err.status === 404 && attempt < MAX_ATTEMPTS){
       setTimeout(() => pollForReport(attempt + 1), DELAY_MS);
     } else if (attempt >= MAX_ATTEMPTS){
-      renderGenerateState('Report banne mein expected se zyada time lag raha hai — thodi der baad wapas aake dekho.', true);
+      renderGenerateState('Report generation is taking longer than expected — please check back in a moment.', true);
     } else {
       renderGenerateState('Could not load the report: ' + escapeHtml(err.message), true);
     }
@@ -178,7 +178,7 @@ async function init(){
   } catch (err) {
     if (err.status === 404){
       if (shouldAutoGenerate) generateReport();
-      else renderGenerateState('Is chat ka abhi tak koi report nahi bana hai.', true);
+      else renderGenerateState('No analysis report has been generated for this chat session yet.', true);
     } else {
       renderGenerateState('Could not load the report: ' + escapeHtml(err.message), true);
     }
