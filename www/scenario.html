@@ -1,347 +1,816 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self'; font-src 'self'; connect-src 'self' https://utkio-backend.onrender.com https://pwdglktwuquoswqoyely.supabase.co https://generativelanguage.googleapis.com wss://generativelanguage.googleapis.com https://*.sentry.io https://*.ingest.sentry.io; media-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';">
-<title>Utkio — Today's Scenario</title>
-<link rel="stylesheet" href="shared/style.css">
-<style>
-  /* ── Status row (Connected / Loading / error) — unchanged position,
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self'; font-src 'self'; connect-src 'self' https://utkio-backend.onrender.com https://pwdglktwuquoswqoyely.supabase.co https://generativelanguage.googleapis.com wss://generativelanguage.googleapis.com https://*.sentry.io https://*.ingest.sentry.io; media-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';">
+  <title>Utkio — Today's Scenario</title>
+  <link rel="stylesheet" href="shared/style.css">
+  <style>
+    /* ── Status row (Connected / Loading / error) — unchanged position,
      colors stay semantic (green=live) rather than brand orange, since
      "connected" is a status signal, not a brand moment. ── */
-  .status-row{
-    display:flex; align-items:center; justify-content:center; gap:8px;
-    margin:14px 0 10px;
-  }
-  .dot{width:9px;height:9px;border-radius:50%;background:var(--ink-dim);flex-shrink:0;transition:background 0.2s;}
-  .dot.live{ background:#3fb950; }
-  .dot.err{ background:var(--bad); }
-  #statusText{font-size:0.95rem;font-weight:500;}
+    .status-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin: 14px 0 10px;
+    }
 
-  /* Scoped to this page only — deliberately NOT touching the shared
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--ink-dim);
+      flex-shrink: 0;
+      transition: background 0.2s;
+    }
+
+    .dot.live {
+      background: #3fb950;
+    }
+
+    .dot.err {
+      background: var(--bad);
+    }
+
+    #statusText {
+      font-size: 0.95rem;
+      font-weight: 500;
+    }
+
+    /* Scoped to this page only — deliberately NOT touching the shared
      .app-title class (used by login/history/settings/etc.), since
      unifying header typography app-wide is a separate decision. */
-  #scenarioHeaderTitle{ font-family:var(--font-serif); }
+    #scenarioHeaderTitle {
+      font-family: var(--font-serif);
+    }
 
-  /* ── Scenario card: title + circular countdown ring ─────────────── */
-  .scenario-card{
-    background:var(--card); border-radius:22px; padding:18px 18px; margin-bottom:14px;
-    box-shadow:0 12px 28px -18px rgba(60,60,120,0.18);
-    display:flex; align-items:center; justify-content:space-between; gap:14px;
-  }
-  .scenario-card .info{ min-width:0; }
-  .scenario-card .category{
-    font-size:0.7rem; font-weight:700; letter-spacing:0.03em; color:var(--accent-orange);
-    text-transform:uppercase; padding-bottom:5px; border-bottom:2px solid var(--accent-orange);
-    display:inline-block;
-  }
-  .scenario-card .title{ font-family:var(--font-serif); font-size:1.25rem; font-weight:700; margin-top:8px; line-height:1.25; }
-  .scenario-card .desc{ font-size:0.8rem; color:var(--ink-dim); margin-top:6px; line-height:1.4; }
+    /* ── Scenario card: title + circular countdown ring ─────────────── */
+    .scenario-card {
+      background: var(--card);
+      border-radius: 22px;
+      padding: 18px 18px;
+      margin-bottom: 14px;
+      box-shadow: 0 12px 28px -18px rgba(60, 60, 120, 0.18);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
 
-  .phase-ring-wrap{ flex-shrink:0; display:flex; flex-direction:column; align-items:center; gap:5px; width:100px; }
-  .phase-ring{ position:relative; width:100px; height:100px; }
-  .phase-ring svg{ width:100%; height:100%; transform:rotate(-90deg); }
-  .phase-ring .ring-track{ fill:none; stroke:var(--accent-soft-orange); stroke-width:8; }
-  .phase-ring .ring-progress{
-    fill:none; stroke:var(--accent-orange); stroke-width:8; stroke-linecap:round;
-    transition:stroke-dashoffset 0.3s linear;
-  }
-  .phase-ring.feedback .ring-progress{ stroke-dashoffset:0 !important; }
-  .phase-ring-text{
-    position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
-  }
-  .phase-ring-value{ font-size:1.15rem; font-weight:800; color:var(--ink); font-variant-numeric:tabular-nums; line-height:1.1; }
-  .phase-ring-unit{ font-size:0.58rem; color:var(--ink-dim); text-transform:uppercase; letter-spacing:0.03em; margin-top:1px; }
-  .phase-ring-feedback-label{ font-family:var(--font-serif); font-size:0.85rem; font-weight:700; color:var(--accent-orange); }
-  .phase-live-row{ display:flex; align-items:center; gap:5px; font-size:0.68rem; font-weight:800; letter-spacing:0.04em; color:var(--accent-orange); }
-  .phase-live-row .live-dot{ width:6px; height:6px; border-radius:50%; background:var(--accent-orange); animation:liveBlink 1.4s ease-in-out infinite; }
-  @media (prefers-reduced-motion: reduce){ .phase-live-row .live-dot{ animation:none; } }
-  @keyframes liveBlink{ 0%,100%{opacity:1;} 50%{opacity:0.35;} }
+    .scenario-card .info {
+      min-width: 0;
+    }
 
-  /* ── Transcript ───────────────────────────────────────────────── */
-  .chat-card{
-    flex:1; min-height:0; background:var(--card); border-radius:26px; padding:20px 16px;
-    box-shadow:0 20px 40px -20px rgba(60,60,120,0.18);
-    display:flex; flex-direction:column; overflow:hidden;
-  }
-  .transcript{
-    flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column;
-    gap:16px; padding-right:2px; padding-bottom:4px; scroll-behavior:smooth;
-    scrollbar-width:none; -ms-overflow-style:none;
-  }
-  .transcript::-webkit-scrollbar{ display:none; }
-  .transcript:empty::before{
-    content:"Tap the mic — the scene starts as soon as you connect";
-    color:var(--ink-dim); font-size:0.85rem; font-style:italic; margin:auto;
-  }
+    .scenario-card .category {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      color: var(--accent-orange);
+      text-transform: uppercase;
+      padding-bottom: 5px;
+      border-bottom: 2px solid var(--accent-orange);
+      display: inline-block;
+    }
 
-  .msg-row{ display:flex; gap:8px; max-width:88%; }
-  .msg-row.user{ align-self:flex-end; flex-direction:row-reverse; }
-  .msg-row.model{ align-self:flex-start; }
-  .msg-avatar{
-    flex-shrink:0; width:30px; height:30px; border-radius:50%; background:var(--accent-soft-orange);
-    color:var(--accent-orange); display:flex; align-items:center; justify-content:center; margin-top:2px;
-  }
-  .msg-avatar svg{ width:15px; height:15px; }
-  .msg-col{ display:flex; flex-direction:column; min-width:0; }
-  .msg-row.user .msg-col{ align-items:flex-end; }
-  .line{ padding:12px 16px; border-radius:16px; font-size:0.95rem; line-height:1.5; }
-  .msg-row.user .line{ background:var(--accent-soft-orange); color:var(--ink); border-bottom-right-radius:6px; }
-  .msg-row.model .line{ background:var(--panel-2); color:var(--ink); border-bottom-left-radius:6px; }
-  .msg-meta{ display:flex; align-items:center; gap:4px; font-size:0.68rem; color:var(--ink-dim); margin-top:4px; padding:0 2px; }
-  .msg-meta svg{ width:12px; height:12px; color:var(--accent-orange); }
+    .scenario-card .title {
+      font-family: var(--font-serif);
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-top: 8px;
+      line-height: 1.25;
+    }
 
-  /* Feedback block — a distinct card, not a chat bubble, since this is
+    .scenario-card .desc {
+      font-size: 0.8rem;
+      color: var(--ink-dim);
+      margin-top: 6px;
+      line-height: 1.4;
+    }
+
+    .phase-ring-wrap {
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      width: 100px;
+    }
+
+    .phase-ring {
+      position: relative;
+      width: 100px;
+      height: 100px;
+    }
+
+    .phase-ring svg {
+      width: 100%;
+      height: 100%;
+      transform: rotate(-90deg);
+    }
+
+    .phase-ring .ring-track {
+      fill: none;
+      stroke: var(--accent-soft-orange);
+      stroke-width: 8;
+    }
+
+    .phase-ring .ring-progress {
+      fill: none;
+      stroke: var(--accent-orange);
+      stroke-width: 8;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 0.3s linear;
+    }
+
+    .phase-ring.feedback .ring-progress {
+      stroke-dashoffset: 0 !important;
+    }
+
+    .phase-ring-text {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .phase-ring-value {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--ink);
+      font-variant-numeric: tabular-nums;
+      line-height: 1.1;
+    }
+
+    .phase-ring-unit {
+      font-size: 0.58rem;
+      color: var(--ink-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      margin-top: 1px;
+    }
+
+    .phase-ring-feedback-label {
+      font-family: var(--font-serif);
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--accent-orange);
+    }
+
+    .phase-live-row {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      color: var(--accent-orange);
+    }
+
+    .phase-live-row .live-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent-orange);
+      animation: liveBlink 1.4s ease-in-out infinite;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .phase-live-row .live-dot {
+        animation: none;
+      }
+    }
+
+    @keyframes liveBlink {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.35;
+      }
+    }
+
+    /* ── Transcript ───────────────────────────────────────────────── */
+    .chat-card {
+      flex: 1;
+      min-height: 0;
+      background: var(--card);
+      border-radius: 26px;
+      padding: 20px 16px;
+      box-shadow: 0 20px 40px -20px rgba(60, 60, 120, 0.18);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .transcript {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      padding-right: 2px;
+      padding-bottom: 4px;
+      scroll-behavior: smooth;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+
+    .transcript::-webkit-scrollbar {
+      display: none;
+    }
+
+    .transcript:empty::before {
+      content: "Tap the mic — the scene starts as soon as you connect";
+      color: var(--ink-dim);
+      font-size: 0.85rem;
+      font-style: italic;
+      margin: auto;
+    }
+
+    .msg-row {
+      display: flex;
+      gap: 8px;
+      max-width: 88%;
+    }
+
+    .msg-row.user {
+      align-self: flex-end;
+      flex-direction: row-reverse;
+    }
+
+    .msg-row.model {
+      align-self: flex-start;
+    }
+
+    .msg-avatar {
+      flex-shrink: 0;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: var(--accent-soft-orange);
+      color: var(--accent-orange);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 2px;
+    }
+
+    .msg-avatar svg {
+      width: 15px;
+      height: 15px;
+    }
+
+    .msg-col {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .msg-row.user .msg-col {
+      align-items: flex-end;
+    }
+
+    .line {
+      padding: 12px 16px;
+      border-radius: 16px;
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+
+    .msg-row.user .line {
+      background: var(--accent-soft-orange);
+      color: var(--ink);
+      border-bottom-right-radius: 6px;
+    }
+
+    .msg-row.model .line {
+      background: var(--panel-2);
+      color: var(--ink);
+      border-bottom-left-radius: 6px;
+    }
+
+    .msg-meta {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.68rem;
+      color: var(--ink-dim);
+      margin-top: 4px;
+      padding: 0 2px;
+    }
+
+    .msg-meta svg {
+      width: 12px;
+      height: 12px;
+      color: var(--accent-orange);
+    }
+
+    /* Feedback block — a distinct card, not a chat bubble, since this is
      "the app's coaching summary," a different kind of moment than a
      back-and-forth chat line. */
-  .feedback-card{
-    background:var(--accent-soft-orange); border:1px solid rgba(217,105,75,0.35);
-    border-radius:16px; padding:14px 16px; align-self:stretch; max-width:none;
-  }
-  .feedback-card-head{ display:flex; align-items:center; gap:10px; margin-bottom:6px; }
-  .feedback-card-icon{
-    flex-shrink:0; width:30px; height:30px; border-radius:50%; background:var(--accent-orange);
-    color:#fff; display:flex; align-items:center; justify-content:center;
-  }
-  .feedback-card-icon svg{ width:15px; height:15px; }
-  .feedback-card-title{ font-family:var(--font-serif); font-weight:700; color:var(--accent-orange); font-size:0.98rem; }
-  .feedback-card-body{ font-size:0.88rem; line-height:1.55; color:var(--ink); }
-  .feedback-card-time{ font-size:0.68rem; color:var(--ink-dim); margin-top:8px; }
+    .feedback-card {
+      background: var(--accent-soft-orange);
+      border: 1px solid rgba(217, 105, 75, 0.35);
+      border-radius: 16px;
+      padding: 14px 16px;
+      align-self: stretch;
+      max-width: none;
+    }
 
-  /* ── Mic dock — primary mic + secondary "AI is speaking" indicator ── */
-  .mic-dock-card{
-    background:var(--card); border-radius:22px; padding:18px 16px 14px; margin-top:14px;
-    box-shadow:0 12px 28px -18px rgba(60,60,120,0.18);
-  }
-  .mic-dock{ position:relative; display:flex; align-items:center; justify-content:center; gap:26px; height:96px; }
-  .wave{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; gap:4px; opacity:0.35; pointer-events:none; }
-  .wave span{ width:3px; border-radius:2px; background:var(--accent-orange); opacity:0.55; }
-  .mic-btn{
-    position:relative; z-index:1; width:72px; height:72px; border-radius:50%;
-    background:var(--accent-orange); border:none; box-shadow:0 10px 22px -8px rgba(217,105,75,0.55);
-    display:flex; align-items:center; justify-content:center; cursor:pointer;
-    transition:transform 0.15s, box-shadow 0.2s, background 0.2s;
-    -webkit-tap-highlight-color: transparent; -webkit-user-select:none; user-select:none;
-    touch-action:manipulation; outline:none;
-  }
-  .mic-btn:focus, .mic-btn:focus-visible{ outline:none; }
-  .mic-btn:hover:not(:disabled){transform:scale(1.04);}
-  .mic-btn:disabled{opacity:0.5;cursor:not-allowed;}
-  .mic-btn svg{width:26px;height:26px;color:#fff;}
-  .mic-btn.active{
-    box-shadow: 0 0 0 14px rgba(217,105,75,0.16), 0 0 26px 6px rgba(217,105,75,0.45);
-  }
-  /* Utkio is currently talking — mic genuinely isn't listening right now
+    .feedback-card-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+
+    .feedback-card-icon {
+      flex-shrink: 0;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: var(--accent-orange);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .feedback-card-icon svg {
+      width: 15px;
+      height: 15px;
+    }
+
+    .feedback-card-title {
+      font-family: var(--font-serif);
+      font-weight: 700;
+      color: var(--accent-orange);
+      font-size: 0.98rem;
+    }
+
+    .feedback-card-body {
+      font-size: 0.88rem;
+      line-height: 1.55;
+      color: var(--ink);
+    }
+
+    .feedback-card-time {
+      font-size: 0.68rem;
+      color: var(--ink-dim);
+      margin-top: 8px;
+    }
+
+    /* ── Mic dock — primary mic + secondary "AI is speaking" indicator ── */
+    .mic-dock-card {
+      background: var(--card);
+      border-radius: 22px;
+      padding: 18px 16px 14px;
+      margin-top: 14px;
+      box-shadow: 0 12px 28px -18px rgba(60, 60, 120, 0.18);
+    }
+
+    .mic-dock {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 26px;
+      height: 96px;
+    }
+
+    .wave {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      opacity: 0.35;
+      pointer-events: none;
+    }
+
+    .wave span {
+      width: 3px;
+      border-radius: 2px;
+      background: var(--accent-orange);
+      opacity: 0.55;
+    }
+
+    .mic-btn {
+      position: relative;
+      z-index: 1;
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: var(--accent-orange);
+      border: none;
+      box-shadow: 0 10px 22px -8px rgba(217, 105, 75, 0.55);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.2s, background 0.2s;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-user-select: none;
+      user-select: none;
+      touch-action: manipulation;
+      outline: none;
+    }
+
+    .mic-btn:focus,
+    .mic-btn:focus-visible {
+      outline: none;
+    }
+
+    .mic-btn:hover:not(:disabled) {
+      transform: scale(1.04);
+    }
+
+    .mic-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .mic-btn svg {
+      width: 26px;
+      height: 26px;
+      color: #fff;
+    }
+
+    .mic-btn.active {
+      box-shadow: 0 0 0 14px rgba(217, 105, 75, 0.16), 0 0 26px 6px rgba(217, 105, 75, 0.45);
+    }
+
+    /* Utkio is currently talking — mic genuinely isn't listening right now
      (audio never sent to Gemini while this is true, see
      shared/voice-live-session.js's onSpeakingChange). Greyed out so
      that's visible, not just implied. */
-  .mic-btn.ai-speaking{
-    background:var(--panel-2); box-shadow:none; cursor:default;
-  }
-  .mic-btn.ai-speaking svg{ color:var(--ink-dim); }
+    .mic-btn.ai-speaking {
+      background: var(--panel-2);
+      box-shadow: none;
+      cursor: default;
+    }
 
-  .ai-indicator{ position:relative; z-index:1; display:flex; flex-direction:column; align-items:center; gap:6px; }
-  .ai-indicator-btn{
-    width:44px; height:44px; border-radius:50%; background:var(--panel-2); color:var(--ink-dim);
-    display:flex; align-items:center; justify-content:center; transition:background 0.2s, color 0.2s;
-  }
-  .ai-indicator-btn svg{ width:19px; height:19px; }
-  .ai-indicator.speaking .ai-indicator-btn{
-    background:var(--accent-orange); color:#fff;
-    animation:aiPulse 1.6s ease-in-out infinite;
-  }
-  @media (prefers-reduced-motion: reduce){ .ai-indicator.speaking .ai-indicator-btn{ animation:none; } }
-  @keyframes aiPulse{
-    0%,100%{ box-shadow:0 0 0 0 rgba(217,105,75,0.35); }
-    50%{ box-shadow:0 0 0 8px rgba(217,105,75,0); }
-  }
+    .mic-btn.ai-speaking svg {
+      color: var(--ink-dim);
+    }
 
-  .mic-caption-row{ display:flex; justify-content:space-around; margin-top:10px; gap:10px; }
-  .mic-caption{ text-align:center; width:100px; }
-  .mic-caption-title{ font-size:0.8rem; font-weight:700; color:var(--ink-dim); transition:color 0.2s; }
-  .mic-caption-sub{ font-size:0.68rem; color:var(--ink-dim); opacity:0.75; margin-top:1px; }
-  .mic-caption.highlight .mic-caption-title{ color:var(--accent-orange); }
+    .ai-indicator {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
 
-  footer{
-    margin-top:14px; display:flex; align-items:flex-start; justify-content:center; gap:6px;
-    color:var(--ink-dim); font-size:0.7rem; line-height:1.5; text-align:center; padding:0 12px;
-  }
-  footer svg{ width:13px; height:13px; flex-shrink:0; margin-top:1px; }
+    .ai-indicator-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: var(--panel-2);
+      color: var(--ink-dim);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s, color 0.2s;
+    }
 
-  /* ── Completion card — celebratory, matches editorial hero treatment
+    .ai-indicator-btn svg {
+      width: 19px;
+      height: 19px;
+    }
+
+    .ai-indicator.speaking .ai-indicator-btn {
+      background: var(--accent-orange);
+      color: #fff;
+      animation: aiPulse 1.6s ease-in-out infinite;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .ai-indicator.speaking .ai-indicator-btn {
+        animation: none;
+      }
+    }
+
+    @keyframes aiPulse {
+
+      0%,
+      100% {
+        box-shadow: 0 0 0 0 rgba(217, 105, 75, 0.35);
+      }
+
+      50% {
+        box-shadow: 0 0 0 8px rgba(217, 105, 75, 0);
+      }
+    }
+
+    .mic-caption-row {
+      display: flex;
+      justify-content: space-around;
+      margin-top: 10px;
+      gap: 10px;
+    }
+
+    .mic-caption {
+      text-align: center;
+      width: 100px;
+    }
+
+    .mic-caption-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--ink-dim);
+      transition: color 0.2s;
+    }
+
+    .mic-caption-sub {
+      font-size: 0.68rem;
+      color: var(--ink-dim);
+      opacity: 0.75;
+      margin-top: 1px;
+    }
+
+    .mic-caption.highlight .mic-caption-title {
+      color: var(--accent-orange);
+    }
+
+    footer {
+      margin-top: 14px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      gap: 6px;
+      color: var(--ink-dim);
+      font-size: 0.7rem;
+      line-height: 1.5;
+      text-align: center;
+      padding: 0 12px;
+    }
+
+    footer svg {
+      width: 13px;
+      height: 13px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    /* ── Completion card — celebratory, matches editorial hero treatment
      rather than a flat "you're done" grey box. ── */
-  .locked-banner{
-    display:none; align-items:center; gap:14px; text-align:left;
-    padding:14px 18px 14px 14px; margin-bottom:14px; border-radius:20px;
-    background:var(--accent-soft-orange); box-shadow:0 12px 28px -18px rgba(217,105,75,0.3);
-  }
-  .locked-banner.show{ display:flex; }
-  .locked-trophy{ flex-shrink:0; width:108px; height:108px; object-fit:contain; }
-  .locked-text{ min-width:0; }
-  .locked-headline{ font-family:var(--font-serif); font-weight:700; font-size:1.05rem; color:var(--ink); line-height:1.25; }
-  .locked-sub{ color:var(--ink-dim); font-size:0.82rem; line-height:1.4; margin-top:4px; }
-  .locked-banner button{
-    margin-top:10px; padding:9px 16px; border-radius:999px; border:1.5px solid var(--accent-orange);
-    background:transparent; color:var(--accent-orange); font-weight:700; font-size:0.8rem;
-    cursor:pointer; font-family:inherit; display:inline-flex; align-items:center; gap:6px; min-height:38px;
-  }
-</style>
+    .locked-banner {
+      display: none;
+      align-items: center;
+      gap: 14px;
+      text-align: left;
+      padding: 14px 18px 14px 14px;
+      margin-bottom: 14px;
+      border-radius: 20px;
+      background: var(--accent-soft-orange);
+      box-shadow: 0 12px 28px -18px rgba(217, 105, 75, 0.3);
+    }
+
+    .locked-banner.show {
+      display: flex;
+    }
+
+    .locked-trophy {
+      flex-shrink: 0;
+      width: 108px;
+      height: 108px;
+      object-fit: contain;
+    }
+
+    .locked-text {
+      min-width: 0;
+    }
+
+    .locked-headline {
+      font-family: var(--font-serif);
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: var(--ink);
+      line-height: 1.25;
+    }
+
+    .locked-sub {
+      color: var(--ink-dim);
+      font-size: 0.82rem;
+      line-height: 1.4;
+      margin-top: 4px;
+    }
+
+    .locked-banner button {
+      margin-top: 10px;
+      padding: 9px 16px;
+      border-radius: 999px;
+      border: 1.5px solid var(--accent-orange);
+      background: transparent;
+      color: var(--accent-orange);
+      font-weight: 700;
+      font-size: 0.8rem;
+      cursor: pointer;
+      font-family: inherit;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 38px;
+    }
+  </style>
 </head>
+
 <body>
-<div class="wrap">
-  <header class="topbar">
-    <button class="icon-btn" id="drawerTrigger" aria-label="Menu">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-    </button>
-    <h1 class="app-title" id="scenarioHeaderTitle">Today's Scenario</h1>
-    <a class="icon-btn" href="settings.html?from=scenario.html" aria-label="Settings" id="topbarSettings">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-    </a>
-  </header>
-
-  <div class="status-row">
-    <div class="dot" id="statusDot"></div>
-    <span id="statusText">Loading today's scenario...</span>
-  </div>
-
-  <div id="trialBanner" class="trial-banner hidden" style="display:none; font-size:13px; text-align:center; padding:6px 12px; opacity:0.8;"></div>
-
-  <div class="commit-mode-banner" id="commitBanner" style="display:none;"></div>
-
-  <div class="scenario-card" id="scenarioCard" style="display:none;">
-    <div class="info">
-      <span class="category" id="scenarioCategory"></span>
-      <div class="title" id="scenarioTitle"></div>
-    </div>
-    <div class="phase-ring-wrap">
-      <div class="phase-ring" id="phaseRing">
-        <svg viewBox="0 0 100 100">
-          <circle class="ring-track" cx="50" cy="50" r="42"></circle>
-          <circle class="ring-progress" id="ringProgress" cx="50" cy="50" r="42"
-                  stroke-dasharray="263.9" stroke-dashoffset="0"></circle>
+  <div class="wrap">
+    <header class="topbar">
+      <button class="icon-btn" id="drawerTrigger" aria-label="Menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="3" y1="6" x2="21" y2="6" />
+          <line x1="3" y1="12" x2="21" y2="12" />
+          <line x1="3" y1="18" x2="21" y2="18" />
         </svg>
-        <div class="phase-ring-text" id="phaseRingText">
-          <span class="phase-ring-value" id="phaseValue">3:00</span>
-          <span class="phase-ring-unit">min&nbsp;&nbsp;sec</span>
+      </button>
+      <h1 class="app-title" id="scenarioHeaderTitle">Today's Scenario</h1>
+      <a class="icon-btn" href="settings.html?from=scenario.html" aria-label="Settings" id="topbarSettings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+          stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3" />
+          <path
+            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+        </svg>
+      </a>
+    </header>
+
+    <div class="status-row">
+      <div class="dot" id="statusDot"></div>
+      <span id="statusText">Loading today's scenario...</span>
+    </div>
+
+    <div id="trialBanner" class="trial-banner hidden"
+      style="display:none; font-size:13px; text-align:center; padding:6px 12px; opacity:0.8;"></div>
+
+    <div class="commit-mode-banner" id="commitBanner" style="display:none;"></div>
+
+    <div class="scenario-card" id="scenarioCard" style="display:none;">
+      <div class="info">
+        <span class="category" id="scenarioCategory"></span>
+        <div class="title" id="scenarioTitle"></div>
+      </div>
+      <div class="phase-ring-wrap">
+        <div class="phase-ring" id="phaseRing">
+          <svg viewBox="0 0 100 100">
+            <circle class="ring-track" cx="50" cy="50" r="42"></circle>
+            <circle class="ring-progress" id="ringProgress" cx="50" cy="50" r="42" stroke-dasharray="263.9"
+              stroke-dashoffset="0"></circle>
+          </svg>
+          <div class="phase-ring-text" id="phaseRingText">
+            <span class="phase-ring-value" id="phaseValue">3:00</span>
+            <span class="phase-ring-unit">min&nbsp;&nbsp;sec</span>
+          </div>
+        </div>
+        <div class="phase-live-row" id="phaseLiveRow" style="visibility:hidden;">
+          <span class="live-dot"></span> LIVE
         </div>
       </div>
-      <div class="phase-live-row" id="phaseLiveRow" style="visibility:hidden;">
-        <span class="live-dot"></span> LIVE
+    </div>
+
+    <div class="locked-banner" id="lockedBanner">
+      <img class="locked-trophy" src="assets/icons/trophy-celebration.webp" alt="" aria-hidden="true">
+      <div class="locked-text">
+        <div class="locked-headline">Today's scenario complete!</div>
+        <div class="locked-sub" id="lockedSub">Tomorrow you'll get a new scenario. Until then, you can check your old
+          chats.</div>
+        <button id="lockedSeeHistory" type="button">
+          <span id="lockedSeeHistoryLabel">Chat history dekho</span>
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"
+            stroke-linecap="round" stroke-linejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12" />
+            <polyline points="12 5 19 12 12 19" />
+          </svg>
+        </button>
       </div>
     </div>
-  </div>
 
-  <div class="locked-banner" id="lockedBanner">
-    <img class="locked-trophy" src="assets/icons/trophy-celebration.webp" alt="" aria-hidden="true">
-    <div class="locked-text">
-      <div class="locked-headline">Aaj ka scenario complete!</div>
-      <div class="locked-sub" id="lockedSub">Kal ek naya scenario milega. Tab tak apni purani chats dekh sakte ho.</div>
-      <button id="lockedSeeHistory" type="button">
-        <span id="lockedSeeHistoryLabel">Chat history dekho</span>
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-      </button>
+    <div class="chat-card">
+      <div class="transcript" id="transcript"></div>
     </div>
-  </div>
 
-  <div class="chat-card">
-    <div class="transcript" id="transcript"></div>
-  </div>
-
-  <div class="mic-dock-card">
-    <div class="mic-dock">
-      <div class="wave" id="wave" aria-hidden="true"></div>
-      <button id="micBtn" class="mic-btn" aria-label="Start/stop talking" disabled>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-      </button>
-      <div class="ai-indicator" id="aiIndicator">
-        <div class="ai-indicator-btn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    <div class="mic-dock-card">
+      <div class="mic-dock">
+        <div class="wave" id="wave" aria-hidden="true"></div>
+        <button id="micBtn" class="mic-btn" aria-label="Start/stop talking" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+            <line x1="12" y1="19" x2="12" y2="23" />
+            <line x1="8" y1="23" x2="16" y2="23" />
+          </svg>
+        </button>
+        <div class="ai-indicator" id="aiIndicator">
+          <div class="ai-indicator-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+          </div>
+        </div>
+      </div>
+      <div class="mic-caption-row">
+        <div class="mic-caption" id="micCaption">
+          <div class="mic-caption-title" id="micCaptionTitle">Tap to speak</div>
+          <div class="mic-caption-sub" id="micCaptionSub">Speak clearly and naturally</div>
+        </div>
+        <div class="mic-caption" id="aiCaption">
+          <div class="mic-caption-title">AI is speaking</div>
+          <div class="mic-caption-sub">Please listen</div>
         </div>
       </div>
     </div>
-    <div class="mic-caption-row">
-      <div class="mic-caption" id="micCaption">
-        <div class="mic-caption-title" id="micCaptionTitle">Tap to speak</div>
-        <div class="mic-caption-sub" id="micCaptionSub">Speak clearly and naturally</div>
-      </div>
-      <div class="mic-caption" id="aiCaption">
-        <div class="mic-caption-title">AI is speaking</div>
-        <div class="mic-caption-sub">Please listen</div>
-      </div>
-    </div>
+
+    <footer>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <rect x="3" y="11" width="18" height="11" rx="2" />
+        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+      </svg>
+
+    </footer>
   </div>
 
-  <footer>
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-    <span>Mic access is required for the best experience. You can change this anytime in your device settings.</span>
-  </footer>
-</div>
+  <script type="module">
+    import './shared/config.js';
+    import { requireCompleteProfile } from './shared/auth.js';
+    import { requireActivePlan, trialBannerText } from './shared/plan.js';
+    import { mountDrawer } from './shared/drawer.js';
+    import { initBackNav } from './shared/back-nav.js';
+    import { renderCommitModeBanner } from './shared/commit-mode-widget.js';
 
-<script type="module">
-  import './shared/config.js';
-  import { requireCompleteProfile } from './shared/auth.js';
-  import { requireActivePlan, trialBannerText } from './shared/plan.js';
-  import { mountDrawer } from './shared/drawer.js';
-  import { initBackNav } from './shared/back-nav.js';
-  import { renderCommitModeBanner } from './shared/commit-mode-widget.js';
+    mountDrawer(document.getElementById('drawerTrigger'), 'scenario');
+    initBackNav('home.html'); // scenario.html is a sub-screen off the main hub
 
-  mountDrawer(document.getElementById('drawerTrigger'), 'scenario');
-  initBackNav('home.html'); // scenario.html is a sub-screen off the main hub
+    const profile = await requireCompleteProfile();
+    if (profile) window.__UKTIO_PROFILE = profile;
 
-  const profile = await requireCompleteProfile();
-  if (profile) window.__UKTIO_PROFILE = profile;
+    const planStatus = await requireActivePlan('scenario');
+    window.__UKTIO_PLAN_STATUS = planStatus;
+    const bannerText = trialBannerText(planStatus);
+    if (bannerText) {
+      const el = document.getElementById('trialBanner');
+      el.textContent = bannerText;
+      el.style.display = 'block';
+      el.classList.remove('hidden');
+    }
+    renderCommitModeBanner(document.getElementById('commitBanner'), planStatus);
+  </script>
 
-  const planStatus = await requireActivePlan('scenario');
-  window.__UKTIO_PLAN_STATUS = planStatus;
-  const bannerText = trialBannerText(planStatus);
-  if (bannerText) {
-    const el = document.getElementById('trialBanner');
-    el.textContent = bannerText;
-    el.style.display = 'block';
-    el.classList.remove('hidden');
-  }
-  renderCommitModeBanner(document.getElementById('commitBanner'), planStatus);
-</script>
+  <script type="module">
+    import { PENDING_CHAT_SESSION_KEY, syncPendingChatSession, apiFetch } from './shared/auth.js';
+    import { createVoiceSession } from './shared/voice-live-session.js';
+    import { formatCountdown } from './shared/scenario-phase.js';
+    import { registerBackHandler, navigateBack } from './shared/back-nav.js';
+    import { cachedFetch, invalidateCache } from './shared/api-cache.js';
+    import { showConfirmDialog } from './shared/confirm-dialog.js';
 
-<script type="module">
-import { PENDING_CHAT_SESSION_KEY, syncPendingChatSession, apiFetch } from './shared/auth.js';
-import { createVoiceSession } from './shared/voice-live-session.js';
-import { formatCountdown } from './shared/scenario-phase.js';
-import { registerBackHandler, navigateBack } from './shared/back-nav.js';
-import { cachedFetch, invalidateCache } from './shared/api-cache.js';
-import { showConfirmDialog } from './shared/confirm-dialog.js';
+    // Same 3-minute roleplay window the feature spec calls for. A constant
+    // (not scenario-config-driven) since every scenario shares the same
+    // timing — only the CONTENT differs per scenario, not the pacing.
+    const PHASE_1_DURATION_SECONDS = 180;
+    const RING_CIRCUMFERENCE = 2 * Math.PI * 42; // matches the r=42 circle in the SVG above
 
-// Same 3-minute roleplay window the feature spec calls for. A constant
-// (not scenario-config-driven) since every scenario shares the same
-// timing — only the CONTENT differs per scenario, not the pacing.
-const PHASE_1_DURATION_SECONDS = 180;
-const RING_CIRCUMFERENCE = 2 * Math.PI * 42; // matches the r=42 circle in the SVG above
+    // ─────────────────────────────────────────────────────────────
+    // System instruction builders — phase 1 (in-character roleplay) and
+    // phase 2 (out-of-character voice feedback). Style/tone conventions
+    // (Hinglish narration, "tum" not "aap", no grammar jargon) intentionally
+    // match chat.html's buildSystemInstruction() so the voice feels like the
+    // same app, not a bolted-on separate product.
+    // ─────────────────────────────────────────────────────────────
 
-// ─────────────────────────────────────────────────────────────
-// System instruction builders — phase 1 (in-character roleplay) and
-// phase 2 (out-of-character voice feedback). Style/tone conventions
-// (Hinglish narration, "tum" not "aap", no grammar jargon) intentionally
-// match chat.html's buildSystemInstruction() so the voice feels like the
-// same app, not a bolted-on separate product.
-// ─────────────────────────────────────────────────────────────
+    function toneHintForAge(age) {
+      if (!age) return '';
+      const ageNum = Number(age);
+      if (!Number.isFinite(ageNum)) return '';
+      if (ageNum < 22) return 'User young hai — thoda casual/friendly tone rakho character ke andar bhi.';
+      if (ageNum > 45) return 'User thodi zyada age ka hai — character thoda zyada respectful/formal tone use kare (jaise "sir" jaisa address, agar character ke context mein natural lage).';
+      return '';
+    }
 
-function toneHintForAge(age) {
-  if (!age) return '';
-  const ageNum = Number(age);
-  if (!Number.isFinite(ageNum)) return '';
-  if (ageNum < 22) return 'User young hai — thoda casual/friendly tone rakho character ke andar bhi.';
-  if (ageNum > 45) return 'User thodi zyada age ka hai — character thoda zyada respectful/formal tone use kare (jaise "sir" jaisa address, agar character ke context mein natural lage).';
-  return '';
-}
+    function buildPhase1Instruction(scenario, profile, pastTurns = []) {
+      const userName = (profile.name && profile.name.trim()) || null;
+      const nameNote = userName
+        ? `User ka naam "${userName}" hai — agar scene mein naturally naam poochna/use karna banta ho to karo, force mat karo.`
+        : `User ka naam pata nahi hai is scene ke character ko — agar zaroorat pade to naturally poochh sakte ho.`;
 
-function buildPhase1Instruction(scenario, profile, pastTurns = []) {
-  const userName = (profile.name && profile.name.trim()) || null;
-  const nameNote = userName
-    ? `User ka naam "${userName}" hai — agar scene mein naturally naam poochna/use karna banta ho to karo, force mat karo.`
-    : `User ka naam pata nahi hai is scene ke character ko — agar zaroorat pade to naturally poochh sakte ho.`;
-
-  let instruction = `ROLE — TUM EK CHARACTER HO, AI NAHI:
+      let instruction = `ROLE — TUM EK CHARACTER HO, AI NAHI:
 Tum "Utkio" ke ek roleplay character ho jo user ke saath EK REAL-LIFE SCENARIO simulate kar raha hai, taaki wo English speaking practice kar sake. Tum teacher ya app nahi ho — tum ek GENUINE INSAAN ki tarah act karoge, poori tarah in-character, jab tak isi message mein tumhe explicitly bola na jaaye character chhodne ko.
 
 CHARACTER BRIEF:
@@ -380,22 +849,22 @@ Judge karne wala kabhi mat bano. Agar scene "fail" ho jaaye (user baar-baar conf
 CHARACTER LOCK:
 Jab tak agla message tumhe explicitly na kahe "character chhodo", tum HAMESHA is character mein raho — kabhi khud se AI/tutor mode mein switch mat karo.`;
 
-  const meaningfulPast = (pastTurns || []).filter(t => t.content && t.content.trim() && t.phase === 'roleplay');
-  if (meaningfulPast.length > 0) {
-    const dialogueText = meaningfulPast.map(t => (t.role === 'user' ? 'User' : 'You (Character)') + ': ' + t.content).join('\n');
-    instruction += `\n\nPREVIOUS CONVERSATION IN THIS SCENE (ALREADY HAPPENED BEFORE INTERRUPTION):
+      const meaningfulPast = (pastTurns || []).filter(t => t.content && t.content.trim() && t.phase === 'roleplay');
+      if (meaningfulPast.length > 0) {
+        const dialogueText = meaningfulPast.map(t => (t.role === 'user' ? 'User' : 'You (Character)') + ': ' + t.content).join('\n');
+        instruction += `\n\nPREVIOUS CONVERSATION IN THIS SCENE (ALREADY HAPPENED BEFORE INTERRUPTION):
 ${dialogueText}
 
 CONTINUATION INSTRUCTION:
 The roleplay was interrupted and is now resuming. The previous conversation above has ALREADY taken place. DO NOT repeat your opening line or start the scene over. Directly and naturally continue the conversation from the last exchange in-character.`;
-  }
+      }
 
-  return instruction;
-}
+      return instruction;
+    }
 
-function buildPhase2Instruction(profile) {
-  const userName = (profile.name && profile.name.trim()) || 'tum';
-  return `CHARACTER CHHODO — AB TUTOR MODE:
+    function buildPhase2Instruction(profile) {
+      const userName = (profile.name && profile.name.trim()) || 'tum';
+      return `CHARACTER CHHODO — AB TUTOR MODE:
 Scene khatam ho gaya hai. Ab tum apna roleplay character bilkul chhod do — turant aur poori tarah. Ab tum "Utkio" ho, ${userName} ke apne warm, caring bade-bhai/dost jaise mentor, seedha apni normal awaaz mein baat kar rahe ho. Koi character ka trace nahi rehna chahiye — tone turant badalni chahiye, koi awkward mix nahi.
 
 Tumhe transcript dobara nahi diya ja raha — is poori session ki memory tumhare paas already hai (jo abhi scene mein hua), usi ko analyze karke seedha bolke feedback do, LIVE VOICE mein, is order mein:
@@ -408,108 +877,108 @@ Tumhe transcript dobara nahi diya ja raha — is poori session ki memory tumhare
 TONE: Judge karne wale teacher jaisa bilkul nahi — genuinely ek dost jaisa jo help karna chahta hai, bilkul waise hi jaise Utkio ke normal (non-scenario) practice mode mein baat karta hai — Indian English + Hinglish mix, casual, warm. Agar scene mein user struggle kiya, usko negative mat banao — sirf encourage karo.
 
 Ek baar mein bahut lamba mat bolo — natural conversational chunks mein bolo, jaise real baat cheet hoti hai, ek hi saans mein poora lecture nahi. User is waqt sirf sun raha hai (uska mic band hai jab tak tum bol rahe ho) — jab tum apni baat khatam karke ruk jaoge, tabhi wo bol payega, isliye clearly signal do jab tumhari baari khatam ho ("ab tum batao" jaisa kuch bol kar).`;
-}
+    }
 
-// ─────────────────────────────────────────────────────────────
-// Page state + DOM refs
-// ─────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────
+    // Page state + DOM refs
+    // ─────────────────────────────────────────────────────────────
 
-const micBtn = document.getElementById('micBtn');
-const statusDot = document.getElementById('statusDot');
-const statusText = document.getElementById('statusText');
-const transcriptEl = document.getElementById('transcript');
-const waveEl = document.getElementById('wave');
-const scenarioCard = document.getElementById('scenarioCard');
-const scenarioCategoryEl = document.getElementById('scenarioCategory');
-const scenarioTitleEl = document.getElementById('scenarioTitle');
-const phaseRing = document.getElementById('phaseRing');
-const ringProgress = document.getElementById('ringProgress');
-const phaseValue = document.getElementById('phaseValue');
-const phaseLiveRow = document.getElementById('phaseLiveRow');
-const lockedBanner = document.getElementById('lockedBanner');
-const aiIndicator = document.getElementById('aiIndicator');
-const micCaptionTitle = document.getElementById('micCaptionTitle');
-const micCaptionSub = document.getElementById('micCaptionSub');
+    const micBtn = document.getElementById('micBtn');
+    const statusDot = document.getElementById('statusDot');
+    const statusText = document.getElementById('statusText');
+    const transcriptEl = document.getElementById('transcript');
+    const waveEl = document.getElementById('wave');
+    const scenarioCard = document.getElementById('scenarioCard');
+    const scenarioCategoryEl = document.getElementById('scenarioCategory');
+    const scenarioTitleEl = document.getElementById('scenarioTitle');
+    const phaseRing = document.getElementById('phaseRing');
+    const ringProgress = document.getElementById('ringProgress');
+    const phaseValue = document.getElementById('phaseValue');
+    const phaseLiveRow = document.getElementById('phaseLiveRow');
+    const lockedBanner = document.getElementById('lockedBanner');
+    const aiIndicator = document.getElementById('aiIndicator');
+    const micCaptionTitle = document.getElementById('micCaptionTitle');
+    const micCaptionSub = document.getElementById('micCaptionSub');
 
-document.getElementById('lockedSeeHistory').onclick = () => {
-  window.location.href = lastCompletedSessionId
-    ? 'report.html?session=' + lastCompletedSessionId + '&generate=1'
-    : 'history.html';
-};
+    document.getElementById('lockedSeeHistory').onclick = () => {
+      window.location.href = lastCompletedSessionId
+        ? 'report.html?session=' + lastCompletedSessionId + '&generate=1'
+        : 'history.html';
+    };
 
-let todaysScenario = null; // { key, category, title, character_brief, opening_situation }
-let phase = 'idle'; // 'idle' | 'roleplay' | 'feedback'
-let phaseTimerHandle = null;
-let phaseSecondsLeft = PHASE_1_DURATION_SECONDS;
+    let todaysScenario = null; // { key, category, title, character_brief, opening_situation }
+    let phase = 'idle'; // 'idle' | 'roleplay' | 'feedback'
+    let phaseTimerHandle = null;
+    let phaseSecondsLeft = PHASE_1_DURATION_SECONDS;
 
-let sessionStartedAt = null;
-let activeSessionId = null;
-let syncedTurnCount = 0;
-let sessionTurns = []; // { role: 'user'|'assistant', content, phase: 'roleplay'|'feedback' }
-let currentTurnIndex = -1;
-let currentUserLine = null;
-let currentModelLine = null;
-let finalizeInFlight = false;
-// Distinguishes "user actually finished / chose to stop" from "connection
-// just dropped" — these used to be treated identically by onClose, which
-// meant a mid-roleplay network blip silently burned the user's entire day
-// (locked, no feedback, no resume). Only these two cases count as a real
-// completion:
-//   1. user explicitly pressed the stop button (any phase)
-//   2. the feedback phase actually produced a model response
-// Anything else reaching onClose is treated as an unexpected drop.
-let explicitStop = false;
-let feedbackResponseReceived = false;
-// Set only when a session completes THIS page-load (we have a real
-// session id to deep-link to). If the scenario was already completed
-// earlier today (page freshly loaded, already-locked), we never learn
-// that session's id from GET /chat/scenario/today — so the locked-state
-// CTA falls back to history.html in that case. See lockChatForToday().
-let lastCompletedSessionId = null;
+    let sessionStartedAt = null;
+    let activeSessionId = null;
+    let syncedTurnCount = 0;
+    let sessionTurns = []; // { role: 'user'|'assistant', content, phase: 'roleplay'|'feedback' }
+    let currentTurnIndex = -1;
+    let currentUserLine = null;
+    let currentModelLine = null;
+    let finalizeInFlight = false;
+    // Distinguishes "user actually finished / chose to stop" from "connection
+    // just dropped" — these used to be treated identically by onClose, which
+    // meant a mid-roleplay network blip silently burned the user's entire day
+    // (locked, no feedback, no resume). Only these two cases count as a real
+    // completion:
+    //   1. user explicitly pressed the stop button (any phase)
+    //   2. the feedback phase actually produced a model response
+    // Anything else reaching onClose is treated as an unexpected drop.
+    let explicitStop = false;
+    let feedbackResponseReceived = false;
+    // Set only when a session completes THIS page-load (we have a real
+    // session id to deep-link to). If the scenario was already completed
+    // earlier today (page freshly loaded, already-locked), we never learn
+    // that session's id from GET /chat/scenario/today — so the locked-state
+    // CTA falls back to history.html in that case. See lockChatForToday().
+    let lastCompletedSessionId = null;
 
-(function buildWave(){
-  const BARS = 28;
-  for (let i = 0; i < BARS; i++){
-    const bar = document.createElement('span');
-    const h = 6 + Math.round(Math.abs(Math.sin(i * 0.7)) * 26);
-    bar.style.height = h + 'px';
-    waveEl.appendChild(bar);
-  }
-})();
+    (function buildWave() {
+      const BARS = 28;
+      for (let i = 0; i < BARS; i++) {
+        const bar = document.createElement('span');
+        const h = 6 + Math.round(Math.abs(Math.sin(i * 0.7)) * 26);
+        bar.style.height = h + 'px';
+        waveEl.appendChild(bar);
+      }
+    })();
 
-function setStatus(text, mode){
-  statusText.textContent = text;
-  statusDot.className = 'dot' + (mode ? ' ' + mode : '');
-  micBtn.classList.toggle('active', mode === 'live');
-  waveEl.classList.toggle('live', mode === 'live');
-}
+    function setStatus(text, mode) {
+      statusText.textContent = text;
+      statusDot.className = 'dot' + (mode ? ' ' + mode : '');
+      micBtn.classList.toggle('active', mode === 'live');
+      waveEl.classList.toggle('live', mode === 'live');
+    }
 
-function scrollTranscriptToBottom(){
-  transcriptEl.scrollTop = transcriptEl.scrollHeight;
-}
+    function scrollTranscriptToBottom() {
+      transcriptEl.scrollTop = transcriptEl.scrollHeight;
+    }
 
-function formatClockTime(date){
-  return date.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true });
-}
+    function formatClockTime(date) {
+      return date.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true });
+    }
 
-const AI_AVATAR_SVG = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.6 4.8L18 8l-4.4 1.2L12 14l-1.6-4.8L6 8l4.4-1.2L12 2z"/><path d="M19 14l.8 2.4L22 17l-2.2.6L19 20l-.8-2.4L16 17l2.2-.6L19 14z"/></svg>`;
-const CHECK_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
-const TROPHY_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4Z"/><path d="M17 5h2.5a1.5 1.5 0 0 1 1.5 1.5v0A3.5 3.5 0 0 1 17.5 10H17"/><path d="M7 5H4.5A1.5 1.5 0 0 0 3 6.5v0A3.5 3.5 0 0 0 6.5 10H7"/></svg>`;
+    const AI_AVATAR_SVG = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.6 4.8L18 8l-4.4 1.2L12 14l-1.6-4.8L6 8l4.4-1.2L12 2z"/><path d="M19 14l.8 2.4L22 17l-2.2.6L19 20l-.8-2.4L16 17l2.2-.6L19 14z"/></svg>`;
+    const CHECK_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+    const TROPHY_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4Z"/><path d="M17 5h2.5a1.5 1.5 0 0 1 1.5 1.5v0A3.5 3.5 0 0 1 17.5 10H17"/><path d="M7 5H4.5A1.5 1.5 0 0 0 3 6.5v0A3.5 3.5 0 0 0 6.5 10H7"/></svg>`;
 
-// A "feedback message" only gets the distinct card treatment when it's
-// Utkio talking (phase 2 monologue). If the user asks a follow-up
-// question during feedback, their line still renders as a normal user
-// chat bubble — the special card is reserved for the app's own coaching
-// summary, not for every line that happens to occur during that phase.
-function addLine(role){
-  const isFeedbackCard = (role === 'model' && phase === 'feedback');
-  const now = formatClockTime(new Date());
-  let textEl;
+    // A "feedback message" only gets the distinct card treatment when it's
+    // Utkio talking (phase 2 monologue). If the user asks a follow-up
+    // question during feedback, their line still renders as a normal user
+    // chat bubble — the special card is reserved for the app's own coaching
+    // summary, not for every line that happens to occur during that phase.
+    function addLine(role) {
+      const isFeedbackCard = (role === 'model' && phase === 'feedback');
+      const now = formatClockTime(new Date());
+      let textEl;
 
-  if (isFeedbackCard){
-    const card = document.createElement('div');
-    card.className = 'feedback-card';
-    card.innerHTML = `
+      if (isFeedbackCard) {
+        const card = document.createElement('div');
+        card.className = 'feedback-card';
+        card.innerHTML = `
       <div class="feedback-card-head">
         <span class="feedback-card-icon">${TROPHY_SVG}</span>
         <span class="feedback-card-title">Feedback</span>
@@ -517,591 +986,592 @@ function addLine(role){
       <div class="feedback-card-body"></div>
       <div class="feedback-card-time">${now}</div>
     `;
-    transcriptEl.appendChild(card);
-    textEl = card.querySelector('.feedback-card-body');
-  } else {
-    const row = document.createElement('div');
-    row.className = 'msg-row ' + role;
-    const avatar = role === 'model'
-      ? `<span class="msg-avatar">${AI_AVATAR_SVG}</span>`
-      : '';
-    const metaHtml = role === 'user'
-      ? `<div class="msg-meta"><span>${now}</span>${CHECK_SVG}</div>`
-      : `<div class="msg-meta"><span>${now}</span></div>`;
-    row.innerHTML = `${avatar}<div class="msg-col"><div class="line"><span class="text"></span></div>${metaHtml}</div>`;
-    transcriptEl.appendChild(row);
-    textEl = row.querySelector('.text');
-  }
-
-  scrollTranscriptToBottom();
-
-  persistLocalSession();
-  sessionTurns.push({ role: role === 'user' ? 'user' : 'assistant', content: '', phase });
-  currentTurnIndex = sessionTurns.length - 1;
-
-  return textEl;
-}
-
-// Writes the in-progress session to the SAME PENDING_CHAT_SESSION_KEY
-// chat.html uses — deliberately reused rather than a second key, so
-// app-open crash recovery (index.html's syncPendingChatSession call)
-// picks this up too without any changes there. POST /chat/sessions
-// already accepts session_type/scenario_key as optional passthrough
-// fields, so this payload works with zero backend-side special-casing
-// beyond what chatRoutes.js already validates.
-//
-// NOTE: this assumes at most one pending (chat OR scenario) session at a
-// time, same assumption chat.html already makes with this key — if a
-// user somehow abandons a freeform chat mid-session and immediately
-// starts a scenario before it synced, the earlier one could be
-// overwritten. This mirrors an existing edge case in the app rather than
-// introducing a new one, and is safe in practice because both pages sync
-// aggressively (every turn boundary) rather than only at the very end.
-function getTodayIstDateString() {
-  const now = new Date();
-  const istOffsetMs = (5 * 60 + 30) * 60 * 1000;
-  const ist = new Date(now.getTime() + istOffsetMs + now.getTimezoneOffset() * 60 * 1000);
-  return ist.toISOString().slice(0, 10);
-}
-
-function getScenarioStorageKey() {
-  if (!todaysScenario || !todaysScenario.key) return null;
-  return `utkio_scenario_state_${todaysScenario.key}_${getTodayIstDateString()}`;
-}
-
-function saveScenarioState() {
-  const key = getScenarioStorageKey();
-  if (!key) return;
-  try {
-    if (phase === 'feedback' || lockedBanner.classList.contains('show')) {
-      localStorage.removeItem(key);
-      return;
-    }
-    const state = {
-      phaseSecondsLeft,
-      sessionStartedAt,
-      sessionTurns: sessionTurns.filter(t => t.content && t.content.trim()),
-      activeSessionId,
-      syncedTurnCount
-    };
-    localStorage.setItem(key, JSON.stringify(state));
-  } catch (e) {
-    console.warn('saveScenarioState failed:', e);
-  }
-}
-
-function restoreScenarioState() {
-  const key = getScenarioStorageKey();
-  if (!key) return;
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return;
-    const state = JSON.parse(raw);
-    if (state && typeof state.phaseSecondsLeft === 'number' && state.phaseSecondsLeft > 0) {
-      phaseSecondsLeft = state.phaseSecondsLeft;
-      sessionStartedAt = state.sessionStartedAt || sessionStartedAt;
-      activeSessionId = state.activeSessionId || null;
-      syncedTurnCount = typeof state.syncedTurnCount === 'number' ? state.syncedTurnCount : 0;
-      const restoredTurns = Array.isArray(state.sessionTurns) ? state.sessionTurns : [];
-
-      transcriptEl.innerHTML = '';
-      sessionTurns = [];
-      restoredTurns.forEach(t => {
-        if (t.role === 'user') {
-          const line = addLine('user');
-          line.textContent = t.content;
-          if (sessionTurns.length) sessionTurns[sessionTurns.length - 1].content = t.content;
-        } else {
-          const line = addLine('model');
-          line.textContent = t.content;
-          if (sessionTurns.length) sessionTurns[sessionTurns.length - 1].content = t.content;
-        }
-      });
-
-      updatePhaseRing();
-      const min = Math.floor(phaseSecondsLeft / 60);
-      const sec = phaseSecondsLeft % 60;
-      const timeStr = `${min}:${sec < 10 ? '0' : ''}${sec}`;
-      setStatus(`Scenario in progress (${timeStr} remaining) — Tap mic to continue`, null);
-    }
-  } catch (e) {
-    console.warn('restoreScenarioState failed:', e);
-  }
-}
-
-function persistLocalSession(){
-  try {
-    saveScenarioState();
-    const meaningful = sessionTurns.filter(t => t.content && t.content.trim());
-    if (!meaningful.length) { localStorage.removeItem(PENDING_CHAT_SESSION_KEY); return; }
-
-    const options = arguments[0] || {};
-    const isCompleted = typeof options === 'boolean'
-      ? options
-      : (typeof options.isCompleted === 'boolean' ? options.isCompleted : (phase === 'feedback'));
-
-    if (activeSessionId) {
-      const deltaMessages = meaningful.slice(syncedTurnCount);
-      if (!deltaMessages.length && !isCompleted) {
-        localStorage.removeItem(PENDING_CHAT_SESSION_KEY);
-        return;
+        transcriptEl.appendChild(card);
+        textEl = card.querySelector('.feedback-card-body');
+      } else {
+        const row = document.createElement('div');
+        row.className = 'msg-row ' + role;
+        const avatar = role === 'model'
+          ? `<span class="msg-avatar">${AI_AVATAR_SVG}</span>`
+          : '';
+        const metaHtml = role === 'user'
+          ? `<div class="msg-meta"><span>${now}</span>${CHECK_SVG}</div>`
+          : `<div class="msg-meta"><span>${now}</span></div>`;
+        row.innerHTML = `${avatar}<div class="msg-col"><div class="line"><span class="text"></span></div>${metaHtml}</div>`;
+        transcriptEl.appendChild(row);
+        textEl = row.querySelector('.text');
       }
-      localStorage.setItem(PENDING_CHAT_SESSION_KEY, JSON.stringify({
-        session_id: activeSessionId,
-        started_at: sessionStartedAt,
-        ended_at: new Date().toISOString(),
-        session_type: 'scenario',
-        scenario_key: todaysScenario ? todaysScenario.key : null,
-        is_completed: isCompleted,
-        messages: deltaMessages.map(t => ({ role: t.role, content: t.content }))
-      }));
-    } else {
-      localStorage.setItem(PENDING_CHAT_SESSION_KEY, JSON.stringify({
-        session_id: null,
-        started_at: sessionStartedAt,
-        ended_at: new Date().toISOString(),
-        session_type: 'scenario',
-        scenario_key: todaysScenario ? todaysScenario.key : null,
-        is_completed: isCompleted,
-        messages: meaningful.map(t => ({ role: t.role, content: t.content }))
-      }));
-    }
-  } catch(e){ console.warn('persistLocalSession failed', e); }
-}
 
-// Drives the circular countdown ring + the "LIVE" row beneath it during
-// roleplay, and switches the ring to a static filled "Feedback" state
-// once phase 2 begins (no countdown then — the monologue's length isn't
-// fixed).
-function updatePhaseRing(){
-  if (phase === 'roleplay'){
-    phaseRing.classList.remove('feedback');
-    phaseLiveRow.style.visibility = 'visible';
-    phaseValue.textContent = formatCountdown(phaseSecondsLeft);
-    const fractionRemaining = Math.max(0, phaseSecondsLeft / PHASE_1_DURATION_SECONDS);
-    ringProgress.style.strokeDashoffset = String(RING_CIRCUMFERENCE * (1 - fractionRemaining));
-  } else if (phase === 'feedback'){
-    phaseRing.classList.add('feedback');
-    phaseLiveRow.style.visibility = 'hidden';
-    phaseValue.textContent = 'Feedback';
-  }
-}
-
-function startPhaseTimer(){
-  // Wall-clock based, anchoring to remaining seconds rather than hardcoded 180.
-  if (phaseSecondsLeft <= 0) {
-    switchToFeedbackPhase();
-    return;
-  }
-  const phaseEndAt = Date.now() + phaseSecondsLeft * 1000;
-  updatePhaseRing();
-  stopPhaseTimer();
-  phaseTimerHandle = setInterval(() => {
-    phaseSecondsLeft = Math.max(0, Math.ceil((phaseEndAt - Date.now()) / 1000));
-    updatePhaseRing();
-    saveScenarioState();
-    if (phaseSecondsLeft <= 0) switchToFeedbackPhase();
-  }, 1000);
-}
-
-function stopPhaseTimer(){
-  if (phaseTimerHandle){ clearInterval(phaseTimerHandle); phaseTimerHandle = null; }
-}
-
-// The client-triggered "mode switch" the feature spec describes — see
-// shared/voice-live-session.js's sendTextTurn() doc comment for why this
-// has to be client-side (the Live session is a direct browser<->Gemini
-// socket the backend never touches) rather than literally
-// backend-pushed, while still functionally being "a new instruction/turn
-// sent into the same session" as specified.
-function switchToFeedbackPhase(){
-  if (phase !== 'roleplay') return;
-  stopPhaseTimer();
-  phase = 'feedback';
-  updatePhaseRing();
-  currentUserLine = null;
-  currentModelLine = null;
-  const sent = voiceSession.sendTextTurn(buildPhase2Instruction(window.__UKTIO_PROFILE || {}));
-  if (!sent) setStatus("Couldn't send the switch to feedback — the session may have already ended.", 'err');
-}
-
-// ─────────────────────────────────────────────────────────────
-// Mic dock captions — two fixed caption pairs (mic vs AI), swapping
-// which side is visually "highlighted" based on whose turn it is. Kept
-// as small state → caption lookups rather than free-text so the dock
-// always reads as two clear, consistent options rather than a shifting
-// sentence.
-// ─────────────────────────────────────────────────────────────
-function updateMicUI(isSpeaking){
-  micBtn.classList.toggle('ai-speaking', isSpeaking);
-  aiIndicator.classList.toggle('speaking', isSpeaking);
-
-  const micCaptionEl = document.getElementById('micCaption');
-  const aiCaptionEl = document.getElementById('aiCaption');
-  micCaptionEl.classList.toggle('highlight', !isSpeaking);
-  aiCaptionEl.classList.toggle('highlight', isSpeaking);
-
-  if (isSpeaking) {
-    micCaptionTitle.textContent = 'Listening mode';
-    micCaptionSub.textContent = 'Mic is off right now';
-  } else if (phase === 'feedback') {
-    micCaptionTitle.textContent = 'Your turn';
-    micCaptionSub.textContent = 'Ask any questions or clarifications';
-  } else {
-    micCaptionTitle.textContent = 'Tap to speak';
-    micCaptionSub.textContent = 'Speak clearly and naturally';
-  }
-}
-
-// ─────────────────────────────────────────────────────────────
-// Voice session wiring — thin glue over shared/voice-live-session.js.
-// ─────────────────────────────────────────────────────────────
-
-const voiceSession = createVoiceSession({
-  getSystemInstruction: () => buildPhase1Instruction(todaysScenario, window.__UKTIO_PROFILE || {}, sessionTurns),
-  callbacks: {
-    onStatus: (text, mode) => setStatus(text, mode),
-    onUserText: (text) => {
-      currentModelLine = null;
-      if (!currentUserLine) currentUserLine = addLine('user');
-      currentUserLine.textContent += text;
-      if (currentTurnIndex >= 0) sessionTurns[currentTurnIndex].content += text;
       scrollTranscriptToBottom();
-    },
-    onModelText: (text) => {
-      currentUserLine = null;
-      if (!currentModelLine) currentModelLine = addLine('model');
-      currentModelLine.textContent += text;
-      if (currentTurnIndex >= 0) sessionTurns[currentTurnIndex].content += text;
-      if (phase === 'feedback') feedbackResponseReceived = true;
-      scrollTranscriptToBottom();
-    },
-    onTurnComplete: () => { /* no-op today — onSpeakingChange below is the real signal for mic mute/unmute UI, this stays for future use */ },
-    onSpeakingChange: (isSpeaking) => {
-      // The real "mic muted right now" signal — audio genuinely isn't
-      // sent to Gemini while this is true (see voice-live-session.js),
-      // so this just makes that already-true fact VISIBLE via the dock.
-      updateMicUI(isSpeaking);
-    },
-    onInterrupted: (info) => {
-      sessionAttemptInFlight = false;
-      micBtn.disabled = false;
-      updateMicUI(false);
-      stopPhaseTimer();
-      persistLocalSession();
 
-      if (phase === 'feedback') {
-        // Feedback phase was reached — scenario is complete for today.
-        finalizeAndSyncSession();
-        lockChatForToday();
-        setStatus("Today's scenario complete! A new scenario will be available tomorrow.", null);
-      } else {
-        // Phase 1 (roleplay) paused: preserve remaining time and turns for tap-to-resume
-        const min = Math.floor(phaseSecondsLeft / 60);
-        const sec = phaseSecondsLeft % 60;
-        const timeStr = `${min}:${sec < 10 ? '0' : ''}${sec}`;
-        setStatus(`Scenario paused (${timeStr} remaining). Tap mic to continue.`, null);
-      }
-    },
-    onInactivityTimeout: (info) => {
-      sessionAttemptInFlight = false;
-      micBtn.disabled = false;
-      updateMicUI(false);
-      stopPhaseTimer();
       persistLocalSession();
-      if (phase === 'feedback') {
-        finalizeAndSyncSession();
-        lockChatForToday();
-      } else {
-        const min = Math.floor(phaseSecondsLeft / 60);
-        const sec = phaseSecondsLeft % 60;
-        const timeStr = `${min}:${sec < 10 ? '0' : ''}${sec}`;
-        const reasonText = info && info.reason === 'stagnant_turn' ? 'Inactivity' : '90s silence';
-        setStatus(`Scenario paused due to ${reasonText} (${timeStr} remaining). Tap mic to continue.`, null);
-      }
-    },
-    onOpen: () => {
-      sessionAttemptInFlight = false;
-      micBtn.disabled = false;
-      startPhaseTimer();
+      sessionTurns.push({ role: role === 'user' ? 'user' : 'assistant', content: '', phase });
+      currentTurnIndex = sessionTurns.length - 1;
 
-      // AUD-030: Kick off AI speech for fresh starts or resumed roleplay
-      const meaningfulTurns = sessionTurns.filter(t => t.content && t.content.trim());
-      if (phase === 'roleplay') {
-        if (!meaningfulTurns.length) {
-          // Fresh roleplay start
-          voiceSession.sendTextTurn('[Scene starts now. Say your opening line in-character to begin the conversation.]');
-        } else {
-          // Resumed mid-roleplay
-          voiceSession.sendTextTurn('[Scene resumed after pause. Continue the conversation in-character naturally from where we left off.]');
+      return textEl;
+    }
+
+    // Writes the in-progress session to the SAME PENDING_CHAT_SESSION_KEY
+    // chat.html uses — deliberately reused rather than a second key, so
+    // app-open crash recovery (index.html's syncPendingChatSession call)
+    // picks this up too without any changes there. POST /chat/sessions
+    // already accepts session_type/scenario_key as optional passthrough
+    // fields, so this payload works with zero backend-side special-casing
+    // beyond what chatRoutes.js already validates.
+    //
+    // NOTE: this assumes at most one pending (chat OR scenario) session at a
+    // time, same assumption chat.html already makes with this key — if a
+    // user somehow abandons a freeform chat mid-session and immediately
+    // starts a scenario before it synced, the earlier one could be
+    // overwritten. This mirrors an existing edge case in the app rather than
+    // introducing a new one, and is safe in practice because both pages sync
+    // aggressively (every turn boundary) rather than only at the very end.
+    function getTodayIstDateString() {
+      const now = new Date();
+      const istOffsetMs = (5 * 60 + 30) * 60 * 1000;
+      const ist = new Date(now.getTime() + istOffsetMs + now.getTimezoneOffset() * 60 * 1000);
+      return ist.toISOString().slice(0, 10);
+    }
+
+    function getScenarioStorageKey() {
+      if (!todaysScenario || !todaysScenario.key) return null;
+      return `utkio_scenario_state_${todaysScenario.key}_${getTodayIstDateString()}`;
+    }
+
+    function saveScenarioState() {
+      const key = getScenarioStorageKey();
+      if (!key) return;
+      try {
+        if (phase === 'feedback' || lockedBanner.classList.contains('show')) {
+          localStorage.removeItem(key);
+          return;
         }
-      }
-    },
-    onClose: () => {
-      sessionAttemptInFlight = false;
-      micBtn.disabled = false;
-      updateMicUI(false);
-      stopPhaseTimer();
-
-      if (phase === 'feedback') {
-        // Feedback phase was reached — scenario is complete for today.
-        finalizeAndSyncSession();
-        lockChatForToday();
-        return;
-      }
-
-      // Mid-roleplay pause or drop:
-      persistLocalSession();
-      const min = Math.floor(phaseSecondsLeft / 60);
-      const sec = phaseSecondsLeft % 60;
-      const timeStr = `${min}:${sec < 10 ? '0' : ''}${sec}`;
-      setStatus(`Scenario paused (${timeStr} remaining). Tap mic to continue.`, null);
-    }
-  }
-});
-
-// Tracks "a start() attempt is currently mid-flight" — true from the
-// moment startSession() commits to trying, until either it succeeds
-// (voiceSession.isActive() becomes the source of truth from then on)
-// or it fails and resets this. voiceSession.isActive() alone isn't
-// enough for that window because it only flips true once the session
-// actually connects — it's still false during the key-check/connect
-// awaits, which is exactly the window the offline-banner wiring below
-// needs to know about so it never re-enables/disables the mic out from
-// under an attempt that's already in progress.
-let sessionAttemptInFlight = false;
-
-async function startSession(){
-  if (voiceSession.isActive() || !todaysScenario) return;
-
-  if (phase === 'feedback' || lockedBanner.classList.contains('show')) {
-    setStatus("Today's scenario is already complete.", null);
-    return;
-  }
-
-  sessionAttemptInFlight = true;
-  if (!sessionStartedAt) sessionStartedAt = new Date().toISOString();
-  phase = 'roleplay';
-  explicitStop = false;
-  feedbackResponseReceived = false;
-  updatePhaseRing();
-  micBtn.disabled = true;
-
-  try {
-    const { GoogleGenAI, Modality } = await import('./vendor/google-genai.bundle.mjs');
-    const result = await voiceSession.start({ GoogleGenAI, Modality });
-
-    if (!result.ok){
-      sessionAttemptInFlight = false;
-      micBtn.disabled = false;
-      sessionStartedAt = null;
-      if (result.reason === 'no_api_key'){
-        setStatus('Please add your AI Access Key in Settings.', 'err');
-        setTimeout(() => { window.location.href = 'settings.html?needsKey=missing'; }, 1200);
-      } else if (result.reason === 'invalid_api_key'){
-        setStatus((result.message || 'Invalid AI Key') + ' — go to Settings to fix this.', 'err');
-        setTimeout(() => { window.location.href = 'settings.html?needsKey=invalid'; }, 1600);
-      } else {
-        setStatus(result.message || 'Could not connect.', 'err');
+        const state = {
+          phaseSecondsLeft,
+          sessionStartedAt,
+          sessionTurns: sessionTurns.filter(t => t.content && t.content.trim()),
+          activeSessionId,
+          syncedTurnCount
+        };
+        localStorage.setItem(key, JSON.stringify(state));
+      } catch (e) {
+        console.warn('saveScenarioState failed:', e);
       }
     }
-  } catch (err) {
-    console.error('startSession failed:', err);
-    sessionAttemptInFlight = false;
-    micBtn.disabled = false;
-    sessionStartedAt = null;
-    setStatus('Could not start microphone — please try again.', 'err');
-  }
-}
 
-function stopSession(){
-  explicitStop = true;
-  voiceSession.stop(); // triggers onClose -> finalizeAndSyncSession
-}
+    function restoreScenarioState() {
+      const key = getScenarioStorageKey();
+      if (!key) return;
+      try {
+        const raw = localStorage.getItem(key);
+        if (!raw) return;
+        const state = JSON.parse(raw);
+        if (state && typeof state.phaseSecondsLeft === 'number' && state.phaseSecondsLeft > 0) {
+          phaseSecondsLeft = state.phaseSecondsLeft;
+          sessionStartedAt = state.sessionStartedAt || sessionStartedAt;
+          activeSessionId = state.activeSessionId || null;
+          syncedTurnCount = typeof state.syncedTurnCount === 'number' ? state.syncedTurnCount : 0;
+          const restoredTurns = Array.isArray(state.sessionTurns) ? state.sessionTurns : [];
 
-// Same fire-and-forget, crash-safe sync pattern as chat.html: local data
-// already persisted at every turn boundary, so even if this call fails
-// (network down right at session-end), the next app-open recovery
-// (syncPendingChatSession in index.html) picks it up and retries.
-async function finalizeAndSyncSession(){
-  if (!sessionTurns.length || finalizeInFlight) return;
-  finalizeInFlight = true;
-  try {
-    persistLocalSession({ isCompleted: true });
-    const syncedSessionId = await syncPendingChatSession();
-    if (syncedSessionId){
-      activeSessionId = syncedSessionId;
-      syncedTurnCount = sessionTurns.length;
-      saveScenarioState();
-      setStatus('Session saved. New scenario tomorrow.', null);
-      lockChatForToday(syncedSessionId);
+          transcriptEl.innerHTML = '';
+          sessionTurns = [];
+          restoredTurns.forEach(t => {
+            if (t.role === 'user') {
+              const line = addLine('user');
+              line.textContent = t.content;
+              if (sessionTurns.length) sessionTurns[sessionTurns.length - 1].content = t.content;
+            } else {
+              const line = addLine('model');
+              line.textContent = t.content;
+              if (sessionTurns.length) sessionTurns[sessionTurns.length - 1].content = t.content;
+            }
+          });
+
+          updatePhaseRing();
+          const min = Math.floor(phaseSecondsLeft / 60);
+          const sec = phaseSecondsLeft % 60;
+          const timeStr = `${min}:${sec < 10 ? '0' : ''}${sec}`;
+          setStatus(`Scenario in progress (${timeStr} remaining) — Tap mic to continue`, null);
+        }
+      } catch (e) {
+        console.warn('restoreScenarioState failed:', e);
+      }
     }
-    sessionTurns = [];
-    currentTurnIndex = -1;
-    sessionStartedAt = null;
-    activeSessionId = null;
-    syncedTurnCount = 0;
-  } finally {
-    finalizeInFlight = false;
-  }
-}
 
-function lockChatForToday(sessionId){
-  lastCompletedSessionId = sessionId || null;
-  const label = document.getElementById('lockedSeeHistoryLabel');
-  if (lastCompletedSessionId){
-    document.getElementById('lockedSub').textContent = 'Your feedback is ready to view below. A new scenario will be available tomorrow.';
-    label.textContent = 'View feedback report';
-  } else {
-    document.getElementById('lockedSub').textContent = 'A new scenario will be available tomorrow. You can practice freeform chat or review past sessions in the meantime.';
-    label.textContent = 'View past sessions';
-  }
-  const key = getScenarioStorageKey();
-  if (key) {
-    try { localStorage.removeItem(key); } catch (e) { /* ignore */ }
-  }
-  invalidateCache('scenario_today_' + getTodayIstDateString());
-  lockedBanner.classList.add('show');
-  micBtn.disabled = true;
-}
-
-function handleScenarioExit() {
-  if (voiceSession && voiceSession.isActive()) voiceSession.stop();
-  if (sessionTurns.length) {
-    persistLocalSession();
-    syncPendingChatSession({ keepalive: true }).then((syncedId) => {
-      if (syncedId) {
-        activeSessionId = syncedId;
-        syncedTurnCount = sessionTurns.length;
+    function persistLocalSession() {
+      try {
         saveScenarioState();
+        const meaningful = sessionTurns.filter(t => t.content && t.content.trim());
+        if (!meaningful.length) { localStorage.removeItem(PENDING_CHAT_SESSION_KEY); return; }
+
+        const options = arguments[0] || {};
+        const isCompleted = typeof options === 'boolean'
+          ? options
+          : (typeof options.isCompleted === 'boolean' ? options.isCompleted : (phase === 'feedback'));
+
+        if (activeSessionId) {
+          const deltaMessages = meaningful.slice(syncedTurnCount);
+          if (!deltaMessages.length && !isCompleted) {
+            localStorage.removeItem(PENDING_CHAT_SESSION_KEY);
+            return;
+          }
+          localStorage.setItem(PENDING_CHAT_SESSION_KEY, JSON.stringify({
+            session_id: activeSessionId,
+            started_at: sessionStartedAt,
+            ended_at: new Date().toISOString(),
+            session_type: 'scenario',
+            scenario_key: todaysScenario ? todaysScenario.key : null,
+            is_completed: isCompleted,
+            messages: deltaMessages.map(t => ({ role: t.role, content: t.content }))
+          }));
+        } else {
+          localStorage.setItem(PENDING_CHAT_SESSION_KEY, JSON.stringify({
+            session_id: null,
+            started_at: sessionStartedAt,
+            ended_at: new Date().toISOString(),
+            session_type: 'scenario',
+            scenario_key: todaysScenario ? todaysScenario.key : null,
+            is_completed: isCompleted,
+            messages: meaningful.map(t => ({ role: t.role, content: t.content }))
+          }));
+        }
+      } catch (e) { console.warn('persistLocalSession failed', e); }
+    }
+
+    // Drives the circular countdown ring + the "LIVE" row beneath it during
+    // roleplay, and switches the ring to a static filled "Feedback" state
+    // once phase 2 begins (no countdown then — the monologue's length isn't
+    // fixed).
+    function updatePhaseRing() {
+      if (phase === 'roleplay') {
+        phaseRing.classList.remove('feedback');
+        phaseLiveRow.style.visibility = 'visible';
+        phaseValue.textContent = formatCountdown(phaseSecondsLeft);
+        const fractionRemaining = Math.max(0, phaseSecondsLeft / PHASE_1_DURATION_SECONDS);
+        ringProgress.style.strokeDashoffset = String(RING_CIRCUMFERENCE * (1 - fractionRemaining));
+      } else if (phase === 'feedback') {
+        phaseRing.classList.add('feedback');
+        phaseLiveRow.style.visibility = 'hidden';
+        phaseValue.textContent = 'Feedback';
       }
-    }).catch(() => {});
-  }
-}
+    }
 
-window.addEventListener('beforeunload', handleScenarioExit);
-window.addEventListener('pagehide', handleScenarioExit);
-window.addEventListener('error', (e) => console.error('uncaught error', e.error || e.message));
-window.addEventListener('unhandledrejection', (e) => console.error('unhandled promise rejection', e.reason));
+    function startPhaseTimer() {
+      // Wall-clock based, anchoring to remaining seconds rather than hardcoded 180.
+      if (phaseSecondsLeft <= 0) {
+        switchToFeedbackPhase();
+        return;
+      }
+      const phaseEndAt = Date.now() + phaseSecondsLeft * 1000;
+      updatePhaseRing();
+      stopPhaseTimer();
+      phaseTimerHandle = setInterval(() => {
+        phaseSecondsLeft = Math.max(0, Math.ceil((phaseEndAt - Date.now()) / 1000));
+        updatePhaseRing();
+        saveScenarioState();
+        if (phaseSecondsLeft <= 0) switchToFeedbackPhase();
+      }, 1000);
+    }
 
-// See shared/app-lifecycle.js — observation-only, does not touch
-// voiceSession state (same reasoning as chat.html's identical listener).
-window.addEventListener('utkio:resume', () => {
-  console.info('[lifecycle] app resumed on scenario.html — session active:', voiceSession.isActive());
-});
+    function stopPhaseTimer() {
+      if (phaseTimerHandle) { clearInterval(phaseTimerHandle); phaseTimerHandle = null; }
+    }
 
-registerBackHandler(() => {
-  if (voiceSession.isActive()) {
-    showConfirmDialog({
-      title: 'Leave active scenario?',
-      message: 'You have an active scenario simulation in progress. Leaving will end the session.',
-      confirmText: 'Leave scenario',
-      cancelText: 'Stay in scenario',
-      destructive: true
-    }).then((leave) => {
-      if (leave) {
-        voiceSession.stop();
-        navigateBack('home.html');
+    // The client-triggered "mode switch" the feature spec describes — see
+    // shared/voice-live-session.js's sendTextTurn() doc comment for why this
+    // has to be client-side (the Live session is a direct browser<->Gemini
+    // socket the backend never touches) rather than literally
+    // backend-pushed, while still functionally being "a new instruction/turn
+    // sent into the same session" as specified.
+    function switchToFeedbackPhase() {
+      if (phase !== 'roleplay') return;
+      stopPhaseTimer();
+      phase = 'feedback';
+      updatePhaseRing();
+      currentUserLine = null;
+      currentModelLine = null;
+      const sent = voiceSession.sendTextTurn(buildPhase2Instruction(window.__UKTIO_PROFILE || {}));
+      if (!sent) setStatus("Couldn't send the switch to feedback — the session may have already ended.", 'err');
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Mic dock captions — two fixed caption pairs (mic vs AI), swapping
+    // which side is visually "highlighted" based on whose turn it is. Kept
+    // as small state → caption lookups rather than free-text so the dock
+    // always reads as two clear, consistent options rather than a shifting
+    // sentence.
+    // ─────────────────────────────────────────────────────────────
+    function updateMicUI(isSpeaking) {
+      micBtn.classList.toggle('ai-speaking', isSpeaking);
+      aiIndicator.classList.toggle('speaking', isSpeaking);
+
+      const micCaptionEl = document.getElementById('micCaption');
+      const aiCaptionEl = document.getElementById('aiCaption');
+      micCaptionEl.classList.toggle('highlight', !isSpeaking);
+      aiCaptionEl.classList.toggle('highlight', isSpeaking);
+
+      if (isSpeaking) {
+        micCaptionTitle.textContent = 'Listening mode';
+        micCaptionSub.textContent = 'Mic is off right now';
+      } else if (phase === 'feedback') {
+        micCaptionTitle.textContent = 'Your turn';
+        micCaptionSub.textContent = 'Ask any questions or clarifications';
+      } else {
+        micCaptionTitle.textContent = 'Tap to speak';
+        micCaptionSub.textContent = 'Speak clearly and naturally';
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Voice session wiring — thin glue over shared/voice-live-session.js.
+    // ─────────────────────────────────────────────────────────────
+
+    const voiceSession = createVoiceSession({
+      getSystemInstruction: () => buildPhase1Instruction(todaysScenario, window.__UKTIO_PROFILE || {}, sessionTurns),
+      callbacks: {
+        onStatus: (text, mode) => setStatus(text, mode),
+        onUserText: (text) => {
+          currentModelLine = null;
+          if (!currentUserLine) currentUserLine = addLine('user');
+          currentUserLine.textContent += text;
+          if (currentTurnIndex >= 0) sessionTurns[currentTurnIndex].content += text;
+          scrollTranscriptToBottom();
+        },
+        onModelText: (text) => {
+          currentUserLine = null;
+          if (!currentModelLine) currentModelLine = addLine('model');
+          currentModelLine.textContent += text;
+          if (currentTurnIndex >= 0) sessionTurns[currentTurnIndex].content += text;
+          if (phase === 'feedback') feedbackResponseReceived = true;
+          scrollTranscriptToBottom();
+        },
+        onTurnComplete: () => { /* no-op today — onSpeakingChange below is the real signal for mic mute/unmute UI, this stays for future use */ },
+        onSpeakingChange: (isSpeaking) => {
+          // The real "mic muted right now" signal — audio genuinely isn't
+          // sent to Gemini while this is true (see voice-live-session.js),
+          // so this just makes that already-true fact VISIBLE via the dock.
+          updateMicUI(isSpeaking);
+        },
+        onInterrupted: (info) => {
+          sessionAttemptInFlight = false;
+          micBtn.disabled = false;
+          updateMicUI(false);
+          stopPhaseTimer();
+          persistLocalSession();
+
+          if (phase === 'feedback') {
+            // Feedback phase was reached — scenario is complete for today.
+            finalizeAndSyncSession();
+            lockChatForToday();
+            setStatus("Today's scenario complete! A new scenario will be available tomorrow.", null);
+          } else {
+            // Phase 1 (roleplay) paused: preserve remaining time and turns for tap-to-resume
+            const min = Math.floor(phaseSecondsLeft / 60);
+            const sec = phaseSecondsLeft % 60;
+            const timeStr = `${min}:${sec < 10 ? '0' : ''}${sec}`;
+            setStatus(`Scenario paused (${timeStr} remaining). Tap mic to continue.`, null);
+          }
+        },
+        onInactivityTimeout: (info) => {
+          sessionAttemptInFlight = false;
+          micBtn.disabled = false;
+          updateMicUI(false);
+          stopPhaseTimer();
+          persistLocalSession();
+          if (phase === 'feedback') {
+            finalizeAndSyncSession();
+            lockChatForToday();
+          } else {
+            const min = Math.floor(phaseSecondsLeft / 60);
+            const sec = phaseSecondsLeft % 60;
+            const timeStr = `${min}:${sec < 10 ? '0' : ''}${sec}`;
+            const reasonText = info && info.reason === 'stagnant_turn' ? 'Inactivity' : '90s silence';
+            setStatus(`Scenario paused due to ${reasonText} (${timeStr} remaining). Tap mic to continue.`, null);
+          }
+        },
+        onOpen: () => {
+          sessionAttemptInFlight = false;
+          micBtn.disabled = false;
+          startPhaseTimer();
+
+          // AUD-030: Kick off AI speech for fresh starts or resumed roleplay
+          const meaningfulTurns = sessionTurns.filter(t => t.content && t.content.trim());
+          if (phase === 'roleplay') {
+            if (!meaningfulTurns.length) {
+              // Fresh roleplay start
+              voiceSession.sendTextTurn('[Scene starts now. Say your opening line in-character to begin the conversation.]');
+            } else {
+              // Resumed mid-roleplay
+              voiceSession.sendTextTurn('[Scene resumed after pause. Continue the conversation in-character naturally from where we left off.]');
+            }
+          }
+        },
+        onClose: () => {
+          sessionAttemptInFlight = false;
+          micBtn.disabled = false;
+          updateMicUI(false);
+          stopPhaseTimer();
+
+          if (phase === 'feedback') {
+            // Feedback phase was reached — scenario is complete for today.
+            finalizeAndSyncSession();
+            lockChatForToday();
+            return;
+          }
+
+          // Mid-roleplay pause or drop:
+          persistLocalSession();
+          const min = Math.floor(phaseSecondsLeft / 60);
+          const sec = phaseSecondsLeft % 60;
+          const timeStr = `${min}:${sec < 10 ? '0' : ''}${sec}`;
+          setStatus(`Scenario paused (${timeStr} remaining). Tap mic to continue.`, null);
+        }
       }
     });
-    return true;
-  }
-});
 
-const topbarSettings = document.getElementById('topbarSettings');
-if (topbarSettings) {
-  topbarSettings.addEventListener('click', async (e) => {
-    if (voiceSession.isActive()) {
-      e.preventDefault();
-      const leave = await showConfirmDialog({
-        title: 'Leave active scenario?',
-        message: 'You have an active scenario simulation in progress. Leaving will end the session.',
-        confirmText: 'Leave scenario',
-        cancelText: 'Stay in scenario',
-        destructive: true
-      });
-      if (leave) {
-        voiceSession.stop();
-        window.location.href = topbarSettings.href;
+    // Tracks "a start() attempt is currently mid-flight" — true from the
+    // moment startSession() commits to trying, until either it succeeds
+    // (voiceSession.isActive() becomes the source of truth from then on)
+    // or it fails and resets this. voiceSession.isActive() alone isn't
+    // enough for that window because it only flips true once the session
+    // actually connects — it's still false during the key-check/connect
+    // awaits, which is exactly the window the offline-banner wiring below
+    // needs to know about so it never re-enables/disables the mic out from
+    // under an attempt that's already in progress.
+    let sessionAttemptInFlight = false;
+
+    async function startSession() {
+      if (voiceSession.isActive() || !todaysScenario) return;
+
+      if (phase === 'feedback' || lockedBanner.classList.contains('show')) {
+        setStatus("Today's scenario is already complete.", null);
+        return;
       }
-    }
-  });
-}
 
-micBtn.addEventListener('click', () => {
-  if (voiceSession.isActive()) stopSession(); else startSession();
-});
+      sessionAttemptInFlight = true;
+      if (!sessionStartedAt) sessionStartedAt = new Date().toISOString();
+      phase = 'roleplay';
+      explicitStop = false;
+      feedbackResponseReceived = false;
+      updatePhaseRing();
+      micBtn.disabled = true;
 
-// ─────────────────────────────────────────────────────────────
-// Boot: load today's scenario (server is the source of truth for both
-// WHICH scenario and whether it's already been completed).
-// ─────────────────────────────────────────────────────────────
-async function loadTodaysScenario(){
-  try {
-    const cacheKey = 'scenario_today_' + getTodayIstDateString();
-    const { value: data } = await cachedFetch(cacheKey, () => apiFetch('/chat/scenario/today'), 60 * 60 * 1000);
-    if (!data || !data.scenario) return;
-    todaysScenario = data.scenario;
+      try {
+        const { GoogleGenAI, Modality } = await import('./vendor/google-genai.bundle.mjs');
+        const result = await voiceSession.start({ GoogleGenAI, Modality });
 
-    scenarioCard.style.display = 'flex';
-    scenarioCategoryEl.textContent = todaysScenario.category;
-    scenarioTitleEl.textContent = todaysScenario.title;
-    phaseValue.textContent = formatCountdown(PHASE_1_DURATION_SECONDS);
-
-    if (data.already_completed_today){
-      lockChatForToday(data.completed_session_id || null);
-      setStatus("Today's scenario is already complete.", null);
-    } else {
-      restoreScenarioState();
-      if (phaseSecondsLeft === PHASE_1_DURATION_SECONDS && !sessionTurns.length) {
-        setStatus('Tap the mic to start today\'s scenario.', null);
-      }
-      micBtn.disabled = false;
-    }
-  } catch (err) {
-    console.error('failed to load today\'s scenario', err);
-    setStatus("Couldn't load the scenario — check your internet and reload the page.", 'err');
-  }
-}
-loadTodaysScenario();
-
-// Live "no internet" banner (on top of the fail-fast checks already in
-// voiceSession.start()/startSession() above), auto-recovery for the
-// initial scenario load, AND proactively disabling the mic while
-// offline so a doomed tap never happens in the first place.
-//
-// "Idle" here — the only state in which these callbacks are allowed to
-// touch the mic — means: scenario data has loaded, today isn't already
-// locked/complete, no connect attempt is in flight, and no session is
-// currently live. Outside that window (mid-connect, mid-session,
-// locked-today) this code does nothing, so it can never fight with
-// onOpen/onClose/lockChatForToday/startSession's own disable/enable
-// calls above — purely additive on top of all existing behaviour.
-function isScenarioIdle(){
-  return !!todaysScenario
-    && !voiceSession.isActive()
-    && !sessionAttemptInFlight
-    && !lockedBanner.classList.contains('show');
-}
-
-import('./shared/offline-banner.js').then(({ initOfflineBanner }) => {
-  initOfflineBanner({
-    onOffline: () => {
-      if (isScenarioIdle()){
-        micBtn.disabled = true;
-        setStatus('No internet connection — please check your network and try again.', 'err');
-      }
-    },
-    onBackOnline: () => {
-      if (!todaysScenario){
-        loadTodaysScenario();
-      } else if (isScenarioIdle()){
+        if (!result.ok) {
+          sessionAttemptInFlight = false;
+          micBtn.disabled = false;
+          sessionStartedAt = null;
+          if (result.reason === 'no_api_key') {
+            setStatus('Please add your AI Access Key in Settings.', 'err');
+            setTimeout(() => { window.location.href = 'settings.html?needsKey=missing'; }, 1200);
+          } else if (result.reason === 'invalid_api_key') {
+            setStatus((result.message || 'Invalid AI Key') + ' — go to Settings to fix this.', 'err');
+            setTimeout(() => { window.location.href = 'settings.html?needsKey=invalid'; }, 1600);
+          } else {
+            setStatus(result.message || 'Could not connect.', 'err');
+          }
+        }
+      } catch (err) {
+        console.error('startSession failed:', err);
+        sessionAttemptInFlight = false;
         micBtn.disabled = false;
-        setStatus('Internet connection restored — tap mic to continue.', null);
+        sessionStartedAt = null;
+        setStatus('Could not start microphone — please try again.', 'err');
       }
     }
-  });
-});
-</script>
+
+    function stopSession() {
+      explicitStop = true;
+      voiceSession.stop(); // triggers onClose -> finalizeAndSyncSession
+    }
+
+    // Same fire-and-forget, crash-safe sync pattern as chat.html: local data
+    // already persisted at every turn boundary, so even if this call fails
+    // (network down right at session-end), the next app-open recovery
+    // (syncPendingChatSession in index.html) picks it up and retries.
+    async function finalizeAndSyncSession() {
+      if (!sessionTurns.length || finalizeInFlight) return;
+      finalizeInFlight = true;
+      try {
+        persistLocalSession({ isCompleted: true });
+        const syncedSessionId = await syncPendingChatSession();
+        if (syncedSessionId) {
+          activeSessionId = syncedSessionId;
+          syncedTurnCount = sessionTurns.length;
+          saveScenarioState();
+          setStatus('Session saved. New scenario tomorrow.', null);
+          lockChatForToday(syncedSessionId);
+        }
+        sessionTurns = [];
+        currentTurnIndex = -1;
+        sessionStartedAt = null;
+        activeSessionId = null;
+        syncedTurnCount = 0;
+      } finally {
+        finalizeInFlight = false;
+      }
+    }
+
+    function lockChatForToday(sessionId) {
+      lastCompletedSessionId = sessionId || null;
+      const label = document.getElementById('lockedSeeHistoryLabel');
+      if (lastCompletedSessionId) {
+        document.getElementById('lockedSub').textContent = 'Your feedback is ready to view below. A new scenario will be available tomorrow.';
+        label.textContent = 'View feedback report';
+      } else {
+        document.getElementById('lockedSub').textContent = 'A new scenario will be available tomorrow. You can practice freeform chat or review past sessions in the meantime.';
+        label.textContent = 'View past sessions';
+      }
+      const key = getScenarioStorageKey();
+      if (key) {
+        try { localStorage.removeItem(key); } catch (e) { /* ignore */ }
+      }
+      invalidateCache('scenario_today_' + getTodayIstDateString());
+      lockedBanner.classList.add('show');
+      micBtn.disabled = true;
+    }
+
+    function handleScenarioExit() {
+      if (voiceSession && voiceSession.isActive()) voiceSession.stop();
+      if (sessionTurns.length) {
+        persistLocalSession();
+        syncPendingChatSession({ keepalive: true }).then((syncedId) => {
+          if (syncedId) {
+            activeSessionId = syncedId;
+            syncedTurnCount = sessionTurns.length;
+            saveScenarioState();
+          }
+        }).catch(() => { });
+      }
+    }
+
+    window.addEventListener('beforeunload', handleScenarioExit);
+    window.addEventListener('pagehide', handleScenarioExit);
+    window.addEventListener('error', (e) => console.error('uncaught error', e.error || e.message));
+    window.addEventListener('unhandledrejection', (e) => console.error('unhandled promise rejection', e.reason));
+
+    // See shared/app-lifecycle.js — observation-only, does not touch
+    // voiceSession state (same reasoning as chat.html's identical listener).
+    window.addEventListener('utkio:resume', () => {
+      console.info('[lifecycle] app resumed on scenario.html — session active:', voiceSession.isActive());
+    });
+
+    registerBackHandler(() => {
+      if (voiceSession.isActive()) {
+        showConfirmDialog({
+          title: 'Leave active scenario?',
+          message: 'You have an active scenario simulation in progress. Leaving will end the session.',
+          confirmText: 'Leave scenario',
+          cancelText: 'Stay in scenario',
+          destructive: true
+        }).then((leave) => {
+          if (leave) {
+            voiceSession.stop();
+            navigateBack('home.html');
+          }
+        });
+        return true;
+      }
+    });
+
+    const topbarSettings = document.getElementById('topbarSettings');
+    if (topbarSettings) {
+      topbarSettings.addEventListener('click', async (e) => {
+        if (voiceSession.isActive()) {
+          e.preventDefault();
+          const leave = await showConfirmDialog({
+            title: 'Leave active scenario?',
+            message: 'You have an active scenario simulation in progress. Leaving will end the session.',
+            confirmText: 'Leave scenario',
+            cancelText: 'Stay in scenario',
+            destructive: true
+          });
+          if (leave) {
+            voiceSession.stop();
+            window.location.href = topbarSettings.href;
+          }
+        }
+      });
+    }
+
+    micBtn.addEventListener('click', () => {
+      if (voiceSession.isActive()) stopSession(); else startSession();
+    });
+
+    // ─────────────────────────────────────────────────────────────
+    // Boot: load today's scenario (server is the source of truth for both
+    // WHICH scenario and whether it's already been completed).
+    // ─────────────────────────────────────────────────────────────
+    async function loadTodaysScenario() {
+      try {
+        const cacheKey = 'scenario_today_' + getTodayIstDateString();
+        const { value: data } = await cachedFetch(cacheKey, () => apiFetch('/chat/scenario/today'), 60 * 60 * 1000);
+        if (!data || !data.scenario) return;
+        todaysScenario = data.scenario;
+
+        scenarioCard.style.display = 'flex';
+        scenarioCategoryEl.textContent = todaysScenario.category;
+        scenarioTitleEl.textContent = todaysScenario.title;
+        phaseValue.textContent = formatCountdown(PHASE_1_DURATION_SECONDS);
+
+        if (data.already_completed_today) {
+          lockChatForToday(data.completed_session_id || null);
+          setStatus("Today's scenario is already complete.", null);
+        } else {
+          restoreScenarioState();
+          if (phaseSecondsLeft === PHASE_1_DURATION_SECONDS && !sessionTurns.length) {
+            setStatus('Tap the mic to start today\'s scenario.', null);
+          }
+          micBtn.disabled = false;
+        }
+      } catch (err) {
+        console.error('failed to load today\'s scenario', err);
+        setStatus("Couldn't load the scenario — check your internet and reload the page.", 'err');
+      }
+    }
+    loadTodaysScenario();
+
+    // Live "no internet" banner (on top of the fail-fast checks already in
+    // voiceSession.start()/startSession() above), auto-recovery for the
+    // initial scenario load, AND proactively disabling the mic while
+    // offline so a doomed tap never happens in the first place.
+    //
+    // "Idle" here — the only state in which these callbacks are allowed to
+    // touch the mic — means: scenario data has loaded, today isn't already
+    // locked/complete, no connect attempt is in flight, and no session is
+    // currently live. Outside that window (mid-connect, mid-session,
+    // locked-today) this code does nothing, so it can never fight with
+    // onOpen/onClose/lockChatForToday/startSession's own disable/enable
+    // calls above — purely additive on top of all existing behaviour.
+    function isScenarioIdle() {
+      return !!todaysScenario
+        && !voiceSession.isActive()
+        && !sessionAttemptInFlight
+        && !lockedBanner.classList.contains('show');
+    }
+
+    import('./shared/offline-banner.js').then(({ initOfflineBanner }) => {
+      initOfflineBanner({
+        onOffline: () => {
+          if (isScenarioIdle()) {
+            micBtn.disabled = true;
+            setStatus('No internet connection — please check your network and try again.', 'err');
+          }
+        },
+        onBackOnline: () => {
+          if (!todaysScenario) {
+            loadTodaysScenario();
+          } else if (isScenarioIdle()) {
+            micBtn.disabled = false;
+            setStatus('Internet connection restored — tap mic to continue.', null);
+          }
+        }
+      });
+    });
+  </script>
 </body>
+
 </html>

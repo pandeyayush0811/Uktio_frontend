@@ -60,7 +60,7 @@ export async function renderCommitModeBanner(el, planStatus) {
   const countdown = document.createElement('span');
   countdown.className = 'commit-mode-countdown';
   countdown.textContent = bothDone
-    ? 'Aaj ka Commit Mode complete ✓'
+    ? "Today's Commit Mode complete ✓"
     : (progress.ms_until_reset <= 0 ? 'Resets soon' : `Reset in ${formatCountdown(progress.ms_until_reset)}`);
 
   el.appendChild(chatChip);

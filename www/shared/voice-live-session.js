@@ -122,7 +122,7 @@ export function createAudioPlayer(onSpeakingChange) {
   return {
     async open() {
       const AudioCtxClass = (typeof window !== 'undefined' && (window.AudioContext || window.webkitAudioContext)) ||
-                            (typeof globalThis !== 'undefined' && (globalThis.AudioContext || globalThis.webkitAudioContext));
+        (typeof globalThis !== 'undefined' && (globalThis.AudioContext || globalThis.webkitAudioContext));
       if (!AudioCtxClass) return;
       playCtx = new AudioCtxClass({ sampleRate: 24000 });
       nextPlayTime = 0;
@@ -315,8 +315,8 @@ export function createVoiceSession({
     stopWatchdog();
     stop(false);
     const message = reason === 'stagnant_turn'
-      ? 'Session paused due to extended inactivity. Tap mic to continue.'
-      : 'Session closed due to 90 seconds of inactivity. Tap mic to resume.';
+      ? 'Chat Session paused due to extended inactivity. Tap mic to continue.'
+      : 'Chat Session closed due to 90 seconds of inactivity. Tap mic to resume.';
     callbacks.onStatus && callbacks.onStatus(message, null);
     if (callbacks.onInactivityTimeout) {
       callbacks.onInactivityTimeout({ reason, silenceElapsed: Date.now() - lastActiveTime });
@@ -484,7 +484,7 @@ export function createVoiceSession({
             stopWatchdog();
             if (!errorAlreadyShown) {
               const msg = describeCloseEvent(e);
-              callbacks.onStatus && callbacks.onStatus(msg || 'Session closed.', msg ? 'err' : null);
+              callbacks.onStatus && callbacks.onStatus(msg || 'Chat Session closed', msg ? 'err' : null);
             }
             errorAlreadyShown = false;
             session = null;
