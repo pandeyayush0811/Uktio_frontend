@@ -1404,6 +1404,26 @@ Ek baar mein bahut lamba mat bolo — natural conversational chunks mein bolo, j
           saveScenarioState();
           setStatus('Session saved. New scenario tomorrow.', null);
           lockChatForToday(syncedSessionId);
+
+          // Sync notification schedule upon scenario completion
+          try {
+            const { syncDailyNotificationSchedule } = await import('./shared/notifications.js');
+            const { getPlanStatus } = await import('./shared/plan.js');
+            getPlanStatus().then(status => {
+              let chatSecondsDone = 0;
+              let scenarioDone = true;
+              if (status?.commitProgress) {
+                chatSecondsDone = status.commitProgress.chat_seconds_done || 0;
+                scenarioDone = true;
+              }
+              syncDailyNotificationSchedule({
+                plan: status?.plan || 'none',
+                chatSecondsDone,
+                scenarioDone,
+                name: (window.__UKTIO_PROFILE || {}).name || 'there'
+              }).catch(() => { });
+            }).catch(() => { });
+          } catch (e) { }
         }
         sessionTurns = [];
         currentTurnIndex = -1;

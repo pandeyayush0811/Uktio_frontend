@@ -81,6 +81,7 @@ import { renderAnnouncementBanner } from './shared/announcement-banner.js';
 import { mountDrawer } from './shared/drawer.js';
 import { initBackNav } from './shared/back-nav.js';
 import { PROMO_CARDS } from './shared/promo-cards.js';
+import { syncDailyNotificationSchedule } from './shared/notifications.js';
 
 initBackNav(null); // home.html is the true root now — back minimizes the app
 mountDrawer(document.getElementById('drawerTrigger'), 'home');
@@ -154,9 +155,11 @@ PROMO_CARDS.forEach(card => {
   renderCommitModeBanner(document.getElementById('commitBanner'), planStatus);
 
   // Real Day Streak — background revalidation
+  let currentStreak = 0;
   try {
     const streakData = await apiFetch('/chat/streak');
     if (streakData && typeof streakData.current_streak === 'number') {
+      currentStreak = streakData.current_streak;
       setCachedStreak(streakData);
       const streakValEl = document.getElementById('homeStreakValue');
       if (streakValEl) streakValEl.textContent = streakData.current_streak;
@@ -167,6 +170,26 @@ PROMO_CARDS.forEach(card => {
     }
   } catch (e) {
     // Fail-safe: cached streak stays on screen seamlessly
+    currentStreak = cachedStreak?.current_streak || 0;
+  }
+
+  // Background Notification Scheduling Sync
+  try {
+    let chatSecondsDone = 0;
+    let scenarioDone = false;
+    if (planStatus?.commitProgress) {
+      chatSecondsDone = planStatus.commitProgress.chat_seconds_done || 0;
+      scenarioDone = planStatus.commitProgress.scenario_requirement_met || false;
+    }
+    syncDailyNotificationSchedule({
+      plan: planStatus?.plan || profile?.plan || 'none',
+      chatSecondsDone,
+      scenarioDone,
+      streak: currentStreak,
+      name: profile?.name || 'there'
+    });
+  } catch (err) {
+    console.warn('[home] Failed to sync notification schedule:', err);
   }
 })();
 </script>

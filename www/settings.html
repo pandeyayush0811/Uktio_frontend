@@ -237,6 +237,45 @@
         box-shadow: 0 0 0 3px transparent, 0 6px 18px -12px rgba(60, 60, 120, 0.2);
       }
     }
+
+    /* ── Switch Toggle for Reminders ── */
+    .switch-toggle {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+    }
+    .switch-toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .switch-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: var(--line);
+      transition: .3s;
+      border-radius: 24px;
+    }
+    .switch-slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    input:checked + .switch-slider {
+      background-color: var(--accent-orange);
+    }
+    input:checked + .switch-slider:before {
+      transform: translateX(20px);
+    }
   </style>
 </head>
 
@@ -292,6 +331,52 @@
         </a>
       </div>
       <div class="status-msg err" id="commitModeTerminatedMsg" style="display:none;margin-top:10px;"></div>
+    </div>
+
+    <!-- ── Reminders & Notifications ────────────────────────────── -->
+    <div class="settings-section">
+      <div class="settings-section-label">Practice Reminders</div>
+      <div class="profile-fields-card">
+        <div class="profile-row" style="cursor:default;">
+          <div class="profile-row-icon tint-orange">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+              <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+            </svg>
+          </div>
+          <div style="flex:1;">
+            <div class="profile-row-label">Daily Reminders</div>
+            <div style="font-size:0.75rem;color:var(--ink-dim);">Habit nudges &amp; Commit Mode protection</div>
+          </div>
+          <div class="profile-row-right">
+            <label class="switch-toggle">
+              <input type="checkbox" id="notifDailyToggle" checked>
+              <span class="switch-slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="profile-row" id="reminderTimeRow" style="cursor:default;">
+          <div class="profile-row-icon tint-orange">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+          </div>
+          <div style="flex:1;">
+            <div class="profile-row-label">Preferred Time</div>
+          </div>
+          <div class="profile-row-right">
+            <select id="preferredTimeSelect" style="background:none;border:none;color:var(--accent-orange);font-weight:700;font-size:0.88rem;cursor:pointer;outline:none;">
+              <option value="18:30">06:30 PM (Evening)</option>
+              <option value="19:30" selected>07:30 PM (Default)</option>
+              <option value="20:30">08:30 PM (Dinner)</option>
+              <option value="21:30">09:30 PM (Night)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="status-msg ok" id="notifSavedMsg" style="display:none;margin-top:6px;"></div>
     </div>
 
     <!-- ── AI Setup ──────────────────────────────────────────────── -->
@@ -414,13 +499,82 @@
     import './shared/config.js';
     import { requireAuthOrRedirect, apiFetch, logout, getCachedProfileBasic, setCachedProfileBasic } from './shared/auth.js';
     import { getPlanStatus } from './shared/plan.js';
-    import { initBackNav } from './shared/back-nav.js';
     import { checkGeminiApiKey } from './shared/gemini-key-check.js';
     import { getApiKey, setApiKey, removeApiKey } from './shared/mic-helpers.js';
     import { showConfirmDialog } from './shared/confirm-dialog.js';
+    import {
+      getNotificationPreferences,
+      saveNotificationPreferences,
+      requestNotificationPermissions,
+      syncDailyNotificationSchedule
+    } from './shared/notifications.js';
 
     await requireAuthOrRedirect();
     initBackNav('home.html');
+
+    // ── Reminders & Notification Preferences ──────────────────────────────────
+    const notifDailyToggle = document.getElementById('notifDailyToggle');
+    const reminderTimeRow = document.getElementById('reminderTimeRow');
+    const preferredTimeSelect = document.getElementById('preferredTimeSelect');
+    const notifSavedMsg = document.getElementById('notifSavedMsg');
+
+    function flashNotifSaved(text) {
+      if (!notifSavedMsg) return;
+      notifSavedMsg.textContent = text;
+      notifSavedMsg.style.display = '';
+      clearTimeout(flashNotifSaved._t);
+      flashNotifSaved._t = setTimeout(() => { notifSavedMsg.style.display = 'none'; }, 2000);
+    }
+
+    const currentPrefs = getNotificationPreferences();
+    if (notifDailyToggle) {
+      notifDailyToggle.checked = !!currentPrefs.dailyEnabled;
+      if (reminderTimeRow) {
+        reminderTimeRow.style.display = currentPrefs.dailyEnabled ? '' : 'none';
+      }
+    }
+
+    if (preferredTimeSelect) {
+      const timeVal = String(currentPrefs.preferredHour).padStart(2, '0') + ':' + String(currentPrefs.preferredMinute).padStart(2, '0');
+      preferredTimeSelect.value = timeVal;
+    }
+
+    notifDailyToggle?.addEventListener('change', async () => {
+      const enabled = notifDailyToggle.checked;
+      if (reminderTimeRow) reminderTimeRow.style.display = enabled ? '' : 'none';
+
+      if (enabled) {
+        await requestNotificationPermissions();
+      }
+
+      saveNotificationPreferences({ dailyEnabled: enabled });
+      flashNotifSaved(enabled ? 'Reminders enabled' : 'Reminders turned off');
+
+      getPlanStatus().then(status => {
+        syncDailyNotificationSchedule({
+          plan: status?.plan || 'none',
+          chatSecondsDone: status?.commitProgress?.chat_seconds_done || 0,
+          scenarioDone: status?.commitProgress?.scenario_requirement_met || false
+        }).catch(() => { });
+      }).catch(() => { });
+    });
+
+    preferredTimeSelect?.addEventListener('change', () => {
+      const [hStr, mStr] = (preferredTimeSelect.value || '19:30').split(':');
+      const hour = parseInt(hStr, 10) || 19;
+      const minute = parseInt(mStr, 10) || 30;
+
+      saveNotificationPreferences({ preferredHour: hour, preferredMinute: minute });
+      flashNotifSaved('Preferred time updated');
+
+      getPlanStatus().then(status => {
+        syncDailyNotificationSchedule({
+          plan: status?.plan || 'none',
+          chatSecondsDone: status?.commitProgress?.chat_seconds_done || 0,
+          scenarioDone: status?.commitProgress?.scenario_requirement_met || false
+        }).catch(() => { });
+      }).catch(() => { });
+    });
 
     // ── Telegram link from config (single place to change) ────────────────────
     // Set UKTIO_CONFIG.TELEGRAM_URL in shared/config.js — no other file needs editing.

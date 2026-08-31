@@ -464,6 +464,7 @@
     import { invalidateCache } from './shared/api-cache.js';
     import { registerBackHandler, navigateBack } from './shared/back-nav.js';
     import { showConfirmDialog } from './shared/confirm-dialog.js';
+    import { syncDailyNotificationSchedule, scheduleReportReadyNotification } from './shared/notifications.js';
 
     function buildBaseInstruction(userName) {
       return `ROLE:
@@ -1212,6 +1213,8 @@ aur zaroorat pade tabhi strict raho.`;
           knownTurnCount += sessionTurns.length;
           if (!isLocked && !reportPill.classList.contains('show') && knownTurnCount >= MIN_TURNS_FOR_ANALYSIS) {
             showReportPill(activeSessionId, false);
+            // Schedule a background report ready notification in 30s if user backgrounded
+            scheduleReportReadyNotification({ delaySeconds: 30 }).catch(() => { });
           }
 
           // Post-session membership nudge — fetch FRESH status (trial credits
@@ -1226,6 +1229,20 @@ aur zaroorat pade tabhi strict raho.`;
             // chat requirement, and the user should see that reflected
             // immediately, not on next app-open.
             renderCommitModeBanner(document.getElementById('commitModeBanner'), status);
+
+            // Re-sync notifications to cancel night alerts or dismiss sticky countdown if goals completed
+            let chatSecondsDone = 0;
+            let scenarioDone = false;
+            if (status?.commitProgress) {
+              chatSecondsDone = status.commitProgress.chat_seconds_done || 0;
+              scenarioDone = status.commitProgress.scenario_requirement_met || false;
+            }
+            syncDailyNotificationSchedule({
+              plan: status?.plan || 'none',
+              chatSecondsDone,
+              scenarioDone,
+              name: (window.__UKTIO_PROFILE || {}).name || 'there'
+            }).catch(() => { });
           }).catch(() => { });
 
           // Invalidate streak cache so home.html gets the updated streak count
