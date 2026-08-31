@@ -960,4 +960,98 @@ describe('Adversarial & Hardcore Test Suite — Issues UX-001 to UX-010: Auth UX
       expect(styleCss).toMatch(/\.auth-field-hint\s*\{[^}]*margin/);
     });
   });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SUITE 11: Auth UI Polish Suite — Issues DES-001 to DES-034
+  // ═══════════════════════════════════════════════════════════════════════════
+  describe('Auth UI Polish Suite — Issues DES-001 to DES-034', () => {
+    // DES-025: Password-to-Submit Ghost Gap Collapse
+    it('DES-025.1: style.css defines .status-msg:empty rule collapsing display, min-height, and margin', () => {
+      expect(styleCss).toMatch(/\.status-msg:empty\s*\{[^}]*display:\s*none/);
+      expect(styleCss).toMatch(/\.status-msg:empty\s*\{[^}]*min-height:\s*0/);
+      expect(styleCss).toMatch(/\.status-msg:empty\s*\{[^}]*margin:\s*0/);
+    });
+
+    it('DES-025.2: .auth-forgot-row has tight vertical margins (margin <= 10px)', () => {
+      expect(styleCss).toMatch(/\.auth-forgot-row\s*\{[^}]*margin:\s*2px\s+0\s+10px/);
+    });
+
+    // DES-028: Indian Mobile +91 Prefix Chip & Paste Sanitizer
+    it('DES-028.1: #signupPhone is enclosed in a .phone-input-group container with .phone-prefix +91', () => {
+      expect(loginHtml).toMatch(/<div class=['"]phone-input-group['"]>\s*<span class=['"]phone-prefix['"]>\+91<\/span>\s*<input[^>]+id=['"]signupPhone['"]/);
+    });
+
+    it('DES-028.2: style.css contains .phone-input-group and .phone-prefix styling rules', () => {
+      expect(styleCss).toMatch(/\.phone-input-group\s*\{/);
+      expect(styleCss).toMatch(/\.phone-prefix\s*\{/);
+      expect(styleCss).toMatch(/\.phone-input-group:focus-within\s*\{[^}]*border-color:\s*var\(--accent-orange\)/);
+    });
+
+    it('DES-028.3: login.html includes paste and input sanitization for #signupPhone to strip non-digits and leading +91/0', () => {
+      expect(loginHtml).toMatch(/signupPhone[\s\S]*?addEventListener\(['"]input['"]/);
+      expect(loginHtml).toMatch(/signupPhone[\s\S]*?addEventListener\(['"]paste['"]/);
+      expect(loginHtml).toMatch(/replace\(\/\\D\/g,\s*['"]['"]\)/);
+    });
+
+    // DES-029: Compact Header on Sub-Screens
+    it('DES-029.1: showScreen() hides #authHeaderSub on non-login screens and shows it on login', () => {
+      expect(loginHtml).toMatch(/authHeaderSub[\s\S]*?style\.display\s*=\s*['"]none['"]/);
+      expect(loginHtml).toMatch(/authHeaderSub[\s\S]*?style\.display\s*=\s*['"]['"]/);
+    });
+
+    it('DES-029.2: showScreen() toggles .auth-header-compact class on .auth-header', () => {
+      expect(loginHtml).toMatch(/auth-header-compact/);
+    });
+
+    it('DES-029.3: style.css defines .auth-header.auth-header-compact styles', () => {
+      expect(styleCss).toMatch(/\.auth-header\.auth-header-compact\s*\{/);
+      expect(styleCss).toMatch(/\.auth-header\.auth-header-compact\s+\.auth-logo\s*\{/);
+    });
+
+    // DES-003: 6-Digit OTP Formatting & Balanced Centering
+    it('DES-003.1: .auth-otp-input has equal letter-spacing and text-indent for balanced optical centering', () => {
+      expect(styleCss).toMatch(/\.auth-otp-input\s*\{[^}]*letter-spacing:\s*0\.5em/);
+      expect(styleCss).toMatch(/\.auth-otp-input\s*\{[^}]*text-indent:\s*0\.5em/);
+    });
+
+    // DES-030: Resend OTP Relocated Below Input
+    it('DES-030.1: #signupResendOtp is located in .auth-otp-resend-row directly under #signupOtp', () => {
+      const signupVerifyMatch = loginHtml.match(/id=['"]screenSignupVerify['"][^>]*>([\s\S]*?)<\/form>/);
+      expect(signupVerifyMatch).toBeTruthy();
+      expect(signupVerifyMatch[1]).toMatch(/class=['"]auth-otp-resend-row['"][\s\S]*?id=['"]signupResendOtp['"]/);
+    });
+
+    it('DES-030.2: #forgotResendOtp is located in .auth-otp-resend-row directly under #forgotOtp', () => {
+      const forgotVerifyMatch = loginHtml.match(/id=['"]screenForgotVerify['"][^>]*>([\s\S]*?)<\/form>/);
+      expect(forgotVerifyMatch).toBeTruthy();
+      expect(forgotVerifyMatch[1]).toMatch(/class=['"]auth-otp-resend-row['"][\s\S]*?id=['"]forgotResendOtp['"]/);
+    });
+
+    it('DES-030.3: style.css defines .auth-otp-resend-row flex layout and text-link sizing', () => {
+      expect(styleCss).toMatch(/\.auth-otp-resend-row\s*\{/);
+      expect(styleCss).toMatch(/\.auth-otp-resend-row\s+\.text-link\s*\{/);
+    });
+
+    // DES-033: Neutral Google Sign-In Button Hover State
+    it('DES-033.1: style.css defines explicit neutral hover state for #googleBtn with --panel-2 background', () => {
+      expect(styleCss).toMatch(/\.auth-card\s+#googleBtn:hover/);
+      expect(styleCss).toMatch(/#googleBtn:hover[^{]*\{[^}]*background:\s*var\(--panel-2\)/);
+    });
+
+    // DES-034: Password Validation Pop-in Checkmark Animation
+    it('DES-034.1: style.css defines @keyframes popCheck and .auth-field-hint checkmark pseudo-element', () => {
+      expect(styleCss).toMatch(/@keyframes\s+popCheck/);
+      expect(styleCss).toMatch(/\.auth-field-hint(?:\.hint-met|\.valid)::before\s*\{[^}]*content:\s*['"]✓\s*['"]/);
+    });
+
+    // DES-004: Tap Target Accessibility
+    it('DES-004.1: .auth-consent label has min-height of at least 40px', () => {
+      expect(styleCss).toMatch(/\.auth-consent\s+label\s*\{[^}]*min-height:\s*40px/);
+    });
+
+    // DES-002: Reduced Motion Accessibility Support
+    it('DES-002.1: style.css includes @media (prefers-reduced-motion: reduce) rule disabling animations', () => {
+      expect(styleCss).toMatch(/@media\s*\(\s*prefers-reduced-motion:\s*reduce\s*\)\s*\{[\s\S]*?\.auth-card-enter/);
+    });
+  });
 });

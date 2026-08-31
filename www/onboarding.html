@@ -9,6 +9,7 @@
 </head>
 <body>
 <div class="wrap" style="justify-content:center;">
+  <div class="progress-step-label" id="progressStepLabel">Step 1 of 9</div>
   <div class="progress-track"><div class="progress-bar" id="progressBar"></div></div>
   <div class="sr-only" id="stepAnnounce" aria-live="polite"></div>
 
@@ -18,7 +19,7 @@
     <div class="status-msg err" id="statusMsg" role="alert" aria-live="assertive"></div>
 
     <div class="step-nav">
-      <button class="secondary" id="backBtn" style="display:none;">Back</button>
+      <button class="secondary" id="backBtn" style="visibility:hidden;pointer-events:none;">Back</button>
       <button class="primary" id="nextBtn">Next</button>
     </div>
   </div>
@@ -133,7 +134,8 @@ const steps = [
       el.innerHTML = `
         <input type="text" id="f_occdetail" placeholder="${placeholder}" maxlength="150">
         <button type="button" id="occSwitchLink" class="auth-switch-link">
-          ${isStudent ? "Already graduated / doing something else? Tap here" : "Actually, I'm currently a student — tap here"}
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3l4 4-4 4"/><path d="M20 7H4"/><path d="M8 21l-4-4 4-4"/><path d="M4 17h16"/></svg>
+          <span>${isStudent ? "Already graduated / doing something else? Tap here" : "Actually, I'm currently a student — tap here"}</span>
         </button>`;
       el.querySelector('#f_occdetail').value = answers[key];
       el.querySelector('#f_occdetail').addEventListener('input', e => answers[key] = e.target.value);
@@ -185,7 +187,8 @@ const steps = [
     render(el){
       el.innerHTML = `
         <div class="translate-prompt-box">
-          <em>"${HINDI_TRANSLATE_PROMPT}"</em>
+          <span class="translate-prompt-badge">Hindi</span>
+          <div class="translate-prompt-text"><em>"${HINDI_TRANSLATE_PROMPT}"</em></div>
         </div>
         <textarea id="f_sample" placeholder="Type your English translation here..." maxlength="500"></textarea>
         <div class="char-hint" id="charHint">0 / 500</div>`;
@@ -266,9 +269,19 @@ function renderStep(){
   if (control && !control.hasAttribute('aria-label')) {
     control.setAttribute('aria-labelledby', 'stepTitleText');
   }
-  backBtn.style.display = current === 0 ? 'none' : '';
+  if (current === 0) {
+    backBtn.style.visibility = 'hidden';
+    backBtn.style.pointerEvents = 'none';
+  } else {
+    backBtn.style.visibility = 'visible';
+    backBtn.style.pointerEvents = 'auto';
+  }
   refreshNextLabel();
   renderProgress();
+  const progressStepLabel = document.getElementById('progressStepLabel');
+  if (progressStepLabel) {
+    progressStepLabel.textContent = `Step ${current + 1} of ${steps.length}`;
+  }
   stepAnnounce.textContent = `Step ${current + 1} of ${steps.length}`;
 }
 
@@ -295,9 +308,7 @@ nextBtn.addEventListener('click', async () => {
   }
 
   if (current < steps.length - 1){
-    current++;
-    renderStep();
-    return;
+    current++; renderStep(); return;
   }
 
   // Last step — submit everything.

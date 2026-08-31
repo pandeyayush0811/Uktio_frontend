@@ -67,7 +67,10 @@
       <input type="email" id="signupEmail" required autocomplete="email" placeholder="you@email.com">
 
       <label for="signupPhone">Mobile Number</label>
-      <input type="tel" id="signupPhone" required inputmode="numeric" autocomplete="tel" placeholder="9876543210" maxlength="10">
+      <div class="phone-input-group">
+        <span class="phone-prefix">+91</span>
+        <input type="tel" id="signupPhone" required inputmode="numeric" autocomplete="tel" placeholder="98765 43210" maxlength="10">
+      </div>
 
       <div class="auth-consent">
         <input type="checkbox" id="signupConsent" required>
@@ -90,6 +93,10 @@
     <form id="signupVerifyForm">
       <label for="signupOtp">6-digit OTP</label>
       <input type="text" id="signupOtp" class="auth-otp-input" required inputmode="numeric" pattern="\d{6}" maxlength="6" autocomplete="one-time-code" placeholder="123456">
+      <div class="auth-otp-resend-row">
+        <span>Didn't receive code?</span>
+        <span class="text-link" id="signupResendOtp" role="button" tabindex="0">Resend OTP</span>
+      </div>
 
       <label for="signupPassword">Set a Password</label>
       <div class="password-field">
@@ -106,7 +113,6 @@
       <button type="submit" class="primary" id="signupVerifySubmitBtn">Verify &amp; Create Account</button>
     </form>
     <div class="auth-footer-links">
-      <span class="text-link" id="signupResendOtp" role="button" tabindex="0">Resend OTP</span>
       <span class="text-link" id="signupBackToLogin2" role="button" tabindex="0">Back</span>
     </div>
   </div>
@@ -135,6 +141,10 @@
     <form id="forgotVerifyForm">
       <label for="forgotOtp">6-digit OTP</label>
       <input type="text" id="forgotOtp" class="auth-otp-input" required inputmode="numeric" pattern="\d{6}" maxlength="6" autocomplete="one-time-code" placeholder="123456">
+      <div class="auth-otp-resend-row">
+        <span>Didn't receive code?</span>
+        <span class="text-link" id="forgotResendOtp" role="button" tabindex="0">Resend OTP</span>
+      </div>
 
       <label for="forgotNewPassword">New Password</label>
       <div class="password-field">
@@ -151,7 +161,6 @@
       <button type="submit" class="primary" id="forgotVerifySubmitBtn">Reset Password</button>
     </form>
     <div class="auth-footer-links">
-      <span class="text-link" id="forgotResendOtp" role="button" tabindex="0">Resend OTP</span>
       <span class="text-link" id="forgotBackToLogin2" role="button" tabindex="0">Back to Login</span>
     </div>
   </div>
@@ -214,6 +223,16 @@ const FOCUS_TARGETS = {
 };
 
 function showScreen(name) {
+  const authHeader = document.querySelector('.auth-header');
+  const authHeaderSub = document.getElementById('authHeaderSub');
+  if (name === 'login') {
+    if (authHeaderSub) authHeaderSub.style.display = '';
+    if (authHeader) authHeader.classList.remove('auth-header-compact');
+  } else {
+    if (authHeaderSub) authHeaderSub.style.display = 'none';
+    if (authHeader) authHeader.classList.add('auth-header-compact');
+  }
+
   for (const key in screens) {
     if (key === name) {
       screens[key].style.display = '';
@@ -594,10 +613,30 @@ function attachPasswordLiveHint(inputId, hintId) {
 attachPasswordLiveHint('signupPassword', 'signupPasswordHint');
 attachPasswordLiveHint('forgotNewPassword', 'forgotPasswordHint');
 
+// ── Phone Input Sanitizer (DES-028) ───────────────────────────────────
+const signupPhoneInput = document.getElementById('signupPhone');
+function sanitizeIndianPhone(raw) {
+  let digits = String(raw || '').replace(/\D/g, '');
+  if (digits.length > 10 && digits.startsWith('91')) digits = digits.slice(2);
+  if (digits.length > 10 && digits.startsWith('0')) digits = digits.slice(1);
+  return digits.slice(-10);
+}
+signupPhoneInput?.addEventListener('input', (e) => {
+  const cleaned = sanitizeIndianPhone(e.target.value);
+  if (e.target.value !== cleaned) e.target.value = cleaned;
+});
+signupPhoneInput?.addEventListener('paste', (e) => {
+  e.preventDefault();
+  const pasted = (e.clipboardData || window.clipboardData)?.getData('text') || '';
+  signupPhoneInput.value = sanitizeIndianPhone(pasted);
+});
+
 // ── Keyboard accessibility for text-link buttons ────────────────────
 [
   document.getElementById('goToSignup'),
   document.getElementById('goToForgot'),
+  document.getElementById('signupResendOtp'),
+  document.getElementById('forgotResendOtp'),
   document.getElementById('signupBackToLogin1'),
   document.getElementById('signupBackToLogin2'),
   document.getElementById('forgotBackToLogin1'),
