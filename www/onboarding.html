@@ -9,7 +9,7 @@
 </head>
 <body>
 <div class="wrap" style="justify-content:center;">
-  <div class="progress-dots" id="progressDots" aria-hidden="true"></div>
+  <div class="progress-track"><div class="progress-bar" id="progressBar"></div></div>
   <div class="sr-only" id="stepAnnounce" aria-live="polite"></div>
 
   <div class="card">
@@ -132,7 +132,7 @@ const steps = [
       const placeholder = isStudent ? 'e.g. Class 10, B.Tech 2nd year, or "Passed out"' : 'e.g. Software Engineer';
       el.innerHTML = `
         <input type="text" id="f_occdetail" placeholder="${placeholder}" maxlength="150">
-        <button type="button" id="occSwitchLink" style="background:none;border:none;padding:8px 0 0;margin:0;color:var(--accent);font-size:0.85rem;font-weight:600;text-align:left;cursor:pointer;text-decoration:underline;">
+        <button type="button" id="occSwitchLink" class="auth-switch-link">
           ${isStudent ? "Already graduated / doing something else? Tap here" : "Actually, I'm currently a student — tap here"}
         </button>`;
       el.querySelector('#f_occdetail').value = answers[key];
@@ -179,11 +179,14 @@ const steps = [
   },
   {
     title: 'Translate this into English',
-    sub: `(Optional) "${HINDI_TRANSLATE_PROMPT}" — try it in your own words, whatever you know. No grading, just for the record.`,
+    sub: '(Optional) Try it in your own words, whatever you know. No grading, just for the record.',
     optional: true,
     optionalKey: 'english_sample',
     render(el){
       el.innerHTML = `
+        <div class="translate-prompt-box">
+          <em>"${HINDI_TRANSLATE_PROMPT}"</em>
+        </div>
         <textarea id="f_sample" placeholder="Type your English translation here..." maxlength="500"></textarea>
         <div class="char-hint" id="charHint">0 / 500</div>`;
       const ta = el.querySelector('#f_sample');
@@ -220,7 +223,8 @@ function renderChips(container, options, key){
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'chip' + (answers[key] === opt.value ? ' selected' : '');
-    btn.textContent = opt.label;
+    const title = opt.title || opt.label;
+    btn.innerHTML = `<span class="chip-title">${title}</span>${opt.sub ? `<span class="chip-sub">${opt.sub}</span>` : ''}`;
     btn.setAttribute('aria-pressed', String(answers[key] === opt.value));
     btn.addEventListener('click', () => {
       answers[key] = opt.value;
@@ -237,17 +241,14 @@ const stepBody = document.getElementById('stepBody');
 const statusMsg = document.getElementById('statusMsg');
 const backBtn = document.getElementById('backBtn');
 const nextBtn = document.getElementById('nextBtn');
-const progressDots = document.getElementById('progressDots');
 const stepAnnounce = document.getElementById('stepAnnounce');
 
-function renderDots(){
-  progressDots.innerHTML = '';
-  steps.forEach((_, i) => {
-    const dot = document.createElement('span');
-    if (i < current) dot.className = 'done';
-    else if (i === current) dot.className = 'active';
-    progressDots.appendChild(dot);
-  });
+function renderProgress(){
+  const progressBar = document.getElementById('progressBar');
+  if (progressBar) {
+    const percent = Math.round(((current + 1) / steps.length) * 100);
+    progressBar.style.width = `${percent}%`;
+  }
 }
 
 function renderStep(){
@@ -255,26 +256,19 @@ function renderStep(){
   const step = steps[current];
   const title = typeof step.title === 'function' ? step.title() : step.title;
   const sub = typeof step.sub === 'function' ? step.sub() : step.sub;
-  // BUG FIX: previously step.render(stepBody) was passed the SAME element
-  // that the title/sub were just written into, and every step's render()
-  // does `el.innerHTML = ...`, which wiped the title/sub out immediately
-  // (that's why the heading/instructions never appeared on screen — only
-  // the bare input/chips were left). Each step now gets its own inner
-  // #stepContent div to write into, so the title/sub stay intact.
+  stepBody.classList.remove('step-enter');
+  void stepBody.offsetWidth;
+  stepBody.classList.add('step-enter');
   stepBody.innerHTML = `<div class="step-title" id="stepTitleText">${title}</div><div class="step-sub">${sub}</div><div id="stepContent"></div>`;
   const stepContent = stepBody.querySelector('#stepContent');
   step.render(stepContent);
-  // Associate the step's primary input with its (dynamically rendered)
-  // visual title, since these steps don't use static <label for> markup —
-  // one generic hook here covers every step instead of touching each
-  // render() function individually.
   const control = stepContent.querySelector('input, textarea');
   if (control && !control.hasAttribute('aria-label')) {
     control.setAttribute('aria-labelledby', 'stepTitleText');
   }
   backBtn.style.display = current === 0 ? 'none' : '';
   refreshNextLabel();
-  renderDots();
+  renderProgress();
   stepAnnounce.textContent = `Step ${current + 1} of ${steps.length}`;
 }
 

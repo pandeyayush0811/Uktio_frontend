@@ -17,7 +17,7 @@
   }
   .report-article p{ margin:0 0 16px; }
   .report-article p:last-child{ margin-bottom:0; }
-  .report-article strong{ color:var(--accent); font-weight:700; }
+  .report-article strong{ color:var(--accent-orange); font-weight:700; }
 
   .generate-state{ text-align:center; padding:60px 20px; }
   .generate-state svg{ color:var(--accent-orange); margin-bottom:16px; }
@@ -62,13 +62,40 @@ async function fetchSessionReport(id) {
 const shouldAutoGenerate = params.get('generate') === '1';
 const content = document.getElementById('content');
 
+let generateInterval = null;
+
 function renderGenerateState(message, showButton){
+  if (generateInterval) { clearInterval(generateInterval); generateInterval = null; }
+
   content.innerHTML = `
     <div class="generate-state">
       ${showButton ? '' : '<div class="spinner-ring"></div>'}
-      <p>${message}</p>
+      <p id="generateStatusText">${escapeHtml(message || '')}</p>
       ${showButton ? '<button class="primary" id="genBtn" style="width:auto;padding:12px 28px;">Generate Report</button>' : ''}
     </div>`;
+
+  if (!showButton && message && message.includes('Generating analysis report')) {
+    const generationSteps = [
+      'Reviewing practice conversation...',
+      'Analyzing grammar and vocabulary patterns...',
+      'Polishing Hinglish coach tips...'
+    ];
+    let phaseIndex = 0;
+    const statusTextEl = document.getElementById('generateStatusText');
+    if (statusTextEl) {
+      statusTextEl.textContent = generationSteps[0];
+      generateInterval = setInterval(() => {
+        phaseIndex++;
+        if (phaseIndex < generationSteps.length && statusTextEl) {
+          statusTextEl.textContent = generationSteps[phaseIndex];
+        } else {
+          clearInterval(generateInterval);
+          generateInterval = null;
+        }
+      }, 2500);
+    }
+  }
+
   if (showButton) {
     const genBtn = document.getElementById('genBtn');
     // Disable + relabel the SAME click the user just made, synchronously,
@@ -99,6 +126,7 @@ function renderReportText(text){
 }
 
 function renderReport(report){
+  if (generateInterval) { clearInterval(generateInterval); generateInterval = null; }
   content.innerHTML = `<div class="report-article">${renderReportText(report.report_text)}</div>`;
 }
 

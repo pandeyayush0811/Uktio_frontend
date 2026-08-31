@@ -23,7 +23,7 @@
   .chat-card.open .expanded-transcript{ display:block; }
   .t-line{ font-size:0.85rem; line-height:1.5; margin-bottom:8px; word-break:break-word; overflow-wrap:break-word; }
   .t-line .t-tag{ font-weight:700; margin-right:6px; }
-  .t-line.user .t-tag{ color:var(--accent); }
+  .t-line.user .t-tag{ color:var(--accent-orange); }
   .t-line-empty{ font-size:0.82rem; color:var(--ink-dim); padding:4px 0 8px; }
   /* Distinct "no results for this search" state — lighter-weight than
      the true empty-state (no illustration), since the person does
@@ -59,11 +59,12 @@
     </div>
   </div>
 
-  <!-- Centered spinner shown while the session list is fetching.
+  <!-- Skeleton loading placeholder shown while the session list is fetching.
        JS hides this and reveals sessionList once data arrives. -->
-  <div class="page-loader" id="listMsg">
-    <div class="loader-ring"></div>
-    <span class="loader-label">Loading chats…</span>
+  <div class="skeleton-card" id="listMsg">
+    <div class="skeleton-line" style="width:40%;"></div>
+    <div class="skeleton-line" style="width:85%;"></div>
+    <div class="skeleton-line" style="width:60%;"></div>
   </div>
   <div class="status-msg err" id="listErr" style="display:none;"></div>
   <div id="sessionList"></div>

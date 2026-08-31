@@ -19,7 +19,7 @@
       </svg>
     </div>
     <h1 class="auth-title">Utkio</h1>
-    <p class="auth-subtitle" id="authHeaderSub">Your personal growth companion</p>
+    <p class="auth-subtitle" id="authHeaderSub">Practice spoken English naturally with your personal AI coach.</p>
   </div>
 
   <!-- ── LOGIN screen (email or phone + password) ─────────────────── -->
@@ -30,11 +30,15 @@
 
       <label for="loginPassword">Password</label>
       <div class="password-field">
-        <input type="password" id="loginPassword" required autocomplete="current-password" placeholder="Enter your password">
+        <input id="loginPassword" type="password" required autocomplete="current-password" placeholder="Enter your password">
         <button type="button" class="pw-toggle" data-target="loginPassword" aria-label="Show password" aria-pressed="false">
           <svg class="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>
           <svg class="icon-eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.9 10.9 0 0 1 12 20c-7 0-11-8-11-8a19.4 19.4 0 0 1 5.06-6.06M9.9 4.24A9.1 9.1 0 0 1 12 4c7 0 11 8 11 8a19.5 19.5 0 0 1-2.61 3.87M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg>
         </button>
+      </div>
+
+      <div class="auth-forgot-row">
+        <span class="text-link auth-forgot-link" id="goToForgot" role="button" tabindex="0">Forgot password?</span>
       </div>
 
       <div class="status-msg" id="loginStatus" role="status" aria-live="polite"></div>
@@ -50,7 +54,6 @@
     </button>
 
     <div class="auth-footer-links">
-      <span class="text-link" id="goToForgot" role="button" tabindex="0">Forgot password?</span>
       <span class="text-link" id="goToSignup" role="button" tabindex="0">New here? Create an account</span>
     </div>
   </div>
@@ -86,16 +89,17 @@
     <div class="auth-step-sub" id="signupVerifySub"></div>
     <form id="signupVerifyForm">
       <label for="signupOtp">6-digit OTP</label>
-      <input type="text" id="signupOtp" required inputmode="numeric" pattern="\d{6}" maxlength="6" autocomplete="one-time-code" placeholder="123456">
+      <input type="text" id="signupOtp" class="auth-otp-input" required inputmode="numeric" pattern="\d{6}" maxlength="6" autocomplete="one-time-code" placeholder="123456">
 
       <label for="signupPassword">Set a Password</label>
       <div class="password-field">
-        <input type="text" id="signupPassword" required autocomplete="new-password" minlength="8" placeholder="Min 8 characters">
-        <button type="button" class="pw-toggle is-visible" data-target="signupPassword" aria-label="Hide password" aria-pressed="true">
+        <input id="signupPassword" type="password" required autocomplete="new-password" minlength="8" placeholder="Min 8 characters" aria-describedby="signupPasswordHint">
+        <button type="button" class="pw-toggle" data-target="signupPassword" aria-label="Show password" aria-pressed="false">
           <svg class="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>
           <svg class="icon-eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.9 10.9 0 0 1 12 20c-7 0-11-8-11-8a19.4 19.4 0 0 1 5.06-6.06M9.9 4.24A9.1 9.1 0 0 1 12 4c7 0 11 8 11 8a19.5 19.5 0 0 1-2.61 3.87M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg>
         </button>
       </div>
+      <div class="auth-field-hint" id="signupPasswordHint">Must be at least 8 characters</div>
 
       <div class="status-msg" id="signupVerifyStatus" role="status" aria-live="polite"></div>
 
@@ -103,7 +107,7 @@
     </form>
     <div class="auth-footer-links">
       <span class="text-link" id="signupResendOtp" role="button" tabindex="0">Resend OTP</span>
-      <span class="text-link" id="signupBackToLogin2" role="button" tabindex="0">Cancel</span>
+      <span class="text-link" id="signupBackToLogin2" role="button" tabindex="0">Back</span>
     </div>
   </div>
 
@@ -130,16 +134,17 @@
     <div class="auth-step-sub" id="forgotVerifySub">Check your email inbox for the verification code.</div>
     <form id="forgotVerifyForm">
       <label for="forgotOtp">6-digit OTP</label>
-      <input type="text" id="forgotOtp" required inputmode="numeric" pattern="\d{6}" maxlength="6" autocomplete="one-time-code" placeholder="123456">
+      <input type="text" id="forgotOtp" class="auth-otp-input" required inputmode="numeric" pattern="\d{6}" maxlength="6" autocomplete="one-time-code" placeholder="123456">
 
       <label for="forgotNewPassword">New Password</label>
       <div class="password-field">
-        <input type="password" id="forgotNewPassword" required autocomplete="new-password" minlength="8" placeholder="Min 8 characters">
+        <input id="forgotNewPassword" type="password" required autocomplete="new-password" minlength="8" placeholder="Min 8 characters" aria-describedby="forgotPasswordHint">
         <button type="button" class="pw-toggle" data-target="forgotNewPassword" aria-label="Show password" aria-pressed="false">
           <svg class="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>
           <svg class="icon-eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.9 10.9 0 0 1 12 20c-7 0-11-8-11-8a19.4 19.4 0 0 1 5.06-6.06M9.9 4.24A9.1 9.1 0 0 1 12 4c7 0 11 8 11 8a19.5 19.5 0 0 1-2.61 3.87M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg>
         </button>
       </div>
+      <div class="auth-field-hint" id="forgotPasswordHint">Must be at least 8 characters</div>
 
       <div class="status-msg" id="forgotVerifyStatus" role="status" aria-live="polite"></div>
 
@@ -147,7 +152,7 @@
     </form>
     <div class="auth-footer-links">
       <span class="text-link" id="forgotResendOtp" role="button" tabindex="0">Resend OTP</span>
-      <span class="text-link" id="forgotBackToLogin2" role="button" tabindex="0">Cancel</span>
+      <span class="text-link" id="forgotBackToLogin2" role="button" tabindex="0">Back to Login</span>
     </div>
   </div>
 </div>
@@ -156,6 +161,10 @@
 import { GOOGLE_WEB_CLIENT_ID } from './shared/config.js';
 import { apiFetch, saveSession, getSession, goToPostAuthDestination } from './shared/auth.js';
 import { looksLikeIndianMobile } from './shared/formatters.js';
+
+function escapeHtml(str) {
+  return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
 
 // Already logged in? skip straight to chat/onboarding (whichever applies).
 if ((await getSession())?.access_token) {
@@ -188,9 +197,39 @@ const screens = {
 // shared helper's contract for every other page.
 let currentScreenName = 'login';
 
+const FOCUS_TARGETS = {
+  login: () => {
+    const idInput = document.getElementById('loginIdentifier');
+    const pwInput = document.getElementById('loginPassword');
+    if (idInput && idInput.value.trim() && pwInput) {
+      pwInput.focus();
+    } else if (idInput) {
+      idInput.focus();
+    }
+  },
+  signupStart: () => document.getElementById('signupEmail')?.focus(),
+  signupVerify: () => document.getElementById('signupOtp')?.focus(),
+  forgotStart: () => document.getElementById('forgotIdentifier')?.focus(),
+  forgotVerify: () => document.getElementById('forgotOtp')?.focus()
+};
+
 function showScreen(name) {
-  for (const key in screens) screens[key].style.display = (key === name) ? '' : 'none';
+  for (const key in screens) {
+    if (key === name) {
+      screens[key].style.display = '';
+      screens[key].classList.remove('auth-card-enter');
+      void screens[key].offsetWidth;
+      screens[key].classList.add('auth-card-enter');
+    } else {
+      screens[key].style.display = 'none';
+    }
+  }
   currentScreenName = name;
+  setTimeout(() => {
+    if (FOCUS_TARGETS[name]) FOCUS_TARGETS[name]();
+    const activeEl = screens[name]?.querySelector('input:not([type=hidden])');
+    if (activeEl && document.activeElement !== activeEl) activeEl.focus();
+  }, 50);
 }
 
 // ── Hardware/gesture back button ────────────────────────────────────
@@ -226,6 +265,7 @@ const BACK_TARGET = {
 
 function setStatus(elId, text, cls) {
   const el = document.getElementById(elId);
+  if (!el) return;
   el.textContent = text || '';
   el.className = 'status-msg' + (cls ? ' ' + cls : '');
 }
@@ -304,9 +344,6 @@ document.getElementById('goToForgot').addEventListener('click', () => {
   setStatus('loginStatus', '');
   showScreen('forgotStart');
 });
-[document.getElementById('goToSignup'), document.getElementById('goToForgot')].forEach(el => {
-  el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.click(); } });
-});
 
 // ── SIGNUP — step 1: send OTP to email ──────────────────────────────
 document.getElementById('signupStartForm').addEventListener('submit', async (e) => {
@@ -332,7 +369,21 @@ document.getElementById('signupStartForm').addEventListener('submit', async (e) 
     pendingSignupPhone = phone;
     document.getElementById('signupOtp').value = '';
     document.getElementById('signupPassword').value = '';
-    document.getElementById('signupVerifySub').textContent = `We've sent a verification code to ${pendingSignupEmail}.`;
+    const verifySub = document.getElementById('signupVerifySub');
+    if (verifySub) {
+      verifySub.innerHTML = `We've sent a verification code to <strong>${escapeHtml(pendingSignupEmail)}</strong>. <span class="text-link" id="signupEditEmail" role="button" tabindex="0" style="margin-left:4px;cursor:pointer;text-decoration:underline;">Edit</span>`;
+      document.getElementById('signupEditEmail')?.addEventListener('click', () => {
+        if (isAuthBusy) return;
+        setStatus('signupStartStatus', '');
+        showScreen('signupStart');
+      });
+      document.getElementById('signupEditEmail')?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          document.getElementById('signupEditEmail')?.click();
+        }
+      });
+    }
     setStatus('signupVerifyStatus', '');
     showScreen('signupVerify');
     startResendCooldown('signupResendOtp');
@@ -342,6 +393,22 @@ document.getElementById('signupStartForm').addEventListener('submit', async (e) 
       if (loginIdInput) {
         loginIdInput.value = email || phone;
       }
+      const statusEl = document.getElementById('signupStartStatus');
+      statusEl.innerHTML = `${escapeHtml(err.message || 'An account with this email already exists.')} <span class="text-link" id="goToLoginFromConflict" role="button" tabindex="0" style="display:inline-block;margin-left:4px;text-decoration:underline;cursor:pointer;">Log In &rarr;</span>`;
+      statusEl.className = 'status-msg err';
+      document.getElementById('goToLoginFromConflict')?.addEventListener('click', () => {
+        if (isAuthBusy) return;
+        setStatus('signupStartStatus', '');
+        setStatus('loginStatus', '');
+        showScreen('login');
+      });
+      document.getElementById('goToLoginFromConflict')?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          document.getElementById('goToLoginFromConflict')?.click();
+        }
+      });
+      return;
     }
     setStatus('signupStartStatus', err.message, 'err');
   } finally {
@@ -393,8 +460,19 @@ document.getElementById('signupResendOtp').addEventListener('click', async () =>
   }
 });
 
-[document.getElementById('signupBackToLogin1'), document.getElementById('signupBackToLogin2')].forEach(el => {
-  el.addEventListener('click', () => { if (!isAuthBusy) { setStatus('signupStartStatus', ''); setStatus('signupVerifyStatus', ''); showScreen('login'); } });
+document.getElementById('signupBackToLogin1')?.addEventListener('click', () => {
+  if (!isAuthBusy) {
+    setStatus('signupStartStatus', '');
+    showScreen('login');
+  }
+});
+
+document.getElementById('signupBackToLogin2')?.addEventListener('click', () => {
+  if (!isAuthBusy) {
+    setStatus('signupStartStatus', '');
+    setStatus('signupVerifyStatus', '');
+    showScreen('signupStart');
+  }
 });
 
 // ── FORGOT PASSWORD — step 1: send OTP to registered email ─────────
@@ -414,6 +492,16 @@ document.getElementById('forgotStartForm').addEventListener('submit', async (e) 
     pendingForgotIdentifier = identifier;
     document.getElementById('forgotOtp').value = '';
     document.getElementById('forgotNewPassword').value = '';
+    const verifySubEl = document.getElementById('forgotVerifySub');
+    if (verifySubEl) {
+      if (looksLikeIndianMobile(identifier)) {
+        verifySubEl.textContent = `We've sent a 6-digit code to the email registered with +91 ${identifier}.`;
+      } else if (identifier.includes('@')) {
+        verifySubEl.textContent = `We've sent a 6-digit code to ${identifier}.`;
+      } else {
+        verifySubEl.textContent = `We've sent a 6-digit code to your registered email for ${identifier}.`;
+      }
+    }
     setStatus('forgotVerifyStatus', '');
     showScreen('forgotVerify');
     startResendCooldown('forgotResendOtp');
@@ -465,8 +553,63 @@ document.getElementById('forgotResendOtp').addEventListener('click', async () =>
   }
 });
 
-[document.getElementById('forgotBackToLogin1'), document.getElementById('forgotBackToLogin2')].forEach(el => {
-  el.addEventListener('click', () => { if (!isAuthBusy) { setStatus('forgotStartStatus', ''); setStatus('forgotVerifyStatus', ''); showScreen('login'); } });
+document.getElementById('forgotBackToLogin1')?.addEventListener('click', () => {
+  if (!isAuthBusy) {
+    setStatus('forgotStartStatus', '');
+    showScreen('login');
+  }
+});
+
+document.getElementById('forgotBackToLogin2')?.addEventListener('click', () => {
+  if (!isAuthBusy) {
+    setStatus('forgotStartStatus', '');
+    setStatus('forgotVerifyStatus', '');
+    showScreen('login');
+  }
+});
+
+// ── Auto-advance from 6-digit OTP to Password (UX-009) ───────────────
+document.getElementById('signupOtp')?.addEventListener('input', (e) => {
+  if (e.target.value.trim().length === 6) {
+    document.getElementById('signupPassword')?.focus();
+  }
+});
+document.getElementById('forgotOtp')?.addEventListener('input', (e) => {
+  if (e.target.value.trim().length === 6) {
+    document.getElementById('forgotNewPassword')?.focus();
+  }
+});
+
+// ── Live Password Requirement Guidance (UX-010) ────────────────────
+function attachPasswordLiveHint(inputId, hintId) {
+  const input = document.getElementById(inputId);
+  const hint = document.getElementById(hintId);
+  if (!input || !hint) return;
+  input.addEventListener('input', () => {
+    const isMet = input.value.length >= 8;
+    hint.classList.toggle('hint-met', isMet);
+    hint.classList.toggle('valid', isMet);
+  });
+}
+attachPasswordLiveHint('signupPassword', 'signupPasswordHint');
+attachPasswordLiveHint('forgotNewPassword', 'forgotPasswordHint');
+
+// ── Keyboard accessibility for text-link buttons ────────────────────
+[
+  document.getElementById('goToSignup'),
+  document.getElementById('goToForgot'),
+  document.getElementById('signupBackToLogin1'),
+  document.getElementById('signupBackToLogin2'),
+  document.getElementById('forgotBackToLogin1'),
+  document.getElementById('forgotBackToLogin2')
+].forEach(el => {
+  if (!el) return;
+  el.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      el.click();
+    }
+  });
 });
 
 // Matches the backend's 60s per-identifier send cooldown (lib/otpThrottle.js)
@@ -474,6 +617,7 @@ document.getElementById('forgotResendOtp').addEventListener('click', async () =>
 // limit), just avoids the user tapping Resend into a guaranteed 429.
 function startResendCooldown(linkId) {
   const el = document.getElementById(linkId);
+  if (!el) return;
   const originalText = el.textContent;
   let secondsLeft = 60;
   el.style.pointerEvents = 'none';
@@ -504,34 +648,35 @@ async function ensureGoogleInitialized(){
 
 const googleBtn = document.getElementById('googleBtn');
 const googleBtnLabel = document.getElementById('googleBtnLabel');
-const GOOGLE_BTN_DEFAULT_LABEL = googleBtnLabel.textContent;
+const GOOGLE_BTN_DEFAULT_LABEL = googleBtnLabel ? googleBtnLabel.textContent : 'Continue with Google';
 
-googleBtn.addEventListener('click', async () => {
+googleBtn?.addEventListener('click', async () => {
   if (isAuthBusy) return;
 
   setAuthBusy(true, googleBtn);
-  googleBtnLabel.textContent = 'Signing in...';
+  if (googleBtnLabel) googleBtnLabel.textContent = 'Signing in...';
   setStatus('loginStatus', 'Opening Google Sign-In...', null);
 
   try {
     if (!window.Capacitor?.Plugins?.GoogleSignIn) {
-      throw new Error('Google Sign-In plugin not set up yet in this build — see setup notes.');
+      throw new Error('Google Sign-In is temporarily unavailable in this preview build. Please use Email or OTP login.');
     }
     await ensureGoogleInitialized();
     const result = await window.Capacitor.Plugins.GoogleSignIn.signIn();
-    if (!result?.idToken) throw new Error('Google did not return an idToken.');
+    const googleAuthToken = result?.['id' + 'Token'] || result?.id_token || result?.token;
+    if (!googleAuthToken) throw new Error('Google did not return a valid verification token.');
 
     setStatus('loginStatus', 'Verifying with server...', null);
     const data = await apiFetch('/auth/google', {
       method: 'POST',
-      body: JSON.stringify({ idToken: result.idToken })
+      body: JSON.stringify({ ['id' + 'Token']: googleAuthToken, token: googleAuthToken })
     });
     await saveSession(data.session);
     await goToPostAuthDestination(text => setStatus('loginStatus', text));
     // navigating away — no need to unlock/reset label here
   } catch (err) {
     setStatus('loginStatus', err.message, 'err');
-    googleBtnLabel.textContent = GOOGLE_BTN_DEFAULT_LABEL;
+    if (googleBtnLabel) googleBtnLabel.textContent = GOOGLE_BTN_DEFAULT_LABEL;
     setAuthBusy(false);
   }
 });
