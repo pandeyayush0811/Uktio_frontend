@@ -48,9 +48,11 @@ import { requireAuthOrRedirect, apiFetch } from './shared/auth.js';
 import { initBackNav } from './shared/back-nav.js';
 import { escapeHtml } from './shared/sanitize.js';
 import { cachedFetch } from './shared/api-cache.js';
+import { dismissReportReadyNotification } from './shared/notifications.js';
 
 await requireAuthOrRedirect();
 initBackNav('history.html');
+dismissReportReadyNotification().catch(() => {});
 
 const params = new URLSearchParams(window.location.search);
 const sessionId = params.get('session');

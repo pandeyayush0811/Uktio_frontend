@@ -780,6 +780,8 @@
     import { registerBackHandler, navigateBack } from './shared/back-nav.js';
     import { cachedFetch, invalidateCache } from './shared/api-cache.js';
     import { showConfirmDialog } from './shared/confirm-dialog.js';
+    import { getPlanStatus } from './shared/plan.js';
+    import { syncDailyNotificationSchedule } from './shared/notifications.js';
 
     // Same 3-minute roleplay window the feature spec calls for. A constant
     // (not scenario-config-driven) since every scenario shares the same
@@ -1407,8 +1409,6 @@ Ek baar mein bahut lamba mat bolo — natural conversational chunks mein bolo, j
 
           // Sync notification schedule upon scenario completion
           try {
-            const { syncDailyNotificationSchedule } = await import('./shared/notifications.js');
-            const { getPlanStatus } = await import('./shared/plan.js');
             getPlanStatus().then(status => {
               let chatSecondsDone = 0;
               let scenarioDone = true;

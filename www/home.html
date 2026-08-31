@@ -149,26 +149,26 @@ PROMO_CARDS.forEach(card => {
   if (!profile) return; // already redirected
   if (profile.name) document.getElementById('homeName').textContent = profile.name;
 
-  // Commit Mode banner — no-op/hidden unless the user is actually on
-  // that plan (see renderCommitModeBanner's own fail-open behavior).
-  const planStatus = await getPlanStatus();
+  // Parallelize Plan Status and Real Day Streak network fetches
+  const [planResult, streakResult] = await Promise.allSettled([
+    getPlanStatus(),
+    apiFetch('/chat/streak')
+  ]);
+  const planStatus = planResult.status === 'fulfilled' ? planResult.value : null;
   renderCommitModeBanner(document.getElementById('commitBanner'), planStatus);
 
-  // Real Day Streak — background revalidation
   let currentStreak = 0;
-  try {
-    const streakData = await apiFetch('/chat/streak');
-    if (streakData && typeof streakData.current_streak === 'number') {
-      currentStreak = streakData.current_streak;
-      setCachedStreak(streakData);
-      const streakValEl = document.getElementById('homeStreakValue');
-      if (streakValEl) streakValEl.textContent = streakData.current_streak;
-      const streakBadge = document.getElementById('homeStreakBadge');
-      if (streakBadge) {
-        streakBadge.classList.toggle('practiced', !!streakData.practiced_today);
-      }
+  if (streakResult.status === 'fulfilled' && streakResult.value && typeof streakResult.value.current_streak === 'number') {
+    const streakData = streakResult.value;
+    currentStreak = streakData.current_streak;
+    setCachedStreak(streakData);
+    const streakValEl = document.getElementById('homeStreakValue');
+    if (streakValEl) streakValEl.textContent = streakData.current_streak;
+    const streakBadge = document.getElementById('homeStreakBadge');
+    if (streakBadge) {
+      streakBadge.classList.toggle('practiced', !!streakData.practiced_today);
     }
-  } catch (e) {
+  } else {
     // Fail-safe: cached streak stays on screen seamlessly
     currentStreak = cachedStreak?.current_streak || 0;
   }

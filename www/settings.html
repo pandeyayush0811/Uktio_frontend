@@ -498,6 +498,7 @@
   <script type="module">
     import './shared/config.js';
     import { requireAuthOrRedirect, apiFetch, logout, getCachedProfileBasic, setCachedProfileBasic } from './shared/auth.js';
+    import { initBackNav } from './shared/back-nav.js';
     import { getPlanStatus } from './shared/plan.js';
     import { checkGeminiApiKey } from './shared/gemini-key-check.js';
     import { getApiKey, setApiKey, removeApiKey } from './shared/mic-helpers.js';

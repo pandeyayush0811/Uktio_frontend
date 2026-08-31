@@ -265,20 +265,24 @@ export function computePendingCommitModeSlots({
     const copy = getCommitModeNotificationCopy({ chatSecondsDone, chatTargetSeconds, scenarioDone, slotName: 'sticky_countdown' });
     if (copy) {
       const midnightTime = getNextIstMidnightDate(referenceDate);
-      slots.push({
-        id: NOTIF_ID_COMMIT_STICKY_COUNTDOWN,
-        title: copy.title,
-        body: copy.body,
-        scheduleAt: stickyTime,
-        channelId: CHANNEL_COMMIT_MODE,
-        extra: {
-          slot: 'sticky_countdown',
-          isSticky: true,
-          usesChronometer: true,
-          chronometerTargetEpoch: midnightTime.getTime(),
-          actionText: copy.actionText || 'Start Practice'
-        }
-      });
+      const targetEpoch = midnightTime ? midnightTime.getTime() : 0;
+      const minValidEpoch = Math.max(referenceDate.getTime(), stickyTime.getTime());
+      if (targetEpoch > minValidEpoch) {
+        slots.push({
+          id: NOTIF_ID_COMMIT_STICKY_COUNTDOWN,
+          title: copy.title,
+          body: copy.body,
+          scheduleAt: stickyTime,
+          channelId: CHANNEL_COMMIT_MODE,
+          extra: {
+            slot: 'sticky_countdown',
+            isSticky: true,
+            usesChronometer: true,
+            chronometerTargetEpoch: targetEpoch,
+            actionText: copy.actionText || 'Start Practice'
+          }
+        });
+      }
     }
   }
 
@@ -412,8 +416,7 @@ export async function createNotificationChannels() {
       description: 'Critical reminders and countdowns to protect your Commit Mode daily streak',
       importance: 5, // High priority / Heads-up notification
       visibility: 1,
-      vibration: true,
-      sound: 'res_custom_notification'
+      vibration: true
     });
 
     await plugin.createChannel({
@@ -459,6 +462,13 @@ export async function cancelNotificationsByIds(ids = []) {
  */
 export async function dismissStickyCountdown() {
   await cancelNotificationsByIds([NOTIF_ID_COMMIT_STICKY_COUNTDOWN]);
+}
+
+/**
+ * Dismisses any scheduled report-ready reminder notification (e.g. when report is opened).
+ */
+export async function dismissReportReadyNotification() {
+  await cancelNotificationsByIds([NOTIF_ID_REPORT_READY]);
 }
 
 /**
