@@ -74,7 +74,7 @@
 
 <script type="module">
 import './shared/config.js';
-import { requireCompleteProfile, getCachedProfileBasic, getCachedStreak, setCachedStreak, apiFetch } from './shared/auth.js';
+import { requireCompleteProfile, getCachedProfileBasic, getCachedStreak, setCachedStreak, getStreakWithCache, apiFetch } from './shared/auth.js';
 import { getPlanStatus } from './shared/plan.js';
 import { renderCommitModeBanner } from './shared/commit-mode-widget.js';
 import { renderAnnouncementBanner } from './shared/announcement-banner.js';
@@ -150,9 +150,10 @@ PROMO_CARDS.forEach(card => {
   if (profile.name) document.getElementById('homeName').textContent = profile.name;
 
   // Parallelize Plan Status and Real Day Streak network fetches
+  // AUD-063: Use unified SWR getStreakWithCache to prevent unbounded queries
   const [planResult, streakResult] = await Promise.allSettled([
     getPlanStatus(),
-    apiFetch('/chat/streak')
+    getStreakWithCache()
   ]);
   const planStatus = planResult.status === 'fulfilled' ? planResult.value : null;
   renderCommitModeBanner(document.getElementById('commitBanner'), planStatus);

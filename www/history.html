@@ -68,6 +68,9 @@
   </div>
   <div class="status-msg err" id="listErr" style="display:none;"></div>
   <div id="sessionList"></div>
+  <div id="loadMoreContainer" style="display:none;text-align:center;padding:16px 0 24px;">
+    <button class="secondary-outline" id="loadMoreBtn" type="button" style="font-size:0.85rem;padding:8px 18px;margin:0 auto;">Load older chats</button>
+  </div>
 </div>
 
 <button class="fab" id="newChatFab">
@@ -94,7 +97,12 @@ const listMsg = document.getElementById('listMsg');
 const sessionList = document.getElementById('sessionList');
 const searchInput = document.getElementById('searchInput');
 const searchClear = document.getElementById('searchClear');
+const loadMoreContainer = document.getElementById('loadMoreContainer');
+const loadMoreBtn = document.getElementById('loadMoreBtn');
 let allSessions = [];
+let nextCursor = null;
+let hasMore = false;
+let isLoadingMore = false;
 
 // ---- Small inline icons reused across cards (kept local — same
 // convention as pricing.html's page-local plan icons; these are
@@ -311,31 +319,79 @@ function renderList(sessions, activeQuery){
   });
 }
 
+function updateLoadMoreVisibility(){
+  if (!loadMoreContainer) return;
+  const q = searchInput ? searchInput.value.trim() : '';
+  loadMoreContainer.style.display = (hasMore && !q) ? 'block' : 'none';
+}
+
 function clearSearch(){
   searchInput.value = '';
   searchClear.style.display = 'none';
   renderList(allSessions, '');
+  updateLoadMoreVisibility();
   searchInput.focus();
 }
 
 searchInput.addEventListener('input', () => {
   const q = searchInput.value.trim().toLowerCase();
   searchClear.style.display = q ? 'flex' : 'none';
-  if (!q) { renderList(allSessions, ''); return; }
+  if (!q) {
+    renderList(allSessions, '');
+    updateLoadMoreVisibility();
+    return;
+  }
   renderList(allSessions.filter(s => formatDateTime(s.started_at).toLowerCase().includes(q)), q);
+  updateLoadMoreVisibility();
 });
 searchClear.addEventListener('click', clearSearch);
 
+async function loadMoreSessions(){
+  if (isLoadingMore || !hasMore || !nextCursor) return;
+  isLoadingMore = true;
+  if (loadMoreBtn) {
+    loadMoreBtn.disabled = true;
+    loadMoreBtn.textContent = 'Loading older chats…';
+  }
+  try {
+    const data = await getRecentChatSessions({ limit: 20, before: nextCursor });
+    const newSessions = data.sessions || [];
+    allSessions = allSessions.concat(newSessions);
+    hasMore = !!data.has_more;
+    nextCursor = data.next_cursor || null;
+
+    const q = searchInput.value.trim().toLowerCase();
+    if (q) {
+      renderList(allSessions.filter(s => formatDateTime(s.started_at).toLowerCase().includes(q)), q);
+    } else {
+      renderList(allSessions, '');
+    }
+  } catch (err) {
+    console.warn('Could not load older chats', err);
+  } finally {
+    isLoadingMore = false;
+    if (loadMoreBtn) {
+      loadMoreBtn.disabled = false;
+      loadMoreBtn.textContent = 'Load older chats';
+    }
+    updateLoadMoreVisibility();
+  }
+}
+
+if (loadMoreBtn) {
+  loadMoreBtn.addEventListener('click', loadMoreSessions);
+}
+
 (async () => {
   try {
-    // Same cached/deduped call the drawer makes (shared/auth.js) — the
-    // drawer on this exact page was firing an identical GET
-    // /chat/sessions within milliseconds of this one; now they collapse
-    // into a single network request instead of two.
-    const data = await getRecentChatSessions();
+    // AUD-059: Initial bounded fetch of 20 sessions
+    const data = await getRecentChatSessions({ limit: 20 });
     allSessions = data.sessions || [];
+    hasMore = !!data.has_more;
+    nextCursor = data.next_cursor || null;
     listMsg.style.display = 'none';
     renderList(allSessions, '');
+    updateLoadMoreVisibility();
   } catch (err) {
     listMsg.style.display = 'none';
     const errEl = document.getElementById('listErr');

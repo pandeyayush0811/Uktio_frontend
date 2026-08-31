@@ -57,9 +57,66 @@ export async function mountDrawer(triggerEl, activePage){
     </div>`;
   document.body.appendChild(overlay);
 
+  // Cache-first: show the last-known name/email INSTANTLY (no network
+  // wait) if we have it. Do NOT make background network calls on mount;
+  // defer until the user actually opens the drawer (AUD-060).
+  const cached = getCachedProfileBasic();
+  if (cached) {
+    overlay.querySelector('#drawerUserName').textContent = cached.name || cached.email || 'User';
+    overlay.querySelector('#drawerUserEmail').textContent = cached.email || '';
+  }
+
+  let drawerDataLoaded = false;
+  async function lazyLoadDrawerData() {
+    if (drawerDataLoaded) return;
+    drawerDataLoaded = true;
+
+    try {
+      const { value: me } = await cachedFetch('profile_me', () => apiFetch('/users/me'), 60 * 1000);
+      if (me) {
+        const name = (me.profile && me.profile.name) || me.email || 'User';
+        overlay.querySelector('#drawerUserName').textContent = name;
+        overlay.querySelector('#drawerUserEmail').textContent = me.email || '';
+        setCachedProfileBasic({ name, email: me.email || '' }); // update cache for next time
+      }
+    } catch (e) { /* silent — cache (if any) already covered this, drawer still works without it */ }
+
+    try {
+      // AUD-060: Fetch only 5 recent sessions for compact navigation
+      const data = await getRecentChatSessions({ limit: 5 });
+      const recent = (data.sessions || []).slice(0, 5);
+      const recentEl = overlay.querySelector('#drawerRecent');
+      if (!recent.length) {
+        recentEl.innerHTML = '<div class="status-msg" style="font-size:0.8rem;">No chats yet.</div>';
+      } else {
+        recentEl.innerHTML = '';
+        recent.forEach(s => {
+          const d = new Date(s.started_at);
+          const timeStr = d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+          const dateStr = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+          const duration = formatDuration(s.started_at, s.ended_at);
+          const item = document.createElement('div');
+          item.className = 'drawer-recent-item';
+          item.innerHTML = `
+            <div class="drawer-recent-avatar">${s.turn_count}</div>
+            <div class="drawer-recent-text">
+              <div class="drawer-recent-title">${dateStr}</div>
+              <div class="drawer-recent-preview">${duration} · ${s.turn_count} turns</div>
+            </div>
+            <div class="drawer-recent-time">${timeStr}</div>`;
+          item.addEventListener('click', () => window.location.href = 'chat.html?resume=' + s.id);
+          recentEl.appendChild(item);
+        });
+      }
+    } catch (e) {
+      overlay.querySelector('#drawerRecent').innerHTML = '<div class="status-msg err" style="font-size:0.8rem;">Could not load chats.</div>';
+    }
+  }
+
   let unregisterBack = null;
   const open = () => {
     overlay.classList.add('open');
+    lazyLoadDrawerData();
     if (!unregisterBack) {
       unregisterBack = registerBackHandler(() => {
         close();
@@ -78,61 +135,6 @@ export async function mountDrawer(triggerEl, activePage){
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
   overlay.querySelector('.drawer-close').addEventListener('click', close);
   overlay.querySelector('#drawerMore').addEventListener('click', () => window.location.href = 'history.html');
-
-  // Cache-first: show the last-known name/email INSTANTLY (no network
-  // wait) if we have it, then quietly refetch in the background below
-  // and correct it if anything changed. This is why the drawer used to
-  // feel slow to open — it was always waiting on a fresh network call
-  // just to show your own name.
-  const cached = getCachedProfileBasic();
-  if (cached) {
-    overlay.querySelector('#drawerUserName').textContent = cached.name || cached.email || 'User';
-    overlay.querySelector('#drawerUserEmail').textContent = cached.email || '';
-  }
-
-  // Fill in user + recent chats lazily, after the drawer is already visible/openable.
-  try {
-    const { value: me } = await cachedFetch('profile_me', () => apiFetch('/users/me'), 60 * 1000);
-    if (me) {
-      const name = (me.profile && me.profile.name) || me.email || 'User';
-      overlay.querySelector('#drawerUserName').textContent = name;
-      overlay.querySelector('#drawerUserEmail').textContent = me.email || '';
-      setCachedProfileBasic({ name, email: me.email || '' }); // update cache for next time
-    }
-  } catch (e) { /* silent — cache (if any) already covered this, drawer still works without it */ }
-
-  try {
-    // Cached + deduped (see shared/auth.js) — if this page also fetches
-    // the full session list itself (history.html), that call reuses this
-    // exact request instead of firing a second one for the same data.
-    const data = await getRecentChatSessions();
-    const recent = (data.sessions || []).slice(0, 5);
-    const recentEl = overlay.querySelector('#drawerRecent');
-    if (!recent.length) {
-      recentEl.innerHTML = '<div class="status-msg" style="font-size:0.8rem;">No chats yet.</div>';
-    } else {
-      recentEl.innerHTML = '';
-      recent.forEach(s => {
-        const d = new Date(s.started_at);
-        const timeStr = d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-        const dateStr = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
-        const duration = formatDuration(s.started_at, s.ended_at);
-        const item = document.createElement('div');
-        item.className = 'drawer-recent-item';
-        item.innerHTML = `
-          <div class="drawer-recent-avatar">${s.turn_count}</div>
-          <div class="drawer-recent-text">
-            <div class="drawer-recent-title">${dateStr}</div>
-            <div class="drawer-recent-preview">${duration} · ${s.turn_count} turns</div>
-          </div>
-          <div class="drawer-recent-time">${timeStr}</div>`;
-        item.addEventListener('click', () => window.location.href = 'chat.html?resume=' + s.id);
-        recentEl.appendChild(item);
-      });
-    }
-  } catch (e) {
-    overlay.querySelector('#drawerRecent').innerHTML = '<div class="status-msg err" style="font-size:0.8rem;">Could not load chats.</div>';
-  }
 
   return { open, close };
 }

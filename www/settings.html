@@ -498,6 +498,7 @@
   <script type="module">
     import './shared/config.js';
     import { requireAuthOrRedirect, apiFetch, logout, getCachedProfileBasic, setCachedProfileBasic } from './shared/auth.js';
+    import { cachedFetch } from './shared/api-cache.js';
     import { initBackNav } from './shared/back-nav.js';
     import { getPlanStatus } from './shared/plan.js';
     import { checkGeminiApiKey } from './shared/gemini-key-check.js';
@@ -638,12 +639,15 @@
     // no "—" flash, no wait — then quietly revalidate in the background and
     // correct it if it ever changes, instead of hitting /users/me fresh on
     // every single Settings visit.
+    // AUD-061: Use unified SWR profile_me cache
     const vEmailEl = document.getElementById('vEmail');
     const cachedBasic = getCachedProfileBasic();
     if (cachedBasic && cachedBasic.email) vEmailEl.textContent = cachedBasic.email;
-    apiFetch('/users/me').then(data => {
-      vEmailEl.textContent = data.email || '—';
-      setCachedProfileBasic({ name: (cachedBasic && cachedBasic.name) || '', email: data.email || '' });
+    cachedFetch('profile_me', () => apiFetch('/users/me'), 60 * 1000).then(({ value: data }) => {
+      if (data) {
+        vEmailEl.textContent = data.email || '—';
+        setCachedProfileBasic({ name: (cachedBasic && cachedBasic.name) || (data.profile && data.profile.name) || '', email: data.email || '' });
+      }
     }).catch(() => {
       if (!cachedBasic) vEmailEl.textContent = 'Could not load';
     });
@@ -656,6 +660,27 @@
     const apiKeyCard = document.getElementById('apiKeyCard');
     const needsKeyBanner = document.getElementById('needsKeyBanner');
     const needsKeyText = document.getElementById('needsKeyText');
+
+    // ── "Sent here to add/fix your key" flow ────────────────────────────────
+    // chat.html/scenario.html redirect here with ?needsKey=missing
+    // or ?needsKey=invalid when they can't start a session — without this,
+    // the user lands on a long Settings page with no clue *why* they're here
+    // or which field needs their attention. This makes that reason loud and
+    // visually points straight at the input, instead of leaving them to
+    // scroll around and guess.
+    const redirectReason = new URLSearchParams(window.location.search).get('needsKey');
+    if (redirectReason === 'missing' || redirectReason === 'invalid') {
+      needsKeyText.textContent = redirectReason === 'invalid'
+        ? 'That AI Key did not work — please enter a valid key below 👇'
+        : 'Please enter your AI Access Key below to start practicing 👇';
+      needsKeyBanner.classList.add('show');
+      apiKeyCard.classList.add('needs-attention');
+      // Scroll the card into view first (page can be long — Plan card above
+      // this pushes AI Setup below the fold on smaller screens), then focus
+      // once it's actually on-screen so the keyboard doesn't pop up over a
+      // field the user can't see yet.
+      apiKeyCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
 
     // Collapsible panel
     const toggle = document.getElementById('keyExpandToggle');
@@ -691,28 +716,16 @@
       // untouched field) was treated as "changed" and queued an unnecessary
       // secure-storage write — extra churn that also widens the window for
       // the logout race described below.
-      if (savedKey) { apiKeyInput.value = savedKey; lastSavedValue = savedKey; validateKeyDebounced(); }
+      if (savedKey) {
+        apiKeyInput.value = savedKey;
+        lastSavedValue = savedKey;
+        // AUD-062: Do not passively validate saved keys on mount against remote Google Gemini API.
+        // Validate only if user was explicitly redirected here due to an invalid key error.
+        if (redirectReason === 'invalid') {
+          validateKeyDebounced();
+        }
+      }
     } catch (e) { console.warn('secure storage read failed', e); }
-
-    // ── "Sent here to add/fix your key" flow ────────────────────────────────
-    // chat.html/scenario.html redirect here with ?needsKey=missing
-    // or ?needsKey=invalid when they can't start a session — without this,
-    // the user lands on a long Settings page with no clue *why* they're here
-    // or which field needs their attention. This makes that reason loud and
-    // visually points straight at the input, instead of leaving them to
-    // scroll around and guess.
-    const redirectReason = new URLSearchParams(window.location.search).get('needsKey');
-    if (redirectReason === 'missing' || redirectReason === 'invalid') {
-      needsKeyText.textContent = redirectReason === 'invalid'
-        ? 'That AI Key did not work — please enter a valid key below 👇'
-        : 'Please enter your AI Access Key below to start practicing 👇';
-      needsKeyBanner.classList.add('show');
-      apiKeyCard.classList.add('needs-attention');
-      // Scroll the card into view first (page can be long — Plan card above
-      // this pushes AI Setup below the fold on smaller screens), then focus
-      // once it's actually on-screen so the keyboard doesn't pop up over a
-      // field the user can't see yet.
-      apiKeyCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
       setTimeout(() => apiKeyInput.focus({ preventScroll: true }), 400);
     }
 

@@ -327,11 +327,31 @@ export function clearCachedStreak() {
   try { localStorage.removeItem(STREAK_CACHE_KEY); } catch (e) { /* ignore */ }
 }
 
+// AUD-063: Practice streak SWR cache unification
+export const CHAT_STREAK_CACHE_KEY = 'chat_streak';
+const STREAK_CACHE_TTL_MS = 60 * 1000;
+
+export async function getStreakWithCache(opts) {
+  const { value } = await cachedFetch(
+    CHAT_STREAK_CACHE_KEY,
+    () => apiFetch('/chat/streak'),
+    STREAK_CACHE_TTL_MS,
+    opts
+  );
+  return value;
+}
+
+export function invalidateStreakCache() {
+  invalidateCache(CHAT_STREAK_CACHE_KEY);
+  clearCachedStreak();
+}
+
 // Recent chat sessions (used by the drawer's "Recent chats" list AND by
 // history.html's own full list) — cached because both places used to
 // fire their own independent GET /chat/sessions, so opening history.html
 // alone fired it TWICE (once from mountDrawer(), once from history.html's
 // own list) within milliseconds of each other for the exact same data.
+// AUD-059: Supports `limit` and `before` cursor parameters.
 export const CHAT_SESSIONS_CACHE_KEY = 'chat_sessions';
 // Short TTL — this list changes right after every chat session (which is
 // the core loop of the app), so it can't be cached long. This mainly
@@ -339,11 +359,16 @@ export const CHAT_SESSIONS_CACHE_KEY = 'chat_sessions';
 // fetches across a whole visit.
 const CHAT_SESSIONS_CACHE_TTL_MS = 30 * 1000;
 
-export async function getRecentChatSessions(opts) {
+export async function getRecentChatSessions({ limit, before, ...opts } = {}) {
   // Always drain any pending unsaved chat session first so newly spoken turns
   // appear in the list immediately even if the user navigated away abruptly.
   try { await syncPendingChatSession(); } catch (e) { /* ignore */ }
-  const { value } = await cachedFetch(CHAT_SESSIONS_CACHE_KEY, () => apiFetch('/chat/sessions'), CHAT_SESSIONS_CACHE_TTL_MS, opts);
+  const params = new URLSearchParams();
+  if (limit !== undefined && limit !== null) params.set('limit', String(limit));
+  if (before) params.set('before', String(before));
+  const qs = params.toString() ? `?${params.toString()}` : '';
+  const cacheKey = qs ? `${CHAT_SESSIONS_CACHE_KEY}_${params.toString()}` : CHAT_SESSIONS_CACHE_KEY;
+  const { value } = await cachedFetch(cacheKey, () => apiFetch(`/chat/sessions${qs}`), CHAT_SESSIONS_CACHE_TTL_MS, opts);
   return value;
 }
 
@@ -386,6 +411,7 @@ async function doSyncPendingChatSession(fetchOpts) {
     });
     try { localStorage.removeItem(PENDING_CHAT_SESSION_KEY); } catch (_) { /* ignore */ }
     invalidateChatSessionsCache(); // this session is now real — don't let a cached list hide it
+    invalidateStreakCache(); // streak counts and practiced_today have just updated
     invalidateCache('plan_status'); // trial credits just decremented — invalidate cache
     return result.session_id || null;
   } catch (err) {

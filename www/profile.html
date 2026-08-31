@@ -219,6 +219,7 @@
 <script type="module">
 import './shared/config.js';
 import { requireAuthOrRedirect, apiFetch, getCachedProfileBasic, setCachedProfileBasic, getCachedFullProfile, setCachedFullProfile } from './shared/auth.js';
+import { cachedFetch, invalidateCache } from './shared/api-cache.js';
 import { initBackNav } from './shared/back-nav.js';
 
 await requireAuthOrRedirect();
@@ -448,14 +449,18 @@ if (cachedFull && cachedFull.profile) {
 
 (async () => {
   try {
-    const data = await apiFetch('/users/me');
-    profile = data.profile || {};
-    email = data.email || '';
-    loadingMsg.style.display = 'none';
-    viewMode.classList.remove('hidden');
-    renderView();
-    document.getElementById('bottomBar').style.visibility = 'visible';
-    setCachedFullProfile({ profile, email });
+    // AUD-061: Unified SWR Profile single source of truth
+    const { value: data } = await cachedFetch('profile_me', () => apiFetch('/users/me'), 60 * 1000);
+    if (data) {
+      profile = data.profile || {};
+      email = data.email || '';
+      loadingMsg.style.display = 'none';
+      viewMode.classList.remove('hidden');
+      renderView();
+      document.getElementById('bottomBar').style.visibility = 'visible';
+      setCachedFullProfile({ profile, email });
+      setCachedProfileBasic({ name: profile.name || email, email });
+    }
   } catch (err) {
     if (!cachedFull && !cachedBasic) {
       loadingMsg.innerHTML =
@@ -499,6 +504,10 @@ saveBtn.addEventListener('click', async () => {
   try {
     const res = await apiFetch('/users/profile', { method: 'PATCH', body: JSON.stringify(payload) });
     profile = res.profile || profile;
+    // AUD-061: Write-through cache update & invalidation so Home/Drawer/Settings reflect new state immediately
+    setCachedFullProfile({ profile, email });
+    setCachedProfileBasic({ name: profile.name || email, email });
+    invalidateCache('profile_me');
     saveStatus.textContent = '';
     showViewMode();
     renderView();
