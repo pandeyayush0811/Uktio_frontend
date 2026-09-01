@@ -80,14 +80,13 @@
 
 <script type="module">
 import './shared/config.js';
-import { requireAuthOrRedirect, apiFetch, getRecentChatSessions } from './shared/auth.js';
+import { requireAuthOrRedirect, apiFetch, getRecentChatSessions, getCachedHistorySessions, setCachedHistorySessions, getCachedChatSessions, setCachedChatSessions } from './shared/auth.js';
 import { mountDrawer } from './shared/drawer.js';
 import { initBackNav } from './shared/back-nav.js';
 import { escapeHtml } from './shared/sanitize.js';
 import { groupSessionsByDate } from './shared/history-grouping.js';
 import { formatDuration } from './shared/formatters.js';
 
-await requireAuthOrRedirect();
 mountDrawer(document.getElementById('drawerTrigger'), 'chats');
 initBackNav('home.html');
 
@@ -103,6 +102,19 @@ let allSessions = [];
 let nextCursor = null;
 let hasMore = false;
 let isLoadingMore = false;
+
+// ── Frame-0 Synchronous Projection (0ms) ──────────────────────────────────
+// Hydrate from persistent disk cache: getCachedHistorySessions / getCachedChatSessions
+const cachedHistory = getCachedHistorySessions();
+if (cachedHistory && Array.isArray(cachedHistory) && cachedHistory.length) {
+  allSessions = cachedHistory;
+  if (listMsg) listMsg.style.display = 'none';
+  renderList(allSessions, '');
+  updateLoadMoreVisibility();
+}
+
+// ── Concurrent Non-blocking Auth Check ────────────────────────────────────
+requireAuthOrRedirect();
 
 // ---- Small inline icons reused across cards (kept local — same
 // convention as pricing.html's page-local plan icons; these are
@@ -386,7 +398,9 @@ if (loadMoreBtn) {
   try {
     // AUD-059: Initial bounded fetch of 20 sessions
     const data = await getRecentChatSessions({ limit: 20 });
-    allSessions = data.sessions || [];
+    const freshSessions = data.sessions || [];
+    allSessions = freshSessions;
+    setCachedHistorySessions(freshSessions);
     hasMore = !!data.has_more;
     nextCursor = data.next_cursor || null;
     listMsg.style.display = 'none';
@@ -394,9 +408,13 @@ if (loadMoreBtn) {
     updateLoadMoreVisibility();
   } catch (err) {
     listMsg.style.display = 'none';
-    const errEl = document.getElementById('listErr');
-    errEl.style.display = '';
-    errEl.textContent = 'Could not load chat history: ' + err.message;
+    if (!allSessions.length) {
+      const errEl = document.getElementById('listErr');
+      if (errEl) {
+        errEl.style.display = '';
+        errEl.textContent = 'Could not load chat history: ' + err.message;
+      }
+    }
   }
 })();
 </script>

@@ -306,7 +306,7 @@
           <div>
             <div class="profile-row-label">Email</div>
           </div>
-          <div class="profile-row-right"><span class="profile-row-value" id="vEmail" style="font-size:0.85rem;">—</span>
+          <div class="profile-row-right"><span class="profile-row-value" id="vEmail" style="font-size:0.85rem;"><span class="skeleton-line" style="width:120px;display:inline-block;"></span></span>
           </div>
         </div>
       </div>
@@ -316,7 +316,7 @@
     <div class="settings-section">
       <div class="settings-section-label">Plan</div>
       <div class="plan-status-card" id="planCard">
-        <div class="plan-status-name" id="vPlan">—</div>
+        <div class="plan-status-name" id="vPlan"><span class="skeleton-line" style="width:100px;display:inline-block;"></span></div>
         <div class="plan-status-expiry" id="planExpiryRow" style="display:none;">
           <span id="planExpiryLabel">Valid until</span> <span id="vPlanExpiry">—</span>
         </div>
@@ -500,7 +500,7 @@
     import { requireAuthOrRedirect, apiFetch, logout, getCachedProfileBasic, setCachedProfileBasic } from './shared/auth.js';
     import { cachedFetch } from './shared/api-cache.js';
     import { initBackNav } from './shared/back-nav.js';
-    import { getPlanStatus } from './shared/plan.js';
+    import { getPlanStatus, getCachedPlanStatus } from './shared/plan.js';
     import { checkGeminiApiKey } from './shared/gemini-key-check.js';
     import { getApiKey, setApiKey, removeApiKey } from './shared/mic-helpers.js';
     import { showConfirmDialog } from './shared/confirm-dialog.js';
@@ -511,8 +511,101 @@
       syncDailyNotificationSchedule
     } from './shared/notifications.js';
 
-    await requireAuthOrRedirect();
     initBackNav('home.html');
+
+    // ── Plan labels & renderer ────────────────────────────────────────────────
+    const PLAN_LABELS = {
+      none: 'No active plan',
+      starter: 'Utkio Starter',
+      unlimited: 'Utkio Unlimited',
+      commit_mode: 'Commit Mode'
+    };
+
+    function renderPlanState(status) {
+      const planCard = document.getElementById('planCard');
+      const vPlanEl = document.getElementById('vPlan');
+      if (!vPlanEl) return;
+      if (!status) { vPlanEl.textContent = 'Could not load'; return; }
+
+      vPlanEl.textContent = PLAN_LABELS[status.plan] || status.plan;
+      if (planCard) planCard.classList.toggle('inactive', !status.active);
+
+      const expiryRow = document.getElementById('planExpiryRow');
+      const ctaTitle = document.getElementById('planCtaTitle');
+      const ctaSub = document.getElementById('planCtaSub');
+      const vPlanExpiry = document.getElementById('vPlanExpiry');
+
+      if (status.plan_expires_at && expiryRow) {
+        expiryRow.style.display = '';
+        const d = new Date(status.plan_expires_at);
+        const dateStr = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+        const labelEl = document.getElementById('planExpiryLabel');
+        if (labelEl) labelEl.textContent = status.active ? 'Valid until' : 'Expired on';
+        if (vPlanExpiry) vPlanExpiry.textContent = dateStr;
+        expiryRow.className = 'plan-status-expiry ' + (status.active ? '' : 'err');
+      }
+
+      if (ctaTitle && ctaSub) {
+        if (!status.active) {
+          ctaTitle.textContent = status.plan === 'none' ? 'Choose a plan' : 'Renew plan';
+          ctaSub.textContent = 'Activate a plan to continue practicing';
+        } else {
+          ctaTitle.textContent = 'Manage plan';
+          ctaSub.textContent = 'View, renew or upgrade your plan';
+        }
+      }
+
+      // One-time-per-page-visit explanation for a Commit Mode termination —
+      // this is the disclosed, expected outcome of missing a day, shown here
+      // (not just buried on pricing.html) so it's visible wherever the user
+      // is checking "what happened to my plan".
+      if (status.commit_mode_termination_reason === 'missed_daily_commitment') {
+        const el = document.getElementById('commitModeTerminatedMsg');
+        if (el) {
+          el.style.display = '';
+          el.textContent = 'Aapka Commit Mode membership ek din ka daily commitment (5 min chat + 1 scenario) miss hone ki wajah se complete ho gaya — jaisa purchase ke time disclose kiya gaya tha, iska koi refund nahi hai.';
+        }
+      }
+    }
+
+    // ── Frame-0 Synchronous Hydration (0ms) ──────────────────────────────────
+    const vEmailEl = document.getElementById('vEmail');
+    const cachedBasic = getCachedProfileBasic();
+    if (cachedBasic && cachedBasic.email && vEmailEl) {
+      vEmailEl.textContent = cachedBasic.email;
+    }
+
+    const cachedPlan = getCachedPlanStatus();
+    if (cachedPlan) {
+      renderPlanState(cachedPlan);
+    }
+
+    // ── Concurrent Non-blocking Auth Check & SWR ──────────────────────────────
+    requireAuthOrRedirect();
+
+    getPlanStatus().then(status => {
+      renderPlanState(status);
+    }).catch(() => {
+      if (!cachedPlan && document.getElementById('vPlan')) {
+        document.getElementById('vPlan').textContent = 'Could not load';
+      }
+    });
+
+    // ── Email SWR Revalidation ────────────────────────────────────────────────
+    // Cache-first (same pattern as the drawer/profile.html/home.html, see
+    // shared/auth.js): show the last-known email INSTANTLY if we have it —
+    // no "—" flash, no wait — then quietly revalidate in the background and
+    // correct it if it ever changes, instead of hitting /users/me fresh on
+    // every single Settings visit.
+    // AUD-061: Use unified SWR profile_me cache
+    cachedFetch('profile_me', () => apiFetch('/users/me'), 60 * 1000).then(({ value: data }) => {
+      if (data && vEmailEl) {
+        vEmailEl.textContent = data.email || '—';
+        setCachedProfileBasic({ name: (cachedBasic && cachedBasic.name) || (data.profile && data.profile.name) || '', email: data.email || '' });
+      }
+    }).catch(() => {
+      if (!cachedBasic && vEmailEl) vEmailEl.textContent = 'Could not load';
+    });
 
     // ── Reminders & Notification Preferences ──────────────────────────────────
     const notifDailyToggle = document.getElementById('notifDailyToggle');
@@ -583,75 +676,6 @@
     document.getElementById('telegramBtn').href =
       (window.UKTIO_CONFIG && window.UKTIO_CONFIG.TELEGRAM_URL) || '#';
 
-    // ── Plan labels ───────────────────────────────────────────────────────────
-    const PLAN_LABELS = {
-      none: 'No active plan',
-      starter: 'Utkio Starter',
-      unlimited: 'Utkio Unlimited',
-      commit_mode: 'Commit Mode'
-    };
-
-    getPlanStatus().then(status => {
-      const planCard = document.getElementById('planCard');
-      if (!status) { document.getElementById('vPlan').textContent = 'Could not load'; return; }
-
-      document.getElementById('vPlan').textContent = PLAN_LABELS[status.plan] || status.plan;
-      planCard.classList.toggle('inactive', !status.active);
-
-      const expiryRow = document.getElementById('planExpiryRow');
-      const ctaTitle = document.getElementById('planCtaTitle');
-      const ctaSub = document.getElementById('planCtaSub');
-      const vPlanExpiry = document.getElementById('vPlanExpiry');
-
-      if (status.plan_expires_at) {
-        expiryRow.style.display = '';
-        const d = new Date(status.plan_expires_at);
-        const dateStr = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-        document.getElementById('planExpiryLabel').textContent = status.active ? 'Valid until' : 'Expired on';
-        vPlanExpiry.textContent = dateStr;
-        expiryRow.className = 'plan-status-expiry ' + (status.active ? '' : 'err');
-      }
-
-      if (!status.active) {
-        ctaTitle.textContent = status.plan === 'none' ? 'Choose a plan' : 'Renew plan';
-        ctaSub.textContent = 'Activate a plan to continue practicing';
-      } else {
-        ctaTitle.textContent = 'Manage plan';
-        ctaSub.textContent = 'View, renew or upgrade your plan';
-      }
-
-      // One-time-per-page-visit explanation for a Commit Mode termination —
-      // this is the disclosed, expected outcome of missing a day, shown here
-      // (not just buried on pricing.html) so it's visible wherever the user
-      // is checking "what happened to my plan".
-      if (status.commit_mode_termination_reason === 'missed_daily_commitment') {
-        const el = document.getElementById('commitModeTerminatedMsg');
-        el.style.display = '';
-        el.textContent = 'Aapka Commit Mode membership ek din ka daily commitment (5 min chat + 1 scenario) miss hone ki wajah se complete ho gaya — jaisa purchase ke time disclose kiya gaya tha, iska koi refund nahi hai.';
-      }
-    }).catch(() => {
-      document.getElementById('vPlan').textContent = 'Could not load';
-    });
-
-    // ── Email ─────────────────────────────────────────────────────────────────
-    // Cache-first (same pattern as the drawer/profile.html/home.html, see
-    // shared/auth.js): show the last-known email INSTANTLY if we have it —
-    // no "—" flash, no wait — then quietly revalidate in the background and
-    // correct it if it ever changes, instead of hitting /users/me fresh on
-    // every single Settings visit.
-    // AUD-061: Use unified SWR profile_me cache
-    const vEmailEl = document.getElementById('vEmail');
-    const cachedBasic = getCachedProfileBasic();
-    if (cachedBasic && cachedBasic.email) vEmailEl.textContent = cachedBasic.email;
-    cachedFetch('profile_me', () => apiFetch('/users/me'), 60 * 1000).then(({ value: data }) => {
-      if (data) {
-        vEmailEl.textContent = data.email || '—';
-        setCachedProfileBasic({ name: (cachedBasic && cachedBasic.name) || (data.profile && data.profile.name) || '', email: data.email || '' });
-      }
-    }).catch(() => {
-      if (!cachedBasic) vEmailEl.textContent = 'Could not load';
-    });
-
     // ── Gemini API key ────────────────────────────────────────────────────────
     const apiKeyInput = document.getElementById('apiKey');
     const savedMsg = document.getElementById('savedMsg');
@@ -680,6 +704,7 @@
       // once it's actually on-screen so the keyboard doesn't pop up over a
       // field the user can't see yet.
       apiKeyCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(() => apiKeyInput.focus({ preventScroll: true }), 400);
     }
 
     // Collapsible panel
@@ -726,8 +751,6 @@
         }
       }
     } catch (e) { console.warn('secure storage read failed', e); }
-      setTimeout(() => apiKeyInput.focus({ preventScroll: true }), 400);
-    }
 
     // Debounced validation
     let validateTimer = null;

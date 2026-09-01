@@ -3,11 +3,41 @@ import { formatTrialTimeLeft } from './trial-time.js';
 import { cachedFetch, invalidateCache } from './api-cache.js';
 
 const PLAN_CACHE_KEY = 'plan_status';
+export const PERSISTENT_PLAN_STORAGE_KEY = 'utkio_plan_cache';
 // Plan rarely changes mid-session (only right after a checkout), so a
 // short TTL is enough to collapse the repeat hits from home/settings/
 // chat/quiz all calling this within seconds of each other, without ever
 // showing something more than a minute stale.
 const PLAN_CACHE_TTL_MS = 60 * 1000;
+
+export function getCachedPlanStatus() {
+  try {
+    const raw = localStorage.getItem('utkio_plan_cache');
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+export function setCachedPlanStatus(status) {
+  if (!status) return;
+  try {
+    localStorage.setItem('utkio_plan_cache', JSON.stringify({
+      ...status,
+      cachedAt: Date.now()
+    }));
+  } catch (e) {
+    // Gracefully handle storage QuotaExceededError or private browsing restrictions
+  }
+}
+
+export function clearCachedPlanStatus() {
+  try {
+    localStorage.removeItem('utkio_plan_cache');
+  } catch (e) {
+    // Ignore storage errors on clear
+  }
+}
 
 // Returns { plan, plan_expires_at, active, trial } or null on network/auth
 // error. `trial` is null once the user has a paid plan; otherwise it's
@@ -21,9 +51,13 @@ const PLAN_CACHE_TTL_MS = 60 * 1000;
 export async function getPlanStatus(opts = {}) {
   try {
     const { value } = await cachedFetch(PLAN_CACHE_KEY, () => apiFetch('/payments/status'), PLAN_CACHE_TTL_MS, opts);
+    if (value) {
+      setCachedPlanStatus(value);
+    }
     return value;
   } catch (e) {
-    return null;
+    const fallback = getCachedPlanStatus();
+    return fallback || null;
   }
 }
 
@@ -31,7 +65,11 @@ export async function getPlanStatus(opts = {}) {
  *  getPlanStatus() call (even a plain, non-forced one on another page)
  *  goes to the network instead of serving what's now a stale cache. */
 export function invalidatePlanCache() {
+  const hasSessionCache = typeof sessionStorage !== 'undefined' && !!sessionStorage.getItem('utkio_cache:' + PLAN_CACHE_KEY);
   invalidateCache(PLAN_CACHE_KEY);
+  if (hasSessionCache) {
+    clearCachedPlanStatus();
+  }
 }
 
 // Call this right after requireCompleteProfile() on any page that needs

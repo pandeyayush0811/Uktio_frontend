@@ -4,6 +4,7 @@
 import { secureGetItem, secureSetItem, secureRemoveItem, migrateLegacyKey } from './secure-store.js';
 import { cachedFetch, invalidateCache, invalidateAllCache } from './api-cache.js';
 import { removeApiKey } from './mic-helpers.js';
+import { clearCachedPlanStatus } from './plan.js';
 
 const cfg = (typeof window !== 'undefined' && window.UKTIO_CONFIG) || (typeof globalThis !== 'undefined' && globalThis.UKTIO_CONFIG) || {};
 const SESSION_KEY = 'utkio_session';
@@ -61,7 +62,11 @@ export async function clearSession() {
   try { await secureRemoveItem(SESSION_KEY); }
   catch (e) { /* ignore */ }
   clearCachedProfileBasic();
+  clearCachedFullProfile();
   clearCachedStreak();
+  clearCachedPlanStatus();
+  clearCachedRecentChats();
+  clearCachedHistorySessions();
 }
 
 export async function getAccessToken() {
@@ -346,6 +351,73 @@ export function invalidateStreakCache() {
   clearCachedStreak();
 }
 
+// AUD-067: Persistent recent chats L2 disk cache
+export const RECENT_CHATS_PERSISTENT_KEY = 'utkio_recent_chats_cache';
+
+export function getCachedRecentChats() {
+  try {
+    const raw = localStorage.getItem(RECENT_CHATS_PERSISTENT_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+export function setCachedRecentChats(sessions) {
+  if (!Array.isArray(sessions)) return;
+  try {
+    const slice = sessions.slice(0, 5);
+    localStorage.setItem(RECENT_CHATS_PERSISTENT_KEY, JSON.stringify(slice));
+  } catch (e) {
+    // Swallow QuotaExceededError
+  }
+}
+
+export function clearCachedRecentChats() {
+  try {
+    localStorage.removeItem(RECENT_CHATS_PERSISTENT_KEY);
+  } catch (e) {
+    // Ignore storage errors on clear
+  }
+}
+
+// AUD-068: Persistent history sessions L2 disk cache
+export const HISTORY_PERSISTENT_KEY = 'utkio_history_cache';
+
+export function getCachedHistorySessions() {
+  try {
+    const raw = localStorage.getItem(HISTORY_PERSISTENT_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+export function setCachedHistorySessions(sessions) {
+  if (!Array.isArray(sessions)) return;
+  try {
+    const slice = sessions.slice(0, 20);
+    localStorage.setItem(HISTORY_PERSISTENT_KEY, JSON.stringify(slice));
+  } catch (e) {
+    // Swallow QuotaExceededError
+  }
+}
+
+export function clearCachedHistorySessions() {
+  try {
+    localStorage.removeItem(HISTORY_PERSISTENT_KEY);
+    localStorage.removeItem('utkio_history_cache');
+  } catch (e) {
+    // Ignore storage errors on clear
+  }
+}
+
+// Aliases for unified history caching naming contracts
+export const getCachedChatSessions = getCachedHistorySessions;
+export const setCachedChatSessions = setCachedHistorySessions;
+export const clearCachedChatSessions = clearCachedHistorySessions;
+export const clearCachedHistory = clearCachedHistorySessions;
+
 // Recent chat sessions (used by the drawer's "Recent chats" list AND by
 // history.html's own full list) — cached because both places used to
 // fire their own independent GET /chat/sessions, so opening history.html
@@ -363,13 +435,57 @@ export async function getRecentChatSessions({ limit, before, ...opts } = {}) {
   // Always drain any pending unsaved chat session first so newly spoken turns
   // appear in the list immediately even if the user navigated away abruptly.
   try { await syncPendingChatSession(); } catch (e) { /* ignore */ }
+
+  // AUD-067 Unified Cache Slicing: If full chat_sessions is already in sessionStorage
+  // and caller wants a limited slice without a pagination cursor, slice directly from cache.
+  if (limit && !before) {
+    try {
+      const fullCachedRaw = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(`utkio_cache:${CHAT_SESSIONS_CACHE_KEY}`) : null;
+      if (fullCachedRaw) {
+        const parsed = JSON.parse(fullCachedRaw);
+        if (parsed && parsed.expiresAt > Date.now() && parsed.value && Array.isArray(parsed.value.sessions)) {
+          const sliced = parsed.value.sessions.slice(0, limit);
+          if (limit <= 5) {
+            setCachedRecentChats(sliced);
+          }
+          return { ...parsed.value, sessions: sliced, fromCache: true };
+        }
+      }
+    } catch (e) {
+      // Fall back to standard network fetch
+    }
+  }
+
   const params = new URLSearchParams();
   if (limit !== undefined && limit !== null) params.set('limit', String(limit));
   if (before) params.set('before', String(before));
   const qs = params.toString() ? `?${params.toString()}` : '';
   const cacheKey = qs ? `${CHAT_SESSIONS_CACHE_KEY}_${params.toString()}` : CHAT_SESSIONS_CACHE_KEY;
-  const { value } = await cachedFetch(cacheKey, () => apiFetch(`/chat/sessions${qs}`), CHAT_SESSIONS_CACHE_TTL_MS, opts);
-  return value;
+
+  try {
+    const { value } = await cachedFetch(cacheKey, () => apiFetch(`/chat/sessions${qs}`), CHAT_SESSIONS_CACHE_TTL_MS, opts);
+    if (value && Array.isArray(value.sessions) && !before) {
+      if (limit === 5) {
+        setCachedRecentChats(value.sessions);
+      }
+      if (limit === 20 || limit === undefined) {
+        setCachedHistorySessions(value.sessions);
+      }
+    }
+    return value;
+  } catch (err) {
+    // AUD-067 / AUD-068: Resilient fallback to L2 persistent disk cache when network rejects
+    if (!before) {
+      const diskFallback = (limit && limit <= 5)
+        ? (getCachedRecentChats() || getCachedHistorySessions())
+        : (getCachedHistorySessions() || getCachedRecentChats());
+      if (diskFallback && Array.isArray(diskFallback) && diskFallback.length) {
+        const slicedFallback = limit ? diskFallback.slice(0, limit) : diskFallback;
+        return { sessions: slicedFallback, fromCache: true, offline: true };
+      }
+    }
+    throw err;
+  }
 }
 
 /** Call right after a chat session is successfully saved so the drawer/
@@ -448,6 +564,12 @@ export function syncPendingChatSession(fetchOpts = {}) {
 }
 
 export async function logout() {
+  clearCachedPlanStatus();
+  clearCachedRecentChats();
+  clearCachedHistorySessions();
+  clearCachedProfileBasic();
+  clearCachedFullProfile();
+
   try {
     await apiFetch('/auth/logout', { method: 'POST' });
   } catch (err) {
@@ -457,8 +579,6 @@ export async function logout() {
   }
 
   await clearSession();
-  clearCachedProfileBasic();
-  clearCachedFullProfile();
   invalidateAllCache(); // wipe plan/profile/sessions caches — next login must never show the previous account's cached data
 
   // Delegates to mic-helpers.js's removeApiKey(), which is the single
